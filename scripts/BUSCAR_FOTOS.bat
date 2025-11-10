@@ -11,14 +11,20 @@ echo.
 echo Verificando Python...
 python --version >nul 2>&1
 if %errorlevel% NEQ 0 (
-    echo ERROR: Python NO encontrado
-    pause
-    exit /b 1
+    py --version >nul 2>&1
+    if %errorlevel% NEQ 0 (
+        echo ERROR: Python NO encontrado
+        pause
+        exit /b 1
+    )
+    set "PYTHON_CMD=py"
+    for /f "tokens=2" %%i in ('py --version 2^>^&1') do echo Python encontrado: %%i (comando: py)
+) else (
+    set "PYTHON_CMD=python"
+    for /f "tokens=2" %%i in ('python --version 2^>^&1') do echo Python encontrado: %%i (comando: python)
 )
 
-echo OK: Python encontrado
 echo.
-
 echo Buscando base de datos...
 set "DB_FOUND=0"
 if exist "BASEDATEJP\*.accdb" (
@@ -30,20 +36,32 @@ if exist "BASEDATEJP\*.accdb" (
 )
 
 if !DB_FOUND! EQU 0 (
+    if exist "..\BASEDATEJP\*.accdb" (
+        for %%f in ("..\BASEDATEJP\*.accdb") do (
+            echo OK: Base de datos encontrada: %%~nxf
+            set "DB_PATH=%%f"
+            set "DB_FOUND=1"
+        )
+    )
+)
+
+if !DB_FOUND! EQU 0 (
     echo ERROR: Base de datos no encontrada
     pause
     exit /b 1
 )
 
-echo OK: Base de datos: !DB_PATH!
 echo.
+echo OK: Base de datos: !DB_PATH!
 
+echo.
 echo Verificando archivo de mapeo...
 set "OUTPUT_FILE=access_photo_mappings.json"
 set "FORCE_REGENERATE="
 
 if exist "%OUTPUT_FILE%" (
     echo INFO: Archivo ya existe
+    echo Deseas REGENERAR las fotos? (S/N):
     set /p "RESPONSE=Deseas REGENERAR las fotos? (S/N): "
     if /i "!RESPONSE!"=="S" (
         echo INFO: Regenerando fotos...
@@ -63,7 +81,7 @@ echo Base de datos: !DB_PATH!
 echo Parametros: !FORCE_REGENERATE!
 echo.
 
-python backend\scripts\auto_extract_photos_from_databasejp.py !FORCE_REGENERATE!
+%PYTHON_CMD% backend\scripts\auto_extract_photos_from_databasejp.py !FORCE_REGENERATE!
 set "PYTHON_EXIT_CODE=!errorlevel!"
 
 echo.

@@ -1,5 +1,5 @@
 @echo off
-REM Configuración optimizada para Windows 11
+REM Configuración optimizada para Windows 11 con mejor manejo de Unicode
 chcp 65001 >nul 2>&1
 setlocal EnableDelayedExpansion
 title UNS-ClaudeJP 5.4 - Extraccion de Fotos (Windows 11)
@@ -7,15 +7,9 @@ title UNS-ClaudeJP 5.4 - Extraccion de Fotos (Windows 11)
 REM Configurar colores para mejor visualidad
 color 0F
 
+
 REM Inicio del script
-cls
-echo.
-echo ================================================================================
-echo    UNS-CLAUDEJP 5.4 - EXTRACCION AUTOMATICA DE FOTOS DE EMPLEADOS
-echo ================================================================================
-echo    Sistema optimizado para Windows 11 con soporte Unicode mejorado
-echo ================================================================================
-echo.
+call :showHeader
 
 echo    [INFO] Buscando base de datos Access en ubicaciones predefinidas...
 echo    [INFO] Archivo contiene fotos de empleados en formato OLE
@@ -188,7 +182,8 @@ if exist "access_photo_mappings.json" (
     echo.
     echo    Deseas REGENERAR las fotos? (S/N):
     choice /c SN /n /m "Deseas REGENERAR las fotos? (S/N): "
-    if errorlevel 2 (
+    set "CHOICE_RESULT=%errorlevel%"
+    if !CHOICE_RESULT! EQU 2 (
         echo.
         echo    [OK] Usando archivo existente - continuando...
         echo.
@@ -216,18 +211,21 @@ echo    Este proceso puede tardar 15-30 minutos para ~1,148 fotos
 echo    El script usa metodo pyodbc (mas confiable que pywin32)
 echo    Por favor espera sin cerrar esta ventana...
 echo.
-echo    Ejecutando: %PYTHON_CMD% backend\scripts\auto_extract_photos_from_databasejp.py
-echo.
 
-REM Si el usuario eligió regenerar, establecer variable de entorno
+REM Determinar si se debe ejecutar con --force
+set "USE_FORCE=0"
 if exist "access_photo_mappings.json" (
-    if /i "!REGENERAR!"=="S" (
-        echo    [INFO] Forzando regeneracion de fotos...
-        %PYTHON_CMD% backend\scripts\auto_extract_photos_from_databasejp.py --force
-    ) else (
-        %PYTHON_CMD% backend\scripts\auto_extract_photos_from_databasejp.py
+    if !CHOICE_RESULT! EQU 1 (
+        set "USE_FORCE=1"
     )
+)
+
+REM Ejecutar el script Python con o sin --force
+if !USE_FORCE! EQU 1 (
+    echo    Ejecutando: %PYTHON_CMD% backend\scripts\auto_extract_photos_from_databasejp.py --force
+    %PYTHON_CMD% backend\scripts\auto_extract_photos_from_databasejp.py --force
 ) else (
+    echo    Ejecutando: %PYTHON_CMD% backend\scripts\auto_extract_photos_from_databasejp.py
     %PYTHON_CMD% backend\scripts\auto_extract_photos_from_databasejp.py
 )
 set "PYTHON_EXIT_CODE=%errorlevel%"
@@ -292,3 +290,13 @@ echo    PRESIONA CUALQUIER TECLA PARA CERRAR ESTA VENTANA
 echo ================================================================================
 pause >nul
 exit /b !PYTHON_EXIT_CODE!
+
+:showHeader
+cls
+echo ================================================================================
+echo    UNS-CLAUDEJP 5.4 - EXTRACCION AUTOMATICA DE FOTOS DE EMPLEADOS
+echo ================================================================================
+echo    Sistema optimizado para Windows 11 con soporte Unicode mejorado
+echo ================================================================================
+echo.
+goto :eof
