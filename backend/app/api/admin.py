@@ -1,0 +1,374 @@
+"""
+Admin API - Panel de Control para gestionar módulos y configuraciones
+"""
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
+from sqlalchemy import update, func
+from typing import List, Optional
+from datetime import datetime
+import json
+
+from app.core.database import get_db
+from app.models.models import PageVisibility, SystemSettings, User
+from app.api.deps import get_current_user, require_admin
+from pydantic import BaseModel
+
+router = APIRouter(prefix="/api/admin", tags=["admin"])
+
+# ============================================
+# SCHEMAS
+# ============================================
+
+class PageVisibilityResponse(BaseModel):
+    id: int
+    page_key: str
+    page_name: str
+    page_name_en: Optional[str]
+    is_enabled: bool
+    path: str
+    description: Optional[str]
+    disabled_message: Optional[str]
+    last_toggled_by: Optional[int]
+    last_toggled_at: Optional[datetime]
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class PageVisibilityUpdate(BaseModel):
+    is_enabled: bool
+    disabled_message: Optional[str] = None
+
+class SystemSettingResponse(BaseModel):
+    id: int
+    key: str
+    value: Optional[str]
+    description: Optional[str]
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class BulkPageToggle(BaseModel):
+    page_keys: List[str]
+    is_enabled: bool
+
+class MaintenanceModeRequest(BaseModel):
+    enabled: bool
+
+# ============================================
+# ENDPOINTS - PAGE VISIBILITY
+# ============================================
+
+@router.get("/pages", response_model=List[PageVisibilityResponse])
+async def get_page_visibility(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """
+    Obtener configuración de visibilidad de todas las páginas
+    """
+    pages = db.query(PageVisibility).order_by(PageVisibility.page_key).all()
+    return pages
+
+@router.get("/pages/{page_key}", response_model=PageVisibilityResponse)
+async def get_page_visibility_by_key(
+    page_key: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """
+    Obtener configuración de visibilidad de una página específica
+    """
+    page = db.query(PageVisibility).filter(PageVisibility.page_key == page_key).first()
+    if not page:
+        raise HTTPException(status_code=404, detail="Página no encontrada")
+
+    return page
+
+@router.put("/pages/{page_key}", response_model=PageVisibilityResponse)
+async def update_page_visibility(
+    page_key: str,
+    page_data: PageVisibilityUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """
+    Actualizar configuración de visibilidad de una página
+    """
+    page = db.query(PageVisibility).filter(PageVisibility.page_key == page_key).first()
+    if not page:
+        raise HTTPException(status_code=404, detail="Página no encontrada")
+
+    # Update page
+    page.is_enabled = page_data.is_enabled
+    if page_data.disabled_message is not None:
+        page.disabled_message = page_data.disabled_message
+    page.last_toggled_by = current_user.id
+    page.last_toggled_at = datetime.utcnow()
+    page.updated_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(page)
+
+    return page
+
+@router.post("/pages/bulk-toggle")
+async def bulk_toggle_pages(
+    bulk_data: BulkPageToggle,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """
+    Habilitar/deshabilitar múltiples páginas simultáneamente
+    """
+    # Update all pages in bulk
+    stmt = (
+        update(PageVisibility)
+        .where(PageVisibility.page_key.in_(bulk_data.page_keys))
+        .values(
+            is_enabled=bulk_data.is_enabled,
+            last_toggled_by=current_user.id,
+            last_toggled_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
+        )
+    )
+    db.execute(stmt)
+    db.commit()
+
+    return {
+        "message": f"{len(bulk_data.page_keys)} páginas actualizadas",
+        "updated_count": len(bulk_data.page_keys)
+    }
+
+@router.post("/pages/{page_key}/toggle")
+async def toggle_page_visibility(
+    page_key: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """
+    Alternar visibilidad de una página (enable <-> disable)
+    """
+    page = db.query(PageVisibility).filter(PageVisibility.page_key == page_key).first()
+    if not page:
+        raise HTTPException(status_code=404, detail="Página no encontrada")
+
+    page.is_enabled = not page.is_enabled
+    page.last_toggled_by = current_user.id
+    page.last_toggled_at = datetime.utcnow()
+    page.updated_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(page)
+
+    return {
+        "page_key": page_key,
+        "is_enabled": page.is_enabled,
+        "message": f"Página {'habilitada' if page.is_enabled else 'deshabilitada'}"
+    }
+
+# ============================================
+# ENDPOINTS - SYSTEM SETTINGS
+# ============================================
+
+@router.get("/settings", response_model=List[SystemSettingResponse])
+async def get_system_settings(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """
+    Obtener todas las configuraciones del sistema
+    """
+    settings = db.query(SystemSettings).order_by(SystemSettings.key).all()
+    return settings
+
+@router.get("/settings/{setting_key}", response_model=SystemSettingResponse)
+async def get_system_setting(
+    setting_key: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """
+    Obtener una configuración específica del sistema
+    """
+    setting = db.query(SystemSettings).filter(SystemSettings.key == setting_key).first()
+    if not setting:
+        raise HTTPException(status_code=404, detail="Configuración no encontrada")
+
+    return setting
+
+@router.put("/settings/{setting_key}", response_model=SystemSettingResponse)
+async def update_system_setting(
+    setting_key: str,
+    value: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """
+    Actualizar una configuración del sistema
+    """
+    setting = db.query(SystemSettings).filter(SystemSettings.key == setting_key).first()
+    if not setting:
+        raise HTTPException(status_code=404, detail="Configuración no encontrada")
+
+    setting.value = value
+    setting.updated_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(setting)
+
+    return setting
+
+@router.post("/maintenance-mode")
+async def toggle_maintenance_mode(
+    maintenance_data: MaintenanceModeRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """
+    Activar/desactivar modo mantenimiento
+    """
+    # Update maintenance mode setting
+    setting = db.query(SystemSettings).filter(SystemSettings.key == "maintenance_mode").first()
+    if not setting:
+        raise HTTPException(status_code=404, detail="Configuración de mantenimiento no encontrada")
+
+    setting.value = "true" if maintenance_data.enabled else "false"
+    setting.updated_at = datetime.utcnow()
+
+    # If enabling maintenance mode, disable all pages
+    if maintenance_data.enabled:
+        stmt = (
+            update(PageVisibility)
+            .values(
+                is_enabled=False,
+                last_toggled_by=current_user.id,
+                last_toggled_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
+            )
+        )
+        db.execute(stmt)
+
+    db.commit()
+
+    action = "activado" if maintenance_data.enabled else "desactivado"
+    return {
+        "message": f"Modo mantenimiento {action}",
+        "maintenance_mode": maintenance_data.enabled
+    }
+
+# ============================================
+# ENDPOINTS - STATISTICS
+# ============================================
+
+@router.get("/statistics")
+async def get_admin_statistics(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """
+    Obtener estadísticas del panel de administración
+    """
+    # Count pages
+    total_pages = db.query(func.count(PageVisibility.id)).scalar()
+    enabled_pages = db.query(func.count(PageVisibility.id)).filter(PageVisibility.is_enabled == True).scalar()
+    disabled_pages = total_pages - enabled_pages
+
+    # Get settings
+    maintenance_mode = db.query(SystemSettings).filter(SystemSettings.key == "maintenance_mode").first()
+    maintenance_enabled = maintenance_mode.value == "true" if maintenance_mode else False
+
+    # Recent changes (last 24 hours)
+    yesterday = datetime.utcnow().timestamp() - (24 * 60 * 60)
+    recent_changes = (
+        db.query(PageVisibility)
+        .filter(PageVisibility.last_toggled_at >= datetime.fromtimestamp(yesterday))
+        .count()
+    )
+
+    return {
+        "pages": {
+            "total": total_pages,
+            "enabled": enabled_pages,
+            "disabled": disabled_pages,
+            "percentage_enabled": round((enabled_pages / total_pages * 100), 2) if total_pages > 0 else 0
+        },
+        "system": {
+            "maintenance_mode": maintenance_enabled,
+            "recent_changes_24h": recent_changes
+        }
+    }
+
+# ============================================
+# ENDPOINTS - EXPORT/IMPORT
+# ============================================
+
+@router.get("/export-config")
+async def export_configuration(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """
+    Exportar toda la configuración del panel
+    """
+    pages = db.query(PageVisibility).order_by(PageVisibility.page_key).all()
+    settings = db.query(SystemSettings).order_by(SystemSettings.key).all()
+
+    export_data = {
+        "exported_at": datetime.utcnow().isoformat(),
+        "exported_by": current_user.username,
+        "pages": [
+            {
+                "page_key": p.page_key,
+                "page_name": p.page_name,
+                "is_enabled": p.is_enabled,
+                "disabled_message": p.disabled_message
+            }
+            for p in pages
+        ],
+        "settings": [
+            {
+                "key": s.key,
+                "value": s.value
+            }
+            for s in settings
+        ]
+    }
+
+    return export_data
+
+@router.post("/import-config")
+async def import_configuration(
+    config_data: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """
+    Importar configuración del panel
+    """
+    # Import pages
+    if "pages" in config_data:
+        for page_data in config_data["pages"]:
+            page = db.query(PageVisibility).filter(PageVisibility.page_key == page_data["page_key"]).first()
+            if page:
+                page.is_enabled = page_data["is_enabled"]
+                page.disabled_message = page_data.get("disabled_message")
+                page.last_toggled_by = current_user.id
+                page.last_toggled_at = datetime.utcnow()
+                page.updated_at = datetime.utcnow()
+
+    # Import settings
+    if "settings" in config_data:
+        for setting_data in config_data["settings"]:
+            setting = db.query(SystemSettings).filter(SystemSettings.key == setting_data["key"]).first()
+            if setting:
+                setting.value = setting_data["value"]
+                setting.updated_at = datetime.utcnow()
+
+    db.commit()
+
+    return {
+        "message": "Configuración importada exitosamente",
+        "imported_at": datetime.utcnow().isoformat()
+    }

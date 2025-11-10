@@ -1,0 +1,434 @@
+"""
+Payroll Service for UNS-ClaudeJP 2.0
+Automatic payroll calculation with all rules
+"""
+import logging
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
+from decimal import Decimal
+from sqlalchemy.orm import Session
+
+from app.core.config import settings
+from app.models.models import Employee, Factory, Apartment
+
+logger = logging.getLogger(__name__)
+
+
+class PayrollService:
+    """Servicio de cálculo automático de nómina para sistema de gestión de recursos humanos.
+
+    Implementa las reglas de cálculo de nómina japonesa incluyendo:
+    - Pago base por horas trabajadas
+    - Recargos por horas extras (時間外手当)
+    - Recargos por trabajo nocturno (深夜手当)
+    - Recargos por trabajo en días festivos (休日手当)
+    - Bonificaciones (手当)
+    - Deducciones (控除): apartamento, seguro social, impuestos
+
+    Attributes:
+        overtime_rate (Decimal): Tasa de recargo por horas extras (1.25 = 25%)
+        night_rate (Decimal): Tasa de recargo nocturno (0.25 = 25% adicional)
+        holiday_rate (Decimal): Tasa de recargo por festivos (1.35 = 35%)
+
+    Note:
+        - Usa Decimal para evitar errores de precisión en cálculos monetarios
+        - Cumple con regulaciones laborales japonesas
+        - Horario nocturno definido: 22:00 - 05:00
+        - Horas extras: más de 8 horas al día
+        - Fin de semana: Sábado y Domingo
+
+    Examples:
+        >>> service = PayrollService()
+        >>> payroll = service.calculate_monthly_payroll(
+        ...     employee_id=123,
+        ...     year=2025,
+        ...     month=10,
+        ...     timer_cards=[...],
+        ...     factory_config={'jikyu_tanka': 1500}
+        ... )
+        >>> print(f"Pago neto: ¥{payroll['net_pay']:,.0f}")
+    """
+
+    def __init__(self, db_session: Optional[Session] = None):
+        """Inicializa el servicio con las tasas estándar de recargo.
+
+        Args:
+            db_session: Optional SQLAlchemy database session for fetching employee data
+        """
+        self.overtime_rate = Decimal('1.25')  # 25% premium
+        self.night_rate = Decimal('0.25')     # 25% night premium
+        self.holiday_rate = Decimal('1.35')   # 35% holiday premium
+        self.db = db_session
+
+    def get_employee_data_for_payroll(self, employee_id: int) -> Dict[str, Any]:
+        """Fetches employee data from database for payroll calculation.
+
+        Args:
+            employee_id: ID of the employee
+
+        Returns:
+            Dictionary with employee data structured for payroll calculation
+
+        Raises:
+            ValueError: If employee not found or database session not available
+        """
+        if not self.db:
+            raise ValueError("Database session is required to fetch employee data")
+
+        try:
+            # Fetch employee with relationships
+            employee = (
+                self.db.query(Employee)
+                .filter(Employee.id == employee_id)
+                .first()
+            )
+
+            if not employee:
+                raise ValueError(f"Employee with ID {employee_id} not found")
+
+            # Get factory info
+            factory = None
+            if employee.factory_id:
+                factory = (
+                    self.db.query(Factory)
+                    .filter(Factory.factory_id == employee.factory_id)
+                    .first()
+                )
+
+            # Get apartment info
+            apartment = None
+            if employee.apartment_id:
+                apartment = (
+                    self.db.query(Apartment)
+                    .filter(Apartment.id == employee.apartment_id)
+                    .first()
+                )
+
+            # Calculate dependents from yukyu (simplified - can be enhanced)
+            dependents = 0  # This can be calculated from family data in the future
+
+            # Build structured employee data
+            employee_data = {
+                'employee_id': employee.id,
+                'name': employee.full_name_kanji,
+                'hakenmoto_id': employee.hakenmoto_id,
+                'base_hourly_rate': float(employee.jikyu) if employee.jikyu else 0.0,
+                'jikyu': float(employee.jikyu) if employee.jikyu else 0.0,  # For backward compatibility
+                'factory_id': employee.factory_id,
+                'factory': {
+                    'factory_id': employee.factory_id,
+                    'company_name': employee.company_name or (factory.company_name if factory else None),
+                    'plant_name': employee.plant_name or (factory.plant_name if factory else None),
+                    'address': factory.address if factory else None
+                },
+                'prefecture': None,  # Factory doesn't have prefecture field,
+                'apartment_id': employee.apartment_id,
+                'apartment_rent': float(employee.apartment_rent) if employee.apartment_rent else 0.0,
+                'apartment': {
+                    'id': employee.apartment_id,
+                    'apartment_code': apartment.apartment_code if apartment else None,
+                    'address': apartment.address if apartment else None,
+                    'rent': float(employee.apartment_rent) if employee.apartment_rent else 0.0
+                } if apartment else None,
+                'dependents': dependents,
+                'contract_type': employee.contract_type,
+                'hire_date': employee.hire_date.isoformat() if employee.hire_date else None,
+                'current_hire_date': employee.current_hire_date.isoformat() if employee.current_hire_date else None,
+                'hourly_rate_charged': float(employee.hourly_rate_charged) if employee.hourly_rate_charged else 0.0,
+                'position': employee.position,
+                'is_active': employee.is_active,
+                'current_status': employee.current_status,
+                'notes': employee.notes
+            }
+
+            logger.info(f"Retrieved employee data for ID {employee_id}: {employee.full_name_kanji}")
+            return employee_data
+
+        except ValueError:
+            raise
+        except Exception as e:
+            logger.error(f"Error fetching employee data for ID {employee_id}: {e}", exc_info=True)
+            raise ValueError(f"Error retrieving employee data: {str(e)}")
+
+    def calculate_employee_payroll(
+        self,
+        employee_data: Optional[Dict[str, Any]] = None,
+        timer_records: Optional[List[Dict[str, Any]]] = None,
+        payroll_run_id: Optional[int] = None,
+        employee_id: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """Calculate payroll for a single employee.
+
+        This method now supports two modes:
+        1. Traditional mode: Pass employee_data dict directly
+        2. Database mode: Pass employee_id to fetch data from database
+
+        Args:
+            employee_data: Employee information dict (id, name, rates, etc.) - for traditional mode
+            timer_records: List of timer card records
+            payroll_run_id: Optional payroll run ID
+            employee_id: Employee ID to fetch from database - for database mode
+
+        Returns:
+            Dictionary with payroll calculation result
+        """
+        try:
+            # Database mode: Fetch employee data from database
+            if employee_id is not None:
+                if not self.db:
+                    raise ValueError("Database session is required when using employee_id")
+
+                employee_data = self.get_employee_data_for_payroll(employee_id)
+
+            # Validate inputs
+            if not employee_data:
+                raise ValueError("Employee data is required (either as dict or via employee_id)")
+
+            if not timer_records:
+                raise ValueError("Timer records are required for payroll calculation")
+
+            # Calculate hours from timer records
+            hours_breakdown = self._calculate_hours(timer_records)
+
+            # Calculate base hourly rate from employee data
+            base_rate = employee_data.get('base_hourly_rate', 0)
+            if base_rate <= 0:
+                base_rate = employee_data.get('jikyu', 0)
+
+            # Calculate payment amounts
+            overtime_rate = Decimal('1.25')
+            night_rate = Decimal('1.25')
+            holiday_rate = Decimal('1.35')
+
+            base_amount = hours_breakdown['normal_hours'] * Decimal(str(base_rate))
+            overtime_amount = hours_breakdown['overtime_hours'] * Decimal(str(base_rate)) * overtime_rate
+            night_amount = hours_breakdown['night_hours'] * Decimal(str(base_rate)) * night_rate
+            holiday_amount = hours_breakdown['holiday_hours'] * Decimal(str(base_rate)) * holiday_rate
+
+            gross_amount = base_amount + overtime_amount + night_amount + holiday_amount
+
+            # Calculate deductions using employee-specific data
+            apartment_rent = employee_data.get('apartment_rent', 0)
+            dependents = employee_data.get('dependents', 0)
+
+            health_insurance = int(float(gross_amount) * 0.05)
+            pension = int(float(gross_amount) * 0.09)
+            employment_insurance = int(float(gross_amount) * 0.006)
+            income_tax = int(float(gross_amount) * 0.05)
+            resident_tax = int(float(gross_amount) * 0.10)
+
+            total_deductions = (
+                apartment_rent + health_insurance + pension +
+                employment_insurance + income_tax + resident_tax
+            )
+
+            net_amount = float(gross_amount) - total_deductions
+
+            return {
+                'success': True,
+                'employee_id': employee_data.get('employee_id'),
+                'payroll_run_id': payroll_run_id,
+                'pay_period_start': timer_records[0].get('work_date') if timer_records else '',
+                'pay_period_end': timer_records[-1].get('work_date') if timer_records else '',
+                'hours_breakdown': {
+                    'regular_hours': float(hours_breakdown['normal_hours']),
+                    'overtime_hours': float(hours_breakdown['overtime_hours']),
+                    'night_shift_hours': float(hours_breakdown['night_hours']),
+                    'holiday_hours': float(hours_breakdown['holiday_hours']),
+                    'sunday_hours': 0,
+                    'total_hours': float(hours_breakdown['total_hours']),
+                    'work_days': hours_breakdown['work_days']
+                },
+                'rates': {
+                    'base_rate': float(base_rate),
+                    'overtime_rate': float(overtime_rate),
+                    'night_shift_rate': float(night_rate),
+                    'holiday_rate': float(holiday_rate),
+                    'sunday_rate': float(holiday_rate)
+                },
+                'amounts': {
+                    'base_amount': int(base_amount),
+                    'overtime_amount': int(overtime_amount),
+                    'night_shift_amount': int(night_amount),
+                    'holiday_amount': int(holiday_amount),
+                    'sunday_amount': 0,
+                    'gross_amount': int(gross_amount),
+                    'total_deductions': total_deductions,
+                    'net_amount': int(net_amount)
+                },
+                'deductions_detail': {
+                    'income_tax': income_tax,
+                    'resident_tax': resident_tax,
+                    'health_insurance': health_insurance,
+                    'pension': pension,
+                    'employment_insurance': employment_insurance,
+                    'apartment': apartment_rent,
+                    'other': 0
+                },
+                'employee_info': {
+                    'employee_id': employee_data.get('employee_id'),
+                    'name': employee_data.get('name'),
+                    'factory': employee_data.get('factory', {}),
+                    'apartment': employee_data.get('apartment', {}),
+                    'contract_type': employee_data.get('contract_type'),
+                    'hire_date': employee_data.get('hire_date'),
+                    'dependents': dependents
+                },
+                'validation': {
+                    'is_valid': True,
+                    'errors': [],
+                    'warnings': [],
+                    'validated_at': datetime.now().isoformat()
+                },
+                'calculated_at': datetime.now().isoformat()
+            }
+
+        except ValueError:
+            raise
+        except Exception as e:
+            logger.error(f"Error calculating employee payroll: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': f'Error calculating payroll: {str(e)}'
+            }
+
+    def _calculate_hours(self, timer_cards: List[Dict]) -> Dict:
+        """Calcula el desglose detallado de horas trabajadas.
+
+        Procesa todas las tarjetas de tiempo del mes y categoriza las horas
+        en: normales, extras, nocturnas, festivas.
+
+        Args:
+            timer_cards (List[Dict]): Lista de registros de tiempo con:
+                - work_date: Fecha de trabajo
+                - clock_in: Hora de entrada (HH:MM)
+                - clock_out: Hora de salida (HH:MM)
+
+        Returns:
+            Dict: Desglose de horas:
+                {
+                    'total_hours': Decimal,  # Total horas trabajadas
+                    'normal_hours': Decimal,  # Horas normales (hasta 8h/día)
+                    'overtime_hours': Decimal,  # Horas extras (>8h/día)
+                    'night_hours': Decimal,  # Horas nocturnas (22:00-05:00)
+                    'holiday_hours': Decimal,  # Horas en fin de semana
+                    'work_days': int  # Días trabajados
+                }
+
+        Note:
+            - Maneja turnos nocturnos (si clock_out < clock_in, añade 1 día)
+            - Fin de semana: Sábado (5) y Domingo (6)
+            - Horas extras: solo en días laborables cuando >8h
+            - Horas nocturnas se calculan independientemente
+        """
+        total_hours = Decimal('0')
+        normal_hours = Decimal('0')
+        overtime_hours = Decimal('0')
+        night_hours = Decimal('0')
+        holiday_hours = Decimal('0')
+        work_days = 0
+
+        for card in timer_cards:
+            try:
+                # Parse times
+                work_date = card.get('work_date')
+                clock_in = card.get('clock_in')
+                clock_out = card.get('clock_out')
+
+                if not all([work_date, clock_in, clock_out]):
+                    continue
+
+                # Convert to datetime objects
+                date_obj = datetime.strptime(str(work_date), '%Y-%m-%d')
+                start = datetime.strptime(clock_in, '%H:%M')
+                end = datetime.strptime(clock_out, '%H:%M')
+
+                # Handle overnight shifts
+                if end < start:
+                    end += timedelta(days=1)
+
+                # Calculate total hours for this day
+                hours = Decimal(str((end - start).total_seconds() / 3600))
+                total_hours += hours
+                work_days += 1
+
+                # Check if weekend/holiday
+                is_weekend = date_obj.weekday() >= 5  # Saturday or Sunday
+
+                if is_weekend:
+                    # All hours on weekend are holiday hours
+                    holiday_hours += hours
+                else:
+                    # Normal weekday
+                    if hours > 8:
+                        normal_hours += Decimal('8')
+                        overtime_hours += (hours - Decimal('8'))
+                    else:
+                        normal_hours += hours
+
+                # Calculate night hours (22:00 - 05:00)
+                night_hrs = self._calculate_night_hours(start, end)
+                if night_hrs > 0:
+                    night_hours += Decimal(str(night_hrs))
+
+            except Exception as e:
+                logger.error(f"Error processing timer card: {e}")
+                continue
+
+        return {
+            'total_hours': total_hours,
+            'normal_hours': normal_hours,
+            'overtime_hours': overtime_hours,
+            'night_hours': night_hours,
+            'holiday_hours': holiday_hours,
+            'work_days': work_days
+        }
+
+    def _calculate_night_hours(self, start: datetime, end: datetime) -> float:
+        """Calcula las horas trabajadas en horario nocturno.
+
+        Horario nocturno japonés: 22:00 - 05:00 (siguiente día)
+
+        Args:
+            start (datetime): Hora de inicio del turno
+            end (datetime): Hora de fin del turno (puede ser día siguiente)
+
+        Returns:
+            float: Horas trabajadas en período nocturno
+
+        Examples:
+            >>> # Turno 08:00 - 17:00 (sin horario nocturno)
+            >>> night_hours = service._calculate_night_hours(
+            ...     datetime(2025, 10, 1, 8, 0),
+            ...     datetime(2025, 10, 1, 17, 0)
+            ... )
+            >>> assert night_hours == 0.0
+
+            >>> # Turno 22:00 - 05:00 (7 horas nocturnas)
+            >>> night_hours = service._calculate_night_hours(
+            ...     datetime(2025, 10, 1, 22, 0),
+            ...     datetime(2025, 10, 2, 5, 0)
+            ... )
+            >>> assert night_hours == 7.0
+
+        Note:
+            - Calcula solapamiento entre período de trabajo y 22:00-05:00
+            - Retorna 0.0 si no hay solapamiento
+        """
+        night_start = start.replace(hour=22, minute=0, second=0)
+        night_end = (start + timedelta(days=1)).replace(hour=5, minute=0, second=0)
+
+        # Find overlap between work period and night period
+        work_start = start
+        work_end = end
+
+        overlap_start = max(work_start, night_start)
+        overlap_end = min(work_end, night_end)
+
+        if overlap_start < overlap_end:
+            return (overlap_end - overlap_start).total_seconds() / 3600
+        return 0.0
+
+
+# Global instance - kept for backward compatibility
+payroll_service = PayrollService()

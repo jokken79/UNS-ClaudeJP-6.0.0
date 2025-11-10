@@ -1,0 +1,48 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useAuthStore } from '@/stores/auth-store';
+import api from '@/lib/api';
+
+interface PagePermission {
+  page_key: string;
+  is_enabled: boolean;
+}
+
+export function usePagePermission(pageKey: string) {
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [loading, setLoading] = useState(true);
+  const user = useAuthStore((state) => state.user);
+
+  useEffect(() => {
+    const checkPermission = async () => {
+      if (!user) {
+        setHasPermission(false);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        // In development with mock user, grant all permissions to admin
+        if (process.env.NODE_ENV === 'development' && user.role === 'ADMIN') {
+          setHasPermission(true);
+          setLoading(false);
+          return;
+        }
+
+        const response = await api.get(`/role-permissions/check/${user.role}/${pageKey}`);
+        setHasPermission(response.data.has_access);
+      } catch (error) {
+        console.error('Error checking permission:', error);
+        // If there's an error, deny permission for safety
+        setHasPermission(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkPermission();
+  }, [user, pageKey]);
+
+  return { hasPermission, loading };
+}
