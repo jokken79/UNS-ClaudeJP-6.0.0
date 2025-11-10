@@ -619,6 +619,47 @@ if !errorlevel! NEQ 0 (
 echo   ✓ Migraciones aplicadas - Base de datos actualizada
 
 echo.
+echo   ▶ Sembrando datos de demostración (demo data)...
+echo   ℹ Comando: docker exec uns-claudejp-backend python scripts/manage_db.py seed
+echo.
+echo   ⏳ Sembrando datos...
+for /L %%i in (1,1,10) do (
+    <nul set /p ="█">nul
+    timeout /t 0.1 /nobreak >nul
+)
+echo. [SEMBRADO]
+echo.
+docker exec uns-claudejp-backend python scripts/manage_db.py seed
+if !errorlevel! NEQ 0 (
+    echo   ⚠ Error al sembrar datos demo
+) else (
+    echo   ✓ Datos de demostración sembrados
+)
+
+echo.
+echo   ▶ Importando empleados, staff y contract workers desde Excel...
+echo   ℹ Comando: docker exec uns-claudejp-backend python scripts/import_data.py
+echo   ℹ Se importarán: Employees + Staff + Contract Workers (請負/Ukeoi)
+echo.
+echo   ⏳ Procesando Excel y mapeando fábricas...
+for /L %%i in (1,1,20) do (
+    <nul set /p ="█">nul
+    timeout /t 0.2 /nobreak >nul
+)
+echo. [PROCESANDO]
+echo.
+docker exec uns-claudejp-backend python scripts/import_data.py
+if !errorlevel! EQU 0 (
+    echo.
+    echo   ✓ Empleados y personal importados correctamente
+    echo   ℹ Employees, Staff y Contract Workers listos en base de datos
+) else (
+    echo.
+    echo   ⚠ Algunos empleados no se importaron completamente
+    echo   ℹ Revisa los mensajes anteriores para detalles
+)
+
+echo.
 echo   ▶ Importando candidatos desde Access DB...
 echo   ℹ Este proceso puede tardar 15-30 minutos
 echo   ℹ Se importan履歴書 (rirekisho) con todos los datos
@@ -639,6 +680,24 @@ if !errorlevel! EQU 0 (
     echo.
     echo   ⚠ Algunos datos no se importaron completamente
     echo   ℹ Revisa los mensajes anteriores para detalles
+)
+
+echo.
+echo   ▶ Verificando integridad de candidatos importados...
+echo   ℹ Comando: docker exec uns-claudejp-backend python scripts/verify_candidates_imported.py
+echo.
+echo   ⏳ Verificando datos...
+for /L %%i in (1,1,10) do (
+    <nul set /p ="█">nul
+    timeout /t 0.1 /nobreak >nul
+)
+echo. [VERIFICADO]
+echo.
+docker exec uns-claudejp-backend python scripts/verify_candidates_imported.py
+if !errorlevel! EQU 0 (
+    echo   ✓ Candidatos verificados - Datos íntegros
+) else (
+    echo   ⚠ Advertencias encontradas durante verificación
 )
 
 echo.
@@ -687,6 +746,27 @@ if exist "config\access_photo_mappings.json" (
     echo   ⚠ Archivo config\access_photo_mappings.json no encontrado
     echo   ℹ Las fotos NO fueron extraídas, pero el sistema funciona normal
     echo   ℹ Para extraer fotos, ejecuta: scripts\EXTRAER_FOTOS_ROBUSTO.bat
+)
+
+echo.
+echo   ▶ Importando fábricas (factories) desde archivos JSON...
+echo   ℹ Comando: docker exec uns-claudejp-backend python scripts/import_factories_from_json.py
+echo   ℹ Se cargarán todas las plantas y ubicaciones
+echo.
+echo   ⏳ Cargando factories...
+for /L %%i in (1,1,15) do (
+    <nul set /p ="█">nul
+    timeout /t 0.1 /nobreak >nul
+)
+echo. [CARGADO]
+echo.
+docker exec uns-claudejp-backend python scripts/import_factories_from_json.py
+if !errorlevel! EQU 0 (
+    echo   ✓ Fábricas importadas correctamente desde JSON
+    echo   ℹ Todas las plantas y ubicaciones están en base de datos
+) else (
+    echo   ⚠ Advertencias durante importación de factories
+    echo   ℹ Algunas fábricas pueden no haberse importado
 )
 
 echo.
