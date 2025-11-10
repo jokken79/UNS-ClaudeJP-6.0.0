@@ -9,8 +9,8 @@ import {
   BuildingOfficeIcon,
   CalendarIcon,
   ChartBarIcon,
-  TrendingUpIcon,
-  TrendingDownIcon,
+  ArrowTrendingUpIcon,
+  ArrowTrendingDownIcon,
 } from '@heroicons/react/24/outline';
 
 interface OccupancyData {
@@ -168,9 +168,9 @@ export default function OccupancyReportPage() {
               <p className="text-3xl font-bold mt-1">{report.summary.occupancy_rate.toFixed(1)}%</p>
               <div className="flex items-center gap-1 mt-1">
                 {isIncreasing ? (
-                  <TrendingUpIcon className="h-4 w-4 text-green-500" />
+                  <ArrowTrendingUpIcon className="h-4 w-4 text-green-500" />
                 ) : (
-                  <TrendingDownIcon className="h-4 w-4 text-red-500" />
+                  <ArrowTrendingDownIcon className="h-4 w-4 text-red-500" />
                 )}
                 <span className={`text-xs ${isIncreasing ? 'text-green-500' : 'text-red-500'}`}>
                   {Math.abs(rateChange).toFixed(1)}% vs anterior

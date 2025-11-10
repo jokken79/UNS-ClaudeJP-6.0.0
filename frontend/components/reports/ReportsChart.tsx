@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ChartBarIcon, TrendingUpIcon, TrendingDownIcon } from '@heroicons/react/24/outline';
+import { ChartBarIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon } from '@heroicons/react/24/outline';
 
 interface ChartData {
   label: string;
@@ -46,9 +46,9 @@ export function ReportsChart({ title, data, type, showTrend = false, color = 'bl
                   {showTrend && item.trend !== undefined && (
                     <div className="flex items-center gap-1">
                       {item.trend >= 0 ? (
-                        <TrendingUpIcon className="h-4 w-4 text-green-500" />
+                        <ArrowTrendingUpIcon className="h-4 w-4 text-green-500" />
                       ) : (
-                        <TrendingDownIcon className="h-4 w-4 text-red-500" />
+                        <ArrowTrendingDownIcon className="h-4 w-4 text-red-500" />
                       )}
                       <span className={`text-xs ${item.trend >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                         {Math.abs(item.trend).toFixed(1)}%

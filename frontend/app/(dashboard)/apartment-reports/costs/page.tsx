@@ -7,8 +7,8 @@ import {
   ArrowLeftIcon,
   CurrencyYenIcon,
   ChartBarIcon,
-  TrendingUpIcon,
-  TrendingDownIcon,
+  ArrowTrendingUpIcon,
+  ArrowTrendingDownIcon,
   DocumentTextIcon,
 } from '@heroicons/react/24/outline';
 
@@ -143,9 +143,9 @@ export default function CostsReportPage() {
               </p>
               <div className="flex items-center gap-1 mt-1">
                 {isProfitIncreasing ? (
-                  <TrendingUpIcon className="h-4 w-4 text-green-500" />
+                  <ArrowTrendingUpIcon className="h-4 w-4 text-green-500" />
                 ) : (
-                  <TrendingDownIcon className="h-4 w-4 text-red-500" />
+                  <ArrowTrendingDownIcon className="h-4 w-4 text-red-500" />
                 )}
                 <span className={`text-xs ${isProfitIncreasing ? 'text-green-500' : 'text-red-500'}`}>
                   {Math.abs(profitChange).toLocaleString()} vs anterior

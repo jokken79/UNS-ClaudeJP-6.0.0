@@ -106,7 +106,8 @@
       "Bash(docker stop:*)",
       "Bash(docker run:*)",
       "Bash(bash -c:*)",
-      "Bash(/tmp/next_config.txt)"
+      "Bash(/tmp/next_config.txt)",
+      "Bash(/tmp/create_types.py:*)"
     ],
     "deny": [],
     "ask": []

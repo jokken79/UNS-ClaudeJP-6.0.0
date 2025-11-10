@@ -11,7 +11,7 @@ import {
   UserGroupIcon,
   ArrowRightIcon,
   CalendarIcon,
-  TrendingUpIcon,
+  ArrowTrendingUpIcon,
 } from '@heroicons/react/24/outline';
 
 interface ReportData {
@@ -138,7 +138,7 @@ export default function ApartmentReportsPage() {
                 vs período anterior
               </p>
             </div>
-            <TrendingUpIcon className="h-12 w-12 text-green-500" />
+            <ArrowTrendingUpIcon className="h-12 w-12 text-green-500" />
           </div>
         </div>
       </div>

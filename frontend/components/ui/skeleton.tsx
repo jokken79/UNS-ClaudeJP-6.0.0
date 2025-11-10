@@ -24,9 +24,9 @@ export function Skeleton({
   className,
   variant = 'shimmer',
   ...props
-}: SkeletonProps) {
+  // Separate HTML events from motion props to avoid type conflicts
   // Separate HTML drag events from motion props to avoid type conflicts
-  const { onDrag, onDragStart, onDragEnd, onDragEnter, onDragLeave, onDragOver, ...restProps } = props;
+  const { 
 
   if (variant === 'shimmer') {
     return (
