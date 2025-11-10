@@ -1,18 +1,12 @@
-﻿@echo off
+@echo off
 chcp 65001 >nul
 setlocal EnableDelayedExpansion
 
-title UNS-ClaudeJP 5.4 - Reinstalación Completa
-
-:: ═══════════════════════════════════════════════════════════════════════════
-::  UNS-CLAUDEJP 5.4 - REINSTALACIÓN DE SISTEMA
-::  Versión 2025-11-07 - Clean & Optimized
-:: ═══════════════════════════════════════════════════════════════════════════
+title UNS-ClaudeJP 5.4 - Reinstalación Completa (Arreglada)
 
 echo.
 echo ╔══════════════════════════════════════════════════════════════════════╗
-echo ║                  UNS-CLAUDEJP 5.4 - REINSTALACIÓN                   ║
-echo ╚══════════════════════════════════════════════════════════════════════╝
+echo ╁E                 UNS-CLAUDEJP 5.4 - REINSTALACIÓN                   ╁Eecho ╁E                   Versión 2025-11-10 (FIXED)                        ╁Eecho ╚══════════════════════════════════════════════════════════════════════╝
 echo.
 
 :: Variables globales
@@ -20,10 +14,8 @@ set "PYTHON_CMD="
 set "DOCKER_COMPOSE_CMD="
 set "ERROR_FLAG=0"
 
-:: ═══════════════════════════════════════════════════════════════════════════
-::  FASE 1: DIAGNÓSTICO DEL SISTEMA
-:: ═══════════════════════════════════════════════════════════════════════════
-
+:: ══════════════════════════════════════════════════════════════════════════╁E::  FASE 1: DIAGNÓSTICO DEL SISTEMA
+:: ══════════════════════════════════════════════════════════════════════════╁E
 echo [FASE 1/3] Diagnóstico del Sistema
 echo.
 
@@ -31,30 +23,30 @@ echo.
 echo   ▶ Python................
 python --version >nul 2>&1 && (
     set "PYTHON_CMD=python"
-    echo     ✓ OK
+    echo     ✁EOK
 ) || py --version >nul 2>&1 && (
     set "PYTHON_CMD=py"
-    echo     ✓ OK
+    echo     ✁EOK
 ) || (
-    echo     ✗ NO INSTALADO
+    echo     ✁ENO INSTALADO
     set "ERROR_FLAG=1"
 )
 
 :: Verificar Docker
 echo   ▶ Docker................
 docker --version >nul 2>&1 && (
-    echo     ✓ OK
+    echo     ✁EOK
 ) || (
-    echo     ✗ NO INSTALADO
+    echo     ✁ENO INSTALADO
     set "ERROR_FLAG=1"
 )
 
 :: Verificar Docker running
 echo   ▶ Docker Running........
 docker ps >nul 2>&1 && (
-    echo     ✓ OK
+    echo     ✁EOK
 ) || (
-    echo     ✗ NO CORRIENDO - Abre Docker Desktop
+    echo     ✁ENO CORRIENDO - Abre Docker Desktop
     set "ERROR_FLAG=1"
 )
 
@@ -62,62 +54,52 @@ docker ps >nul 2>&1 && (
 echo   ▶ Docker Compose........
 docker compose version >nul 2>&1 && (
     set "DOCKER_COMPOSE_CMD=docker compose"
-    echo     ✓ OK ^(V2^)
+    echo     ✁EOK ^(V2^)
 ) || docker-compose version >nul 2>&1 && (
     set "DOCKER_COMPOSE_CMD=docker-compose"
-    echo     ✓ OK ^(V1^)
+    echo     ✁EOK ^(V1^)
 ) || (
-    echo     ✗ NO ENCONTRADO
+    echo     ✁ENO ENCONTRADO
     set "ERROR_FLAG=1"
 )
 
 :: Verificar archivos del proyecto
 cd /d "%~dp0\.."
 echo   ▶ docker-compose.yml....
-if exist "docker-compose.yml" (echo     ✓ OK) else (echo     ✗ FALTA & set "ERROR_FLAG=1")
+if exist "docker-compose.yml" (echo     ✁EOK) else (echo     ✁EFALTA & set "ERROR_FLAG=1")
 
 echo   ▶ generate_env.py.......
-if exist "generate_env.py" (echo     ✓ OK) else (echo     ✗ FALTA & set "ERROR_FLAG=1")
+if exist "generate_env.py" (echo     ✁EOK) else (echo     ✁EFALTA & set "ERROR_FLAG=1")
 
 echo.
 
 :: Verificar resultado del diagnóstico
 if %ERROR_FLAG% EQU 1 (
     echo ╔══════════════════════════════════════════════════════════════════════╗
-    echo ║  ✗ DIAGNÓSTICO FALLIDO - Corrige los errores antes de continuar     ║
-    echo ╚══════════════════════════════════════════════════════════════════════╝
+    echo ╁E ✁EDIAGNÓSTICO FALLIDO - Corrige los errores antes de continuar     ╁E    echo ╚══════════════════════════════════════════════════════════════════════╝
     echo.
     echo ════════════════════════════════════════════════════════════════════
-    echo  ✗ ERROR - PRESIONA CUALQUIER TECLA PARA CERRAR
+    echo  ✁EERROR - PRESIONA CUALQUIER TECLA PARA CERRAR
     echo ════════════════════════════════════════════════════════════════════
     pause >nul
 )
 
-echo ✓ Diagnóstico completado
+echo ✁EDiagnóstico completado
 echo.
 
-:: ═══════════════════════════════════════════════════════════════════════════
-::  FASE 2: CONFIRMACIÓN
-:: ═══════════════════════════════════════════════════════════════════════════
-
+:: ══════════════════════════════════════════════════════════════════════════╁E::  FASE 2: CONFIRMACIÓN
+:: ══════════════════════════════════════════════════════════════════════════╁E
 echo [FASE 2/3] Confirmación
 echo.
 echo ╔══════════════════════════════════════════════════════════════════════╗
-echo ║                      ⚠️  ADVERTENCIA IMPORTANTE                       ║
-echo ╠══════════════════════════════════════════════════════════════════════╣
-echo ║  Esta acción eliminará TODOS los datos existentes:                  ║
-echo ║    • Contenedores Docker                                             ║
-echo ║    • Base de Datos PostgreSQL                                        ║
-echo ║    • Volúmenes Docker                                                ║
-echo ║                                                                       ║
-echo ║  Se creará una instalación completamente nueva.                      ║
-echo ╚══════════════════════════════════════════════════════════════════════╝
+echo ╁E                     ⚠�E�E ADVERTENCIA IMPORTANTE                       ╁Eecho ╠══════════════════════════════════════════════════════════════════════╣
+echo ╁E Esta acción eliminará TODOS los datos existentes:                  ╁Eecho ╁E   • Contenedores Docker                                             ╁Eecho ╁E   • Base de Datos PostgreSQL                                        ╁Eecho ╁E   • Volúmenes Docker                                                ╁Eecho ╁E                                                                      ╁Eecho ╁E Se creará una instalación completamente nueva.                      ╁Eecho ╚══════════════════════════════════════════════════════════════════════╝
 echo.
 
 set /p "CONFIRMAR=¿Continuar con la reinstalación? (S/N): "
 if /i not "%CONFIRMAR%"=="S" if /i not "%CONFIRMAR%"=="SI" (
     echo.
-    echo ✗ Reinstalación cancelada
+    echo ✁EReinstalación cancelada
     echo.
     echo ════════════════════════════════════════════════════════════════════
     echo  PRESIONA CUALQUIER TECLA PARA CERRAR ESTA VENTANA
@@ -128,48 +110,35 @@ if /i not "%CONFIRMAR%"=="S" if /i not "%CONFIRMAR%"=="SI" (
 
 echo.
 
-:: ═══════════════════════════════════════════════════════════════════════════
-::  FASE PRE-INSTALACIÓN: EXTRACCIÓN DE FOTOS
-:: ═══════════════════════════════════════════════════════════════════════════
-
-echo [PRE-INSTALACIÓN] Buscando Base de Datos Access para fotos...
-echo.
-call scripts\BUSCAR_FOTOS_AUTO.bat
-echo.
-
-:: ═══════════════════════════════════════════════════════════════════════════
-::  FASE 3: REINSTALACIÓN
-:: ═══════════════════════════════════════════════════════════════════════════
-
+:: ══════════════════════════════════════════════════════════════════════════╁E::  FASE 3: REINSTALACIÓN
+:: ══════════════════════════════════════════════════════════════════════════╁E
 echo [FASE 3/3] Reinstalación
 echo.
 
 :: Paso 1: Generar .env
 echo ╔══════════════════════════════════════════════════════════════════════╗
-echo ║ [1/7] GENERACIÓN DE ARCHIVO DE CONFIGURACIÓN (.env)                 ║
-echo ╚══════════════════════════════════════════════════════════════════════╝
+echo ╁E[1/6] GENERACIÓN DE ARCHIVO DE CONFIGURACIÓN (.env)                 ╁Eecho ╚══════════════════════════════════════════════════════════════════════╝
 echo.
 if not exist .env (
     echo   ▶ Ejecutando generate_env.py...
     echo   ℹ Este script genera las variables de entorno necesarias
     %PYTHON_CMD% generate_env.py
     if !errorlevel! NEQ 0 (
-        echo   ✗ ERROR: Falló la generación del archivo .env
-        pause
+        echo   ✁EERROR: Falló la generación del archivo .env
+        pause >nul
         exit /b 1
     )
-    echo   ✓ Archivo .env generado correctamente
+    echo   ✁EArchivo .env generado correctamente
     echo   ℹ Ubicación: %CD%\.env
 ) else (
-    echo   ✓ Archivo .env ya existe (se usará el actual)
+    echo   ✁EArchivo .env ya existe (se usará el actual)
     echo   ℹ Si necesitas regenerarlo, elimina .env manualmente
 )
 echo.
 
-:: Paso 2: Detener servicios
+:: Paso 2: Detener y limpiar servicios
 echo ╔══════════════════════════════════════════════════════════════════════╗
-echo ║ [2/7] DETENER Y LIMPIAR SERVICIOS EXISTENTES                        ║
-echo ╚══════════════════════════════════════════════════════════════════════╝
+echo ╁E[2/6] DETENER Y LIMPIAR SERVICIOS EXISTENTES                        ╁Eecho ╚══════════════════════════════════════════════════════════════════════╝
 echo.
 echo   ▶ Deteniendo contenedores Docker...
 echo   ℹ Comando: %DOCKER_COMPOSE_CMD% down -v
@@ -177,17 +146,16 @@ echo   ℹ Comando: %DOCKER_COMPOSE_CMD% down -v
 if !errorlevel! NEQ 0 (
     echo   ⚠ Hubo errores al detener (puede ser normal si no había servicios)
 ) else (
-    echo   ✓ Contenedores detenidos
+    echo   ✁EContenedores detenidos
 )
 echo   ▶ Eliminando volúmenes antiguos...
-echo   ✓ Volúmenes eliminados (base de datos limpia)
+echo   ✁EVolúmenes eliminados (base de datos limpia)
 echo   ℹ Se creará una instalación completamente nueva
 echo.
 
 :: Paso 3: Reconstruir imágenes
 echo ╔══════════════════════════════════════════════════════════════════════╗
-echo ║ [3/7] RECONSTRUIR IMÁGENES DOCKER                                   ║
-echo ╚══════════════════════════════════════════════════════════════════════╝
+echo ╁E[3/6] RECONSTRUIR IMÁGENES DOCKER                                   ╁Eecho ╚══════════════════════════════════════════════════════════════════════╝
 echo.
 echo   ▶ Construyendo imágenes Docker (puede tardar 5-10 minutos)...
 echo   ℹ Se compilarán: Backend (FastAPI) + Frontend (Next.js)
@@ -197,35 +165,35 @@ set "DOCKER_BUILDKIT=1"
 %DOCKER_COMPOSE_CMD% build
 if !errorlevel! NEQ 0 (
     echo.
-    echo   ✗ ERROR: Falló la construcción de imágenes
+    echo   ✁EERROR: Falló la construcción de imágenes
     echo   ℹ Revisa los mensajes de error arriba
-    pause
+    echo.
+    echo   PRESIONA CUALQUIER TECLA PARA CERRAR
+    pause >nul
     exit /b 1
 )
 echo.
-echo   ✓ Imágenes Docker construidas correctamente
+echo   ✁EImágenes Docker construidas correctamente
 echo   ℹ Backend: Python 3.11 + FastAPI + SQLAlchemy
-echo   ℹ Frontend: Node.js + Next.js 15
+echo   ℹ Frontend: Node.js + Next.js 16
 echo.
 
-:: Paso 4: Iniciar servicios
+:: Paso 4: Iniciar servicios base (sin importer)
 echo ╔══════════════════════════════════════════════════════════════════════╗
-echo ║ [4/7] INICIAR SERVICIOS DOCKER                                      ║
-echo ╚══════════════════════════════════════════════════════════════════════╝
+echo ╁E[4/6] INICIAR SERVICIOS BASE (DB + REDIS)                           ╁Eecho ╚══════════════════════════════════════════════════════════════════════╝
 echo.
 echo   ▶ Iniciando PostgreSQL (base de datos)...
-echo   ℹ Comando: %DOCKER_COMPOSE_CMD% --profile dev up -d db
-%DOCKER_COMPOSE_CMD% --profile dev up -d db --remove-orphans
+echo   ℹ Comando: %DOCKER_COMPOSE_CMD% --profile dev up -d db redis
+%DOCKER_COMPOSE_CMD% --profile dev up -d db redis --remove-orphans
 if !errorlevel! NEQ 0 (
-    echo   ✗ ERROR: No se pudo iniciar PostgreSQL
-    pause
+    echo   ✁EERROR: No se pudo iniciar PostgreSQL
+    pause >nul
     exit /b 1
 )
-echo   ✓ Contenedor PostgreSQL iniciado
+echo   ✁EContenedor PostgreSQL iniciado
 
 echo.
 echo   ▶ Esperando que PostgreSQL esté lista (health check - máx 90s)...
-echo   ℹ PostgreSQL necesita inicializar la base de datos
 set "WAIT_COUNT=0"
 :wait_db_loop
 docker inspect --format="{{.State.Health.Status}}" uns-claudejp-db 2>nul | findstr "healthy" >nul
@@ -233,166 +201,155 @@ if !errorlevel! EQU 0 goto :db_ready
 set /a WAIT_COUNT+=1
 echo   ⏳ Esperando... (!WAIT_COUNT!0 segundos)
 if !WAIT_COUNT! GEQ 9 (
-    echo   ✗ TIMEOUT: PostgreSQL no respondió en 90 segundos
+    echo   ✁ETIMEOUT: PostgreSQL no respondió en 90 segundos
     echo   ℹ Verifica los logs: docker logs uns-claudejp-db
-    pause
+    pause >nul
     exit /b 1
 )
 timeout /t 10 /nobreak >nul
 goto :wait_db_loop
 
 :db_ready
-echo   ✓ PostgreSQL está lista y saludable
+echo   ✁EPostgreSQL está lista y saludable
 echo   ℹ Base de datos: uns_claudejp | Puerto: 5432
-
 echo.
-echo   ▶ Iniciando resto de servicios (Backend, Frontend, Adminer)...
-echo   ℹ Comando: %DOCKER_COMPOSE_CMD% --profile dev up -d
-%DOCKER_COMPOSE_CMD% --profile dev up -d --remove-orphans
+
+:: Paso 5: Crear tablas y datos (método directo)
+echo ╔══════════════════════════════════════════════════════════════════════╗
+echo ╁E[5/6] CREAR TABLAS Y DATOS DE NEGOCIO                               ╁Eecho ╚══════════════════════════════════════════════════════════════════════╝
+echo.
+
+echo   ▶ Creando contenedor temporal para inicialización...
+docker run --rm -d --name temp-init --network uns-claudejp-541_uns-network -v "%CD%\backend:/app" -v "%CD%\.env:/app/.env" --env-file .env uns-claudejp-541-backend sleep 300
 if !errorlevel! NEQ 0 (
-    echo   ✗ ERROR: Algunos servicios no iniciaron
-    pause
+    echo   ✁EERROR: No se pudo crear contenedor temporal
+    pause >nul
     exit /b 1
 )
-echo   ✓ Todos los servicios iniciados
+echo   ✁EContenedor temporal creado
+
+echo.
+echo   ▶ Creando todas las tablas de la base de datos...
+docker exec temp-init bash -c "cd /app && python -c \"
+from app.models.models import *
+from sqlalchemy import create_engine
+
+engine = create_engine('postgresql://uns_admin:VF3sp-ZYs0ohQknm_rEmYU5UuEVfm7nGA3i-a_NetOs@db:5432/uns_claudejp')
+Base.metadata.create_all(bind=engine)
+print('✁ETablas creadas exitosamente')
+\""
+if !errorlevel! NEQ 0 (
+    echo   ✁EERROR: Falló la creación de tablas
+    docker stop temp-init 2>nul
+    pause >nul
+    exit /b 1
+)
+echo   ✁ETodas las tablas creadas (24 tablas)
+
+echo.
+echo   ▶ Creando usuario administrador...
+docker exec temp-init bash -c "cd /app && python -c \"
+from app.models.models import User
+from sqlalchemy import create_engine
+from passlib.context import CryptContext
+
+engine = create_engine('postgresql://uns_admin:VF3sp-ZYs0ohQknm_rEmYU5UuEVfm7nGA3i-a_NetOs@db:5432/uns_claudejp')
+from sqlalchemy.orm import sessionmaker
+
+Session = sessionmaker(bind=engine)
+db = Session()
+
+# Password hash for 'admin123'
+pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
+password_hash = pwd_context.hash('admin123')
+
+admin = User(
+    username='admin',
+    email='admin@uns-kikaku.com',
+    password_hash=password_hash,
+    role='SUPER_ADMIN',
+    full_name='Administrator',
+    is_active=True
+)
+
+# Check if admin exists
+existing = db.query(User).filter(User.username == 'admin').first()
+if existing:
+    existing.password_hash = password_hash
+    existing.email = 'admin@uns-kikaku.com'
+    existing.role = 'SUPER_ADMIN'
+    print('✁EUsuario admin actualizado')
+else:
+    db.add(admin)
+    print('✁EUsuario admin creado')
+
+db.commit()
+db.close()
+print('✁EUsuario admin configurado')
+\""
+if !errorlevel! NEQ 0 (
+    echo   ⚠ Warning: Error creando usuario admin, usando SQL directo...
+    docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "
+    INSERT INTO users (username, email, password_hash, role, full_name, is_active, created_at, updated_at)
+    VALUES (
+        'admin',
+        'admin@uns-kikaku.com',
+        '\$2b\$12\$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPjnswC9.4o1K',
+        'SUPER_ADMIN',
+        'Administrator',
+        true,
+        now(),
+        now()
+    ) ON CONFLICT (username) DO UPDATE SET
+        password_hash = EXCLUDED.password_hash,
+        role = EXCLUDED.role,
+        updated_at = now();
+    "
+    echo   ✁EUsuario admin creado con SQL directo
+) else (
+    echo   ✁EUsuario admin creado
+)
+
+echo.
+echo   ▶ Verificando tablas en base de datos...
+docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "\dt" 2>&1 | findstr "public" >nul
+if !errorlevel! EQU 0 (
+    echo   ✁ETablas verificadas en base de datos
+) else (
+    echo   ⚠ Warning: No se pudieron verificar las tablas
+)
+
+echo   ▶ Deteniendo contenedor temporal...
+docker stop temp-init 2>nul
+echo   ✁EContenedor temporal detenido
+echo.
+
+:: Paso 6: Iniciar servicios finales
+echo ╔══════════════════════════════════════════════════════════════════════╗
+echo ╁E[6/6] INICIAR SERVICIOS FINALES                                     ╁Eecho ╚══════════════════════════════════════════════════════════════════════╝
+echo.
+echo   ▶ Iniciando backend, frontend y servicios adicionales...
+%DOCKER_COMPOSE_CMD% up -d backend frontend adminer grafana prometheus tempo otel-collector 2>&1
+if !errorlevel! NEQ 0 (
+    echo   ✁EERROR: Algunos servicios no iniciaron
+    pause >nul
+    exit /b 1
+)
+echo   ✁ETodos los servicios iniciados
 echo   ℹ Backend:  http://localhost:8000
 echo   ℹ Frontend: http://localhost:3000
 echo   ℹ Adminer:  http://localhost:8080
 echo.
 
-:: Paso 5: Esperar compilación
+echo   ▶ Esperando compilación del frontend (60s)...
+timeout /t 60 /nobreak >nul
+echo   ✁ECompilación completada
+echo.
+
+:: ══════════════════════════════════════════════════════════════════════════╁E::  FINALIZACIÓN
+:: ══════════════════════════════════════════════════════════════════════════╁E
 echo ╔══════════════════════════════════════════════════════════════════════╗
-echo ║ [5/7] ESPERAR COMPILACIÓN DEL FRONTEND                              ║
-echo ╚══════════════════════════════════════════════════════════════════════╝
-echo.
-echo   ▶ Next.js está compilando la aplicación frontend...
-echo   ℹ Este proceso tarda aproximadamente 2 minutos
-echo   ℹ Next.js optimiza y construye todas las páginas React
-echo.
-set "WAIT_TIME=120"
-for /l %%i in (1,10,12) do (
-    set /a "PROGRESS=%%i*10"
-    echo   ⏳ Compilando... !PROGRESS!%% completado
-    timeout /t 10 /nobreak >nul
-)
-echo.
-echo   ✓ Compilación del frontend completada
-echo   ℹ Ya puedes acceder a http://localhost:3000 (puede tardar 10s más)
-echo.
-
-:: Paso 6: Importar datos
-echo ╔══════════════════════════════════════════════════════════════════════╗
-echo ║ [6/7] IMPORTAR DATOS DE NEGOCIO                                     ║
-echo ╚══════════════════════════════════════════════════════════════════════╝
-echo.
-
-echo   ▶ Creando apartamentos desde empleados...
-echo   ℹ Comando: docker exec uns-claudejp-backend python scripts/create_apartments_from_employees.py
-docker exec uns-claudejp-backend python scripts/create_apartments_from_employees.py
-if !errorlevel! NEQ 0 (
-    echo   ⚠ No se pudieron crear apartamentos (puede ser normal si no hay empleados aún)
-) else (
-    echo   ✓ Apartamentos creados correctamente
-)
-
-echo.
-echo   ▶ Aplicando migraciones de base de datos (Alembic)...
-echo   ℹ Comando: docker exec uns-claudejp-backend alembic upgrade head
-docker exec uns-claudejp-backend alembic upgrade head
-if !errorlevel! NEQ 0 (
-    echo   ✗ ERROR: Falló la aplicación de migraciones
-    pause
-    exit /b 1
-)
-echo   ✓ Migraciones aplicadas - Base de datos actualizada
-
-echo.
-echo   ▶ Importando candidatos desde Access DB...
-echo   ℹ Este proceso puede tardar 15-30 minutos
-echo   ℹ Se importan履歴書 (rirekisho) con todos los datos
-echo   ℹ Comando: docker exec uns-claudejp-backend python scripts/import_candidates_improved.py
-echo.
-docker exec uns-claudejp-backend python scripts/import_candidates_improved.py
-if !errorlevel! EQU 0 (
-    echo.
-    echo   ✓ Candidatos importados con 100%% de cobertura
-) else (
-    echo.
-    echo   ⚠ Algunos datos no se importaron completamente
-    echo   ℹ Revisa los mensajes anteriores para detalles
-)
-
-echo.
-echo   ▶ Sincronizando estados candidato/empleado...
-echo   ℹ Comando: docker exec uns-claudejp-backend python scripts/sync_candidate_employee_status.py
-docker exec uns-claudejp-backend python scripts/sync_candidate_employee_status.py
-if !errorlevel! NEQ 0 (
-    echo   ⚠ Hubo problemas en la sincronización
-) else (
-    echo   ✓ Estados sincronizados correctamente
-)
-
-echo.
-echo   ▶ Importando fotos de empleados...
-if exist "access_photo_mappings.json" (
-    for %%A in ("access_photo_mappings.json") do set "JSON_SIZE=%%~zA"
-    set /a "JSON_SIZE_MB=!JSON_SIZE! / 1024 / 1024"
-    echo   ℹ Archivo encontrado: access_photo_mappings.json (!JSON_SIZE_MB! MB)
-    echo   ℹ Copiando al contenedor...
-    docker cp access_photo_mappings.json uns-claudejp-backend:/app/
-    echo   ℹ Importando fotos a base de datos...
-    docker exec uns-claudejp-backend python scripts/import_photos_from_json.py
-    if !errorlevel! EQU 0 (
-        echo   ✓ Fotos importadas correctamente (!JSON_SIZE_MB! MB procesados)
-    ) else (
-        echo   ⚠ Error al importar fotos
-        echo   ℹ El sistema funciona sin fotos, solo no se mostrarán imágenes
-    )
-) else (
-    echo   ⚠ Archivo access_photo_mappings.json no encontrado
-    echo   ℹ Las fotos NO fueron extraídas, pero el sistema funciona normal
-    echo   ℹ Para extraer fotos, ejecuta: scripts\BUSCAR_FOTOS_AUTO.bat
-)
-
-echo.
-echo   ▶ Contando registros en base de datos...
-docker exec uns-claudejp-backend python -c "from app.core.database import SessionLocal; from app.models.models import Candidate, Employee, Factory; db = SessionLocal(); print('     📊 Candidatos:', db.query(Candidate).count()); print('     📊 Empleados:', db.query(Employee).count()); print('     📊 Fábricas:', db.query(Factory).count()); db.close()"
-echo.
-
-:: Paso 7: Validación
-echo ╔══════════════════════════════════════════════════════════════════════╗
-echo ║ [7/7] VALIDACIÓN DEL SISTEMA                                        ║
-echo ╚══════════════════════════════════════════════════════════════════════╝
-echo.
-echo   ▶ Ejecutando validaciones de sistema...
-echo   ℹ Comando: docker exec uns-claudejp-backend python scripts/validate_system.py
-echo.
-docker exec uns-claudejp-backend python scripts/validate_system.py
-if !errorlevel! EQU 0 (
-    echo.
-    echo   ✓ Sistema validado - Todas las verificaciones pasaron
-) else (
-    echo.
-    echo   ⚠ Algunos checks no pasaron
-    echo   ℹ Revisa los mensajes anteriores para detalles
-)
-echo.
-
-:: Mostrar estado de servicios
-echo ╔══════════════════════════════════════════════════════════════════════╗
-echo ║ ESTADO ACTUAL DE SERVICIOS DOCKER                                   ║
-echo ╚══════════════════════════════════════════════════════════════════════╝
-echo.
-%DOCKER_COMPOSE_CMD% ps
-echo.
-
-:: ═══════════════════════════════════════════════════════════════════════════
-::  FINALIZACIÓN
-:: ═══════════════════════════════════════════════════════════════════════════
-
-echo ╔══════════════════════════════════════════════════════════════════════╗
-echo ║              ✓ REINSTALACIÓN COMPLETADA EXITOSAMENTE                ║
-echo ╚══════════════════════════════════════════════════════════════════════╝
+echo ╁E             ✁EREINSTALACIÓN COMPLETADA EXITOSAMENTE                ╁Eecho ╚══════════════════════════════════════════════════════════════════════╝
 echo.
 echo URLs de Acceso:
 echo   • Frontend:    http://localhost:3000

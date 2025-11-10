@@ -104,7 +104,9 @@
       "Bash(docker run --rm -d --name temp-backend-init --network uns-claudejp-541_uns-network -v /d/UNS-ClaudeJP-5.4.1/backend:/app -v /d/UNS-ClaudeJP-5.4.1/.env:/app/.env --env-file /d/UNS-ClaudeJP-5.4.1/.env uns-claudejp-541-backend sleep 300)",
       "Bash(SECURITY_AUDIT_REPORT.md)",
       "Bash(docker stop:*)",
-      "Bash(docker run:*)"
+      "Bash(docker run:*)",
+      "Bash(bash -c:*)",
+      "Bash(/tmp/next_config.txt)"
     ],
     "deny": [],
     "ask": []
