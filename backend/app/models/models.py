@@ -574,6 +574,7 @@ class Employee(Base, SoftDeleteMixin):
     apartment_move_out_date = Column(Date) # 退去日
     apartment_rent = Column(Integer)
     is_corporate_housing = Column(Boolean, default=False, nullable=False)  # 社宅 (Corporate Housing)
+    housing_subsidy = Column(Integer, default=0)  # 住宅手当 (Housing Subsidy)
 
     # Yukyu (]~b]️有効)
     yukyu_total = Column(Integer, default=0)
@@ -677,6 +678,7 @@ class ContractWorker(Base, SoftDeleteMixin):
     apartment_move_out_date = Column(Date)
     apartment_rent = Column(Integer)
     is_corporate_housing = Column(Boolean, default=False, nullable=False)  # 社宅 (Corporate Housing)
+    housing_subsidy = Column(Integer, default=0)  # 住宅手当 (Housing Subsidy)
 
     # Yukyu (有給休暇)
     yukyu_total = Column(Integer, default=0)
@@ -738,6 +740,7 @@ class Staff(Base, SoftDeleteMixin):
     yukyu_total = Column(Integer, default=0)
     yukyu_used = Column(Integer, default=0)
     is_corporate_housing = Column(Boolean, default=False, nullable=False)  # 社宅 (Corporate Housing) - para contabilidad keiri
+    housing_subsidy = Column(Integer, default=0)  # 住宅手当 (Housing Subsidy)
     yukyu_remaining = Column(Integer, default=0)
 
     # Status

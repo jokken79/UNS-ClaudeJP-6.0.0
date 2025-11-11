@@ -83,6 +83,18 @@ interface EmployeeDetails {
   apartment_start_date: string | null;
   apartment_move_out_date: string | null;
   apartment_rent: number | null;
+  is_corporate_housing: boolean;
+  housing_subsidy: number | null;
+  apartment?: {
+    id: number;
+    name: string;
+    building_name: string;
+    room_number: string;
+    prefecture: string;
+    city: string;
+    address_line1: string;
+    base_rent: number;
+  };
 
   // Yukyu
   yukyu_total: number;
@@ -611,35 +623,133 @@ export default function EmployeeDetailPage() {
               </div>
             </div>
 
-            {/* Apartment Information */}
+            {/* Housing Information (社宅) */}
             <div className="bg-card/90 backdrop-blur-sm shadow-lg rounded-2xl border">
               <div className="px-6 py-4 border-b border-border bg-gradient-to-r from-muted to-card">
                 <h2 className="text-lg font-bold text-foreground flex items-center">
                   <HomeIcon className="h-6 w-6 mr-2 text-purple-500" />
-                  アパート情報
+                  社宅・住宅情報
                 </h2>
               </div>
-              <div className="px-6 py-5">
-                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div>
-                    <dt className="text-sm font-medium text-muted-foreground">アパートID</dt>
-                    <dd className="mt-1 text-sm text-foreground font-mono">{employee.apartment_id ? `#${employee.apartment_id}` : '-'}</dd>
+              <div className="px-6 py-5 space-y-4">
+                {/* Status Badge */}
+                <div>
+                  {employee.is_corporate_housing ? (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300">
+                      🏢 社宅利用中
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300">
+                      🏠 社外住宅
+                    </span>
+                  )}
+                </div>
+
+                {/* Corporate Housing Details */}
+                {employee.is_corporate_housing && employee.apartment ? (
+                  <div className="border-t border-border pt-4 space-y-4">
+                    {/* Apartment Details */}
+                    <div className="bg-muted/30 p-4 rounded-xl">
+                      <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center">
+                        <HomeIcon className="h-4 w-4 mr-2 text-purple-500" />
+                        アパート詳細
+                      </h3>
+                      <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <dt className="text-xs font-medium text-muted-foreground">物件名</dt>
+                          <dd className="mt-1 text-sm text-foreground font-semibold">
+                            {employee.apartment.name || `${employee.apartment.building_name} ${employee.apartment.room_number}`}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-xs font-medium text-muted-foreground">住所</dt>
+                          <dd className="mt-1 text-sm text-foreground">
+                            {employee.apartment.prefecture} {employee.apartment.city} {employee.apartment.address_line1}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-xs font-medium text-muted-foreground">基本家賃</dt>
+                          <dd className="mt-1 text-sm text-foreground font-semibold">
+                            {formatCurrency(employee.apartment.base_rent)}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-xs font-medium text-muted-foreground">アパートID</dt>
+                          <dd className="mt-1 text-sm text-foreground font-mono">#{employee.apartment_id}</dd>
+                        </div>
+                      </dl>
+                    </div>
+
+                    {/* Assignment Details */}
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground mb-3">入居情報</h3>
+                      <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <dt className="text-sm font-medium text-muted-foreground">入居日</dt>
+                          <dd className="mt-1 text-sm text-foreground">{formatDate(employee.apartment_start_date)}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm font-medium text-muted-foreground">退去予定日</dt>
+                          <dd className="mt-1 text-sm text-foreground">
+                            {employee.apartment_move_out_date ? formatDate(employee.apartment_move_out_date) : '未定'}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm font-medium text-muted-foreground">従業員負担額</dt>
+                          <dd className="mt-1 text-sm text-foreground font-semibold">
+                            {formatCurrency(employee.apartment_rent)}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm font-medium text-muted-foreground">会社補助額</dt>
+                          <dd className="mt-1 text-sm text-foreground font-semibold text-green-600 dark:text-green-400">
+                            {formatCurrency(employee.housing_subsidy)}
+                          </dd>
+                        </div>
+                      </dl>
+                    </div>
+
+                    {/* Cost Breakdown */}
+                    {employee.apartment_rent !== null && employee.housing_subsidy !== null && (
+                      <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-xl border border-blue-200 dark:border-blue-900">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-blue-900 dark:text-blue-300">会社負担総額</span>
+                          <span className="text-lg font-bold text-blue-900 dark:text-blue-300">
+                            {formatCurrency((employee.apartment.base_rent || 0) - (employee.apartment_rent || 0) + (employee.housing_subsidy || 0))}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-blue-700 dark:text-blue-400">
+                          (基本家賃 - 従業員負担 + 補助額)
+                        </p>
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <dt className="text-sm font-medium text-muted-foreground">家賃</dt>
-                    <dd className="mt-1 text-sm text-foreground font-semibold">
-                      {formatCurrency(employee.apartment_rent)}
-                    </dd>
+                ) : employee.is_corporate_housing && !employee.apartment ? (
+                  <div className="border-t border-border pt-4">
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-900 rounded-xl p-4">
+                      <p className="text-sm text-yellow-800 dark:text-yellow-300">
+                        ⚠️ 社宅に登録されていますが、アパート情報が取得できません
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <dt className="text-sm font-medium text-muted-foreground">入居日</dt>
-                    <dd className="mt-1 text-sm text-foreground">{formatDate(employee.apartment_start_date)}</dd>
+                ) : (
+                  /* Non-corporate housing */
+                  <div className="border-t border-border pt-4">
+                    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <dt className="text-sm font-medium text-muted-foreground">住宅手当</dt>
+                        <dd className="mt-1 text-sm text-foreground font-semibold text-green-600 dark:text-green-400">
+                          {formatCurrency(employee.housing_subsidy)}
+                        </dd>
+                      </div>
+                    </dl>
+                    {employee.housing_subsidy === null || employee.housing_subsidy === 0 ? (
+                      <p className="mt-3 text-sm text-muted-foreground">
+                        住宅手当の支給はありません
+                      </p>
+                    ) : null}
                   </div>
-                  <div>
-                    <dt className="text-sm font-medium text-muted-foreground">退去日</dt>
-                    <dd className="mt-1 text-sm text-foreground">{formatDate(employee.apartment_move_out_date)}</dd>
-                  </div>
-                </dl>
+                )}
               </div>
             </div>
 
