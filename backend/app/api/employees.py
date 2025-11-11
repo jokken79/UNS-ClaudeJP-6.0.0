@@ -90,12 +90,15 @@ async def create_employee(
 
 
 def _paginate_response(items, total, page, page_size):
+    total_pages = (total + page_size - 1) // page_size
     return {
         "items": items,
         "total": total,
         "page": page,
         "page_size": page_size,
-        "total_pages": (total + page_size - 1) // page_size,
+        "total_pages": total_pages,
+        "has_next": page < total_pages,
+        "has_previous": page > 1
     }
 
 

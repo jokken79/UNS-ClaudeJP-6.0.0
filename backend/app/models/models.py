@@ -1,11 +1,12 @@
 """
 SQLAlchemy Models for UNS-ClaudeJP 1.0
 """
-from sqlalchemy import Boolean, Column, Integer, String, Text, DateTime, Date, Time, Numeric, Float, ForeignKey, Enum as SQLEnum, JSON
+from sqlalchemy import Boolean, Column, Integer, String, Text, DateTime, Date, Time, Numeric, Float, ForeignKey, Enum as SQLEnum, JSON, CheckConstraint, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.sql import func
 from datetime import datetime
+from decimal import Decimal
 import enum
 
 from app.core.database import Base
@@ -66,6 +67,53 @@ class ShiftType(str, enum.Enum):
     HIRU = "hiru"  # 昼番
     YORU = "yoru"  # 夜番
     OTHER = "other"
+
+
+class RoomType(str, enum.Enum):
+    """Room type classifications for apartments"""
+    ONE_K = "1K"
+    ONE_DK = "1DK"
+    ONE_LDK = "1LDK"
+    TWO_K = "2K"
+    TWO_DK = "2DK"
+    TWO_LDK = "2LDK"
+    THREE_LDK = "3LDK"
+    STUDIO = "studio"
+    OTHER = "other"
+
+
+class ApartmentStatus(str, enum.Enum):
+    """Status of apartment availability"""
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    MAINTENANCE = "maintenance"
+    RESERVED = "reserved"
+
+
+class AssignmentStatus(str, enum.Enum):
+    """Status of apartment assignment"""
+    ACTIVE = "active"
+    ENDED = "ended"
+    CANCELLED = "cancelled"
+    TRANSFERRED = "transferred"
+
+
+class ChargeType(str, enum.Enum):
+    """Types of additional charges"""
+    CLEANING = "cleaning"
+    REPAIR = "repair"
+    DEPOSIT = "deposit"
+    PENALTY = "penalty"
+    KEY_REPLACEMENT = "key_replacement"
+    OTHER = "other"
+
+
+class DeductionStatus(str, enum.Enum):
+    """Status of rent deduction"""
+    PENDING = "pending"
+    PROCESSED = "processed"
+    PAID = "paid"
+    CANCELLED = "cancelled"
 
 
 # ============================================
@@ -387,17 +435,54 @@ class Apartment(Base, SoftDeleteMixin):
     __tablename__ = "apartments"
 
     id = Column(Integer, primary_key=True, index=True)
-    apartment_code = Column(String(50), unique=True, nullable=False)
-    address = Column(Text, nullable=False)
-    monthly_rent = Column(Integer, nullable=False)
-    capacity = Column(Integer)
-    is_available = Column(Boolean, default=True)
+
+    # Basic identification (legacy fields kept for compatibility)
+    apartment_code = Column(String(50), unique=True, nullable=True)  # Made nullable for migration
+    name = Column(String(200), nullable=False, index=True)  # Primary name
+    building_name = Column(String(200))
+    room_number = Column(String(20))
+    floor_number = Column(Integer)
+
+    # Address information
+    postal_code = Column(String(10))
+    prefecture = Column(String(50))
+    city = Column(String(100))
+    address = Column(Text)  # Legacy field, kept for compatibility
+    address_line1 = Column(String(200))
+    address_line2 = Column(String(200))
+
+    # Room specifications
+    room_type = Column(SQLEnum(RoomType, name='room_type'))
+    size_sqm = Column(Numeric(6, 2))  # Size in square meters
+    capacity = Column(Integer)  # Legacy field, kept
+
+    # Financial information
+    base_rent = Column(Integer, nullable=False)  # Base monthly rent
+    monthly_rent = Column(Integer)  # Legacy field, kept for compatibility
+    management_fee = Column(Integer, default=0)  # Management/common area fee
+    deposit = Column(Integer, default=0)  # 敷金 (Shikikin)
+    key_money = Column(Integer, default=0)  # 礼金 (Reikin)
+    default_cleaning_fee = Column(Integer, default=20000)  # Default cleaning charge on move-out
+
+    # Contract with landlord/agency
+    contract_start_date = Column(Date)
+    contract_end_date = Column(Date)
+    landlord_name = Column(String(200))
+    landlord_contact = Column(String(200))
+    real_estate_agency = Column(String(200))
+    emergency_contact = Column(String(200))
+
+    # Status and metadata
+    status = Column(SQLEnum(ApartmentStatus, name='apartment_status'), default=ApartmentStatus.ACTIVE)
+    is_available = Column(Boolean, default=True)  # Legacy field, kept
     notes = Column(Text)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
     employees = relationship("Employee", back_populates="apartment")
     contract_workers = relationship("ContractWorker", back_populates="apartment")
+    assignments = relationship("ApartmentAssignment", back_populates="apartment", cascade="all, delete-orphan")
 
 
 class Employee(Base, SoftDeleteMixin):
@@ -1130,4 +1215,173 @@ class YukyuUsageDetail(Base):
     # Relationships
     request = relationship("YukyuRequest", back_populates="usage_details")
     balance = relationship("YukyuBalance", back_populates="usage_details")
+
+
+class ApartmentAssignment(Base, SoftDeleteMixin):
+    """
+    アパート割り当て (Apartment Assignment) - Tracks employee apartment assignments
+
+    This table records when an employee is assigned to an apartment, including:
+    - Assignment dates (start and end)
+    - Prorated rent calculations
+    - Total deductions (rent + charges)
+
+    Business rules:
+    - One employee can only have ONE active assignment at a time
+    - end_date = NULL means assignment is still active
+    - When assignment ends, cleaning fee is automatically added
+    - Prorated calculation: (monthly_rent / days_in_month) * days_occupied
+    """
+    __tablename__ = "apartment_assignments"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    # References
+    apartment_id = Column(Integer, ForeignKey("apartments.id", ondelete="CASCADE"), nullable=False, index=True)
+    employee_id = Column(Integer, ForeignKey("employees.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    # Assignment dates
+    start_date = Column(Date, nullable=False, index=True)
+    end_date = Column(Date, nullable=True, index=True)  # NULL = still active
+
+    # Rent calculation fields
+    monthly_rent = Column(Integer, nullable=False)  # Base rent at time of assignment
+    days_in_month = Column(Integer)  # Days in the month (28-31)
+    days_occupied = Column(Integer)  # Actual days occupied
+    prorated_rent = Column(Integer)  # Calculated prorated rent
+    is_prorated = Column(Boolean, default=False)  # Is it prorated or full month?
+
+    # Total deduction (rent + all additional charges)
+    total_deduction = Column(Integer, nullable=False, default=0)
+
+    # Contract and status
+    contract_type = Column(String(50))  # Type of housing contract
+    status = Column(SQLEnum(AssignmentStatus, name='assignment_status'), default=AssignmentStatus.ACTIVE, nullable=False)
+    notes = Column(Text)
+
+    # Audit timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Constraints
+    __table_args__ = (
+        CheckConstraint('end_date IS NULL OR end_date >= start_date', name='check_assignment_dates'),
+        CheckConstraint('days_occupied > 0 AND days_occupied <= 31', name='check_days_occupied'),
+    )
+
+    # Relationships
+    apartment = relationship("Apartment", back_populates="assignments")
+    employee = relationship("Employee", backref="apartment_assignments")
+    additional_charges = relationship("AdditionalCharge", back_populates="assignment", cascade="all, delete-orphan")
+    rent_deductions = relationship("RentDeduction", back_populates="assignment", cascade="all, delete-orphan")
+
+
+class AdditionalCharge(Base, SoftDeleteMixin):
+    """
+    追加料金 (Additional Charge) - Additional charges for apartment assignments
+
+    This table tracks all additional charges beyond base rent:
+    - Cleaning fees (¥20,000 default on move-out)
+    - Repair charges for damages
+    - Deposit deductions
+    - Penalties
+    - Key replacement fees
+    - Other miscellaneous charges
+
+    Business rules:
+    - Charges must be approved before being included in deductions
+    - Cleaning fee is automatically added when assignment ends
+    - All charges are summed into assignment.total_deduction
+    """
+    __tablename__ = "additional_charges"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    # References
+    assignment_id = Column(Integer, ForeignKey("apartment_assignments.id", ondelete="CASCADE"), nullable=False, index=True)
+    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False, index=True)
+    apartment_id = Column(Integer, ForeignKey("apartments.id"), nullable=False, index=True)
+
+    # Charge details
+    charge_type = Column(SQLEnum(ChargeType, name='charge_type'), nullable=False)
+    description = Column(String(500), nullable=False)
+    amount = Column(Integer, nullable=False)  # Charge amount in yen
+
+    # Date and status
+    charge_date = Column(Date, nullable=False, index=True)
+    status = Column(SQLEnum(DeductionStatus, name='charge_status'), default=DeductionStatus.PENDING, nullable=False)
+
+    # Approval workflow
+    approved_by = Column(Integer, ForeignKey("users.id"))
+    approved_at = Column(DateTime(timezone=True))
+
+    # Additional notes
+    notes = Column(Text)
+
+    # Audit timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    assignment = relationship("ApartmentAssignment", back_populates="additional_charges")
+    employee = relationship("Employee", backref="apartment_charges")
+    apartment = relationship("Apartment", backref="additional_charges")
+    approver = relationship("User", backref="approved_charges")
+
+
+class RentDeduction(Base, SoftDeleteMixin):
+    """
+    家賃控除 (Rent Deduction) - Monthly rent deductions for payroll
+
+    This table stores the final deduction amounts to be subtracted from employee payroll:
+    - Base rent (prorated or full month)
+    - Sum of all additional charges
+    - Total deduction amount
+
+    Business rules:
+    - One deduction record per assignment per month (UNIQUE constraint)
+    - Generated automatically at month-end or manually
+    - Linked to payroll processing system
+    - Status tracks processing workflow (pending → processed → paid)
+    """
+    __tablename__ = "rent_deductions"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    # References
+    assignment_id = Column(Integer, ForeignKey("apartment_assignments.id", ondelete="CASCADE"), nullable=False, index=True)
+    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False, index=True)
+    apartment_id = Column(Integer, ForeignKey("apartments.id"), nullable=False, index=True)
+
+    # Period
+    year = Column(Integer, nullable=False, index=True)
+    month = Column(Integer, nullable=False, index=True)
+
+    # Amounts
+    base_rent = Column(Integer, nullable=False)  # Base or prorated rent
+    additional_charges = Column(Integer, default=0)  # Sum of all charges for this period
+    total_deduction = Column(Integer, nullable=False)  # Total to deduct from payroll
+
+    # Status and processing
+    status = Column(SQLEnum(DeductionStatus, name='deduction_status'), default=DeductionStatus.PENDING, nullable=False)
+    processed_date = Column(Date)  # When deduction was processed in payroll
+    paid_date = Column(Date)  # When deduction was actually paid
+
+    # Notes
+    notes = Column(Text)
+
+    # Audit timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Constraints
+    __table_args__ = (
+        CheckConstraint('month >= 1 AND month <= 12', name='check_month_range'),
+        UniqueConstraint('assignment_id', 'year', 'month', name='uq_assignment_year_month'),
+    )
+
+    # Relationships
+    assignment = relationship("ApartmentAssignment", back_populates="rent_deductions")
+    employee = relationship("Employee", backref="rent_deductions")
+    apartment = relationship("Apartment", backref="rent_deductions")
 

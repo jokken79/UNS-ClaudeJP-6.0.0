@@ -28,6 +28,7 @@ interface Employee {
   factory_name: string | null;
   hakensaki_shain_id: string | null;
   photo_url: string | null;
+  photo_data_url: string | null;
 
   // Personal
   full_name_kanji: string;
@@ -560,10 +561,11 @@ export default function EmployeesPage() {
       key: 'photo',
       label: '写真',
       defaultWidth: 80,
-      render: (emp) => (
-        emp.photo_url ? (
+      render: (emp) => {
+        const photoSrc = emp.photo_url || emp.photo_data_url;
+        return photoSrc ? (
           <img
-            src={emp.photo_url}
+            src={photoSrc}
             alt={emp.full_name_kanji}
             className="w-12 h-12 rounded-full object-cover border-2 border-gray-200"
           />
@@ -571,8 +573,8 @@ export default function EmployeesPage() {
           <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
             <UserCircleIcon className="w-8 h-8 text-gray-400" />
           </div>
-        )
-      ),
+        );
+      },
     },
     {
       key: 'current_status',
@@ -1407,17 +1409,20 @@ export default function EmployeesPage() {
                           className={`${index % 2 === 0 ? 'bg-card' : 'bg-muted'} hover:bg-accent transition-colors`}
                         >
                           <td className="px-3 py-2 border border-input text-xs text-foreground sticky left-0 bg-inherit">
-                            {emp.photo_url ? (
-                              <img
-                                src={emp.photo_url}
-                                alt={emp.full_name_kanji}
-                                className="w-10 h-10 rounded object-cover border border-gray-300"
-                              />
-                            ) : (
-                              <div className="w-10 h-10 rounded bg-gray-200 flex items-center justify-center">
-                                <UserCircleIcon className="w-6 h-6 text-gray-400" />
-                              </div>
-                            )}
+                            {(() => {
+                              const photoSrc = emp.photo_url || emp.photo_data_url;
+                              return photoSrc ? (
+                                <img
+                                  src={photoSrc}
+                                  alt={emp.full_name_kanji}
+                                  className="w-10 h-10 rounded object-cover border border-gray-300"
+                                />
+                              ) : (
+                                <div className="w-10 h-10 rounded bg-gray-200 flex items-center justify-center">
+                                  <UserCircleIcon className="w-6 h-6 text-gray-400" />
+                                </div>
+                              );
+                            })()}
                           </td>
                           <td className="px-3 py-2 border border-gray-300 text-xs text-gray-900">{getStatusText(emp.current_status)}</td>
                           <td className="px-3 py-2 border border-gray-300 text-xs text-gray-900 font-medium">{emp.hakenmoto_id}</td>

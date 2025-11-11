@@ -14,6 +14,7 @@ import {
   HelpCircle,
   MessageCircle,
   BookOpen,
+  Calendar,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -85,6 +86,12 @@ export const dashboardConfig: DashboardConfig = {
       href: '/payroll',
       icon: DollarSign,
       description: 'Sistema completo de nómina y cálculo de salarios.',
+    },
+    {
+      title: 'Yukyu (有給)',
+      href: '/yukyu',
+      icon: Calendar,
+      description: 'Gestión de vacaciones pagadas (有給休暇) y balance de días.',
     },
   ],
   secondaryNav: [

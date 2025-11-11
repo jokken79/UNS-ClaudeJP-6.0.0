@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func, desc
 from typing import List, Optional, Tuple
 from datetime import datetime
+from decimal import Decimal
 import calendar
 
 from app.models.models import Apartment, User
@@ -107,7 +108,7 @@ class ApartmentService:
         for apt in apartments:
             # Calcular campos adicionales
             full_address = self._build_full_address(apt)
-            total_monthly_cost = apt.base_rent + apt.management_fee
+            total_monthly_cost = (apt.base_rent or 0) + (apt.management_fee or 0)
 
             results.append(ApartmentResponse(
                 id=apt.id,
@@ -222,16 +223,49 @@ class ApartmentService:
         # Calcular estadísticas
         stats = await self._calculate_apartment_stats(apartment_id)
 
-        # Construir respuesta
-        response = await self._build_apartment_response(apartment)
-        response.current_occupancy = stats["current_occupancy"]
-        response.max_occupancy = stats["max_occupancy"]
-        response.occupancy_rate = stats["occupancy_rate"]
-        response.is_available = response.status == "active" and stats["current_occupancy"] < stats["max_occupancy"]
-        response.last_assignment_date = stats["last_assignment_date"]
-        response.average_stay_duration = stats["average_stay_duration"]
+        # Construir respuesta base
+        full_address = self._build_full_address(apartment)
+        total_monthly_cost = (apartment.base_rent or 0) + (apartment.management_fee or 0)
 
-        return response
+        # Construir respuesta con estadísticas
+        return ApartmentWithStats(
+            id=apartment.id,
+            name=apartment.name,
+            building_name=apartment.building_name,
+            room_number=apartment.room_number,
+            floor_number=apartment.floor_number,
+            postal_code=apartment.postal_code,
+            prefecture=apartment.prefecture,
+            city=apartment.city,
+            address_line1=apartment.address_line1,
+            address_line2=apartment.address_line2,
+            room_type=apartment.room_type,
+            size_sqm=apartment.size_sqm,
+            base_rent=apartment.base_rent,
+            management_fee=apartment.management_fee,
+            deposit=apartment.deposit,
+            key_money=apartment.key_money,
+            default_cleaning_fee=apartment.default_cleaning_fee,
+            contract_start_date=apartment.contract_start_date,
+            contract_end_date=apartment.contract_end_date,
+            landlord_name=apartment.landlord_name,
+            landlord_contact=apartment.landlord_contact,
+            real_estate_agency=apartment.real_estate_agency,
+            emergency_contact=apartment.emergency_contact,
+            notes=apartment.notes,
+            status=apartment.status,
+            created_at=apartment.created_at,
+            updated_at=apartment.updated_at,
+            full_address=full_address,
+            total_monthly_cost=total_monthly_cost,
+            active_assignments=0,
+            current_occupancy=stats["current_occupancy"],
+            max_occupancy=stats["max_occupancy"],
+            occupancy_rate=stats["occupancy_rate"],
+            is_available=(apartment.status or "active") == "active" and stats["current_occupancy"] < stats["max_occupancy"],
+            last_assignment_date=stats["last_assignment_date"],
+            average_stay_duration=stats["average_stay_duration"],
+        )
 
     async def update_apartment(
         self,
@@ -383,7 +417,7 @@ class ApartmentService:
         if max_total_cost is not None:
             # Filtrar por costo total (renta + gastos)
             query = query.filter(
-                (Apartment.base_rent + Apartment.management_fee) <= max_total_cost
+                (func.coalesce(Apartment.base_rent, 0) + func.coalesce(Apartment.management_fee, 0)) <= max_total_cost
             )
 
         # Filtros de enum
@@ -554,7 +588,7 @@ class ApartmentService:
     async def _build_apartment_response(self, apartment: Apartment) -> ApartmentResponse:
         """Construir respuesta de apartamento"""
         full_address = self._build_full_address(apartment)
-        total_monthly_cost = apartment.base_rent + apartment.management_fee
+        total_monthly_cost = (apartment.base_rent or 0) + (apartment.management_fee or 0)
 
         return ApartmentResponse(
             id=apartment.id,

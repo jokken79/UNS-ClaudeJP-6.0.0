@@ -169,10 +169,10 @@ class ApartmentResponse(BaseModel):
     size_sqm: Optional[Decimal]
 
     base_rent: int
-    management_fee: int
-    deposit: int
-    key_money: int
-    default_cleaning_fee: int
+    management_fee: Optional[int] = 0
+    deposit: Optional[int] = 0
+    key_money: Optional[int] = 0
+    default_cleaning_fee: Optional[int] = 20000
 
     contract_start_date: Optional[date]
     contract_end_date: Optional[date]
@@ -182,7 +182,7 @@ class ApartmentResponse(BaseModel):
     emergency_contact: Optional[str]
 
     notes: Optional[str]
-    status: str
+    status: Optional[str] = "active"
     created_at: datetime
     updated_at: Optional[datetime]
 

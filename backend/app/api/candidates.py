@@ -493,15 +493,16 @@ async def list_candidates(
     # Convert SQLAlchemy objects to Pydantic models
     items = [CandidateResponse.model_validate(c) for c in candidates]
 
+    total_pages = (total + page_size - 1) // page_size
+
     return {
         "items": items,
         "total": total,
-        "skip": actual_skip,
-        "limit": actual_limit,
         "page": page,
         "page_size": page_size,
-        "total_pages": (total + page_size - 1) // page_size,
-        "has_more": (actual_skip + len(items)) < total
+        "total_pages": total_pages,
+        "has_next": page < total_pages,
+        "has_previous": page > 1
     }
 
 
