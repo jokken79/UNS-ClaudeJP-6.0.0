@@ -15,6 +15,7 @@ import {
   MessageCircle,
   BookOpen,
   Calendar,
+  BarChart3,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -88,10 +89,16 @@ export const dashboardConfig: DashboardConfig = {
       description: 'Sistema completo de nómina y cálculo de salarios.',
     },
     {
-      title: 'Yukyu (有給)',
-      href: '/yukyu',
+      title: 'Yukyus (有給)',
+      href: '/yukyu-requests',
       icon: Calendar,
-      description: 'Gestión de vacaciones pagadas (有給休暇) y balance de días.',
+      description: 'Gestión de 有給休暇 (vacaciones pagadas) - solicitudes y aprobaciones.',
+    },
+    {
+      title: 'Reportes Yukyu',
+      href: '/yukyu-reports',
+      icon: BarChart3,
+      description: 'Estadísticas y reportes de uso de vacaciones pagadas.',
     },
   ],
   secondaryNav: [
