@@ -260,7 +260,7 @@ echo   ∁EBackend listo
 
 echo.
 echo   ▶ Creando todas las tablas de la base de datos...
-docker exec uns-claudejp-backend bash -c "cd /app && python -c \"from app.models.models import *; from sqlalchemy import create_engine; engine = create_engine('postgresql://uns_admin:VF3sp-ZYs0ohQknm_rEmYU5UuEVfm7nGA3i-a_NetOs@db:5432/uns_claudejp'); Base.metadata.create_all(bind=engine); print('✁ETablas creadas exitosamente')\""
+docker exec uns-claudejp-backend bash -c "cd /app && python -c \"from app.models.models import *; from sqlalchemy import create_engine; engine = create_engine('postgresql://uns_admin:!POSTGRES_PASSWORD!@db:5432/uns_claudejp'); Base.metadata.create_all(bind=engine); print('✁ETablas creadas exitosamente')\""
 if !errorlevel! NEQ 0 (
     echo   X ERROR: Falló la creación de tablas
     pause >nul
@@ -347,7 +347,12 @@ echo Comandos útiles:
 echo   • Ver logs:    scripts\LOGS.bat
 echo   • Detener:     scripts\STOP.bat
 echo.
-echo i Primera carga del frontend puede tardar 1-2 minutosnecho.necho [PASO FINAL] Limpieza automatica de fotos OLEnecho [INFO] Ejecutando LIMPIAR_FOTOS_OLE.bat automaticamente...necho.ncall "%~dp0LIMPIAR_FOTOS_OLE.bat"
+echo   i Primera carga del frontend puede tardar 1-2 minutos
+echo.
+echo [PASO FINAL] Limpieza automatica de fotos OLE
+echo [INFO] Ejecutando LIMPIAR_FOTOS_OLE.bat automaticamente...
+echo.
+call "%~dp0LIMPIAR_FOTOS_OLE.bat"
 echo.
 
 pause >nul

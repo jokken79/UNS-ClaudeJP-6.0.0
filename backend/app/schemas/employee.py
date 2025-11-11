@@ -38,6 +38,7 @@ class EmployeeCreate(EmployeeBase):
     apartment_start_date: Optional[date] = None
     apartment_rent: Optional[int] = None
     is_corporate_housing: bool = False  # 社宅 (Corporate Housing)
+    housing_subsidy: Optional[int] = 0  # 住宅手当 (Housing Subsidy)
 
 
 class EmployeeUpdate(BaseModel):
@@ -59,6 +60,7 @@ class EmployeeUpdate(BaseModel):
     apartment_id: Optional[int] = None
     apartment_rent: Optional[int] = None
     is_corporate_housing: bool = False  # 社宅 (Corporate Housing)
+    housing_subsidy: Optional[int] = 0  # 住宅手当 (Housing Subsidy)
     zairyu_expire_date: Optional[date] = None
 
 
@@ -117,6 +119,7 @@ class EmployeeResponse(EmployeeBase):
     apartment_move_out_date: Optional[date]  # 退去日
     apartment_rent: Optional[int]
     is_corporate_housing: bool = False  # 社宅 (Corporate Housing)
+    housing_subsidy: Optional[int] = 0  # 住宅手当 (Housing Subsidy)
 
     # Yukyu (paid vacation)
     yukyu_total: int
@@ -197,6 +200,7 @@ class StaffResponse(BaseModel):
     termination_reason: Optional[str] = None
     notes: Optional[str] = None
     is_corporate_housing: bool = False
+    housing_subsidy: Optional[int] = 0  # 住宅手当 (Housing Subsidy)
 
     # Metadata
     created_at: datetime
@@ -278,6 +282,7 @@ class ContractWorkerResponse(BaseModel):
     apartment_move_out_date: Optional[date] = None
     apartment_rent: Optional[int] = None
     is_corporate_housing: bool = False
+    housing_subsidy: Optional[int] = 0  # 住宅手当 (Housing Subsidy)
 
     # Yukyu (vacaciones pagadas)
     yukyu_total: int = 0
