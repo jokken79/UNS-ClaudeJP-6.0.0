@@ -336,28 +336,20 @@ echo Comandos útiles:
 echo   • Ver logs:    scripts\LOGS.bat
 echo   • Detener:     scripts\STOP.bat
 echo.
-echo i Primera carga del frontend puede tardar 1-2 minutosnecho.necho [PASO FINAL] Limpieza automatica de fotos OLEnecho [INFO] Ejecutando LIMPIAR_FOTOS_OLE.bat automaticamente...necho.ncall "%~dp0LIMPIAR_FOTOS_OLE.bat"
+echo   i Primera carga del frontend puede tardar 1-2 minutos
 echo.
-
-pause >nul
-
-:: ══════════════════════════════════════════════════════════════════════════
-::  LIMPIEZA AUTOMÁTICA DE FOTOS OLE (2025-11-11)
-:: ══════════════════════════════════════════════════════════════════════════
-
 echo.
 echo ╔══════════════════════════════════════════════════════════════════════╗
-echo ║         PASO FINAL: LIMPIEZA AUTOMÁTICA DE FOTOS OLE               ║
+echo ║      [PASO FINAL] LIMPIEZA AUTOMÁTICA DE FOTOS OLE                 ║
 echo ╚══════════════════════════════════════════════════════════════════════╝
 echo.
-echo [INFO] Ejecutando limpieza automática de bytes OLE en fotos...
-echo [INFO] Esto eliminará basura de Microsoft Access de las fotos
+echo [INFO] Ejecutando LIMPIAR_FOTOS_OLE.bat automáticamente...
 echo.
-
 call "%~dp0LIMPIAR_FOTOS_OLE.bat"
-
 echo.
 echo ╔══════════════════════════════════════════════════════════════════════╗
 echo ║         REINSTALACIÓN + LIMPIEZA COMPLETADA AL 100%%                ║
 echo ╚══════════════════════════════════════════════════════════════════════╝
 echo.
+
+pause >nul

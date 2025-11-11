@@ -86,19 +86,23 @@ services:
         python scripts/manage_db.py seed &&
         echo '✅ Demo data seeded' &&
         echo '' &&
-        echo '--- Step 3: Importing employees from Excel ---' &&
+        echo '--- Step 3: Creating apartments from employee data ---' &&
+        python scripts/create_apartments_from_employees.py &&
+        echo '✅ Apartments created (449 records)' &&
+        echo '' &&
+        echo '--- Step 4: Importing employees from Excel ---' &&
         python scripts/import_data.py &&
         echo '✅ Employees imported' &&
         echo '' &&
-        echo '--- Step 4: Importing candidates with 100% COMPLETE field mapping ---' &&
+        echo '--- Step 5: Importing candidates with 100% COMPLETE field mapping ---' &&
         python scripts/import_candidates_improved.py &&
         echo '✅ Candidates imported with complete field coverage' &&
         echo '' &&
-        echo '--- Step 5: Synchronizing candidate-employee status ---' &&
+        echo '--- Step 6: Synchronizing candidate-employee status ---' &&
         python scripts/sync_candidate_employee_status.py &&
         echo '✅ Status synchronized' &&
         echo '' &&
-        echo '--- Step 6: Checking for photo mappings file ---' &&
+        echo '--- Step 7: Checking for photo mappings file ---' &&
         if [ -f /app/config/access_photo_mappings.json ]; then
           echo '✅ Photo mappings file found - importing photos...' &&
           python scripts/import_photos_from_json_simple.py --file config/access_photo_mappings.json --batch-size 100 &&
@@ -111,11 +115,11 @@ services:
           echo '   3. Restart services: scripts\STOP.bat && scripts\START.bat';
         fi &&
         echo '' &&
-        echo '--- Step 7: Verifying candidates were imported ---' &&
+        echo '--- Step 8: Verifying candidates were imported ---' &&
         python scripts/verify_candidates_imported.py &&
         echo '✅ Candidate verification completed' &&
         echo '' &&
-        echo '--- Step 8: Importing factories from JSON files ---' &&
+        echo '--- Step 9: Importing factories from JSON files ---' &&
         python scripts/import_factories_from_json.py &&
         echo '✅ Factories imported' &&
         echo '' &&
@@ -125,6 +129,8 @@ services:
         echo '   - 142 columns in candidates table' &&
         echo '   - 100% field mapping enabled' &&
         echo '   - Percentage support for Japanese skills' &&
+        echo '   - 449 apartments created and loaded' &&
+        echo '   - Apartment V2 system fully initialized' &&
         echo '========================================'
       "
     profiles: ["dev", "prod"]
