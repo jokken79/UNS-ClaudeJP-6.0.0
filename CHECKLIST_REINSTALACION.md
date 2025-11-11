@@ -102,6 +102,39 @@ docker exec -it uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "SELECT COU
 
 ---
 
+### Paso 4b: Verificar Apartamentos V2 (1 min)
+
+```bash
+# Verificar apartamentos cargados
+docker exec -it uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "SELECT COUNT(*) as total_apartamentos FROM apartments WHERE deleted_at IS NULL;"
+
+# Resultado esperado:
+#  total_apartamentos
+# --------------------
+#                 449
+
+# Verificar tablas relacionadas
+docker exec -it uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "SELECT 'apartments' as tabla, COUNT(*) as registros FROM apartments UNION ALL SELECT 'apartment_assignments', COUNT(*) FROM apartment_assignments UNION ALL SELECT 'additional_charges', COUNT(*) FROM additional_charges UNION ALL SELECT 'rent_deductions', COUNT(*) FROM rent_deductions ORDER BY tabla;"
+
+# Resultado esperado:
+#        tabla         | registros
+# ---------------------+-----------
+#  additional_charges  |         0
+#  apartment_assignments |       0
+#  apartments          |       449
+#  rent_deductions     |         0
+```
+
+**✅ Completado cuando:**
+- 449 apartamentos en la tabla `apartments`
+- 4 tablas del sistema V2 existen y son consultables
+
+**⚠️ Si falla:**
+- Verifica que el importer corrió correctamente: `docker compose logs importer | grep apartments`
+- Debería mostrar: "✅ Apartments created (449 records)"
+
+---
+
 ### Paso 5: Verificar en Navegador (2 min)
 
 #### 5a. Verificar Candidatos
@@ -118,7 +151,16 @@ docker exec -it uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "SELECT COU
 3. ✅ Fotos aparecen al hacer scroll (virtual scrolling)
 4. ✅ Sin errores en consola del navegador (F12)
 
-**✅ Completado cuando:** Ambas páginas muestran fotos correctamente
+#### 5c. Verificar Apartamentos V2 (NUEVO)
+
+1. Abrir: http://localhost:3000/apartments
+2. ✅ Deberías ver lista de apartamentos (449 total)
+3. ✅ Columnas: Código, Dirección, Renta, Capacidad, Estado
+4. ✅ Filtros funcionando (Estado, Prefectura, Tipo de habitación)
+5. ✅ Paginación funcional
+6. ✅ Sin errores en consola del navegador (F12)
+
+**✅ Completado cuando:** Las tres páginas (candidatos, empleados, apartamentos) muestran datos correctamente
 
 ---
 
@@ -211,12 +253,17 @@ docker exec uns-claudejp-backend bash -c "cd /app && python scripts/fix_photo_da
 # Comando 2 (empleados)
 docker exec uns-claudejp-backend bash -c "cd /app && python scripts/fix_employee_photos.py"
 
+# Comando 3 (verificar apartamentos V2 - NUEVO)
+docker exec -it uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "SELECT COUNT(*) FROM apartments;"
+# Debe mostrar: 449
+
 # Verificar en navegador
 # - http://localhost:3000/candidates
 # - http://localhost:3000/employees
+# - http://localhost:3000/apartments (NUEVO)
 ```
 
-**Si sigues estos 2 comandos, NUNCA tendrás problemas con fotos.**
+**Si sigues estos 3 comandos, NUNCA tendrás problemas con fotos ni apartamentos.**
 
 ---
 
@@ -234,12 +281,14 @@ docker exec uns-claudejp-backend bash -c "cd /app && python scripts/fix_employee
 **Si completaste todos los pasos:**
 - ✅ Sistema reinstalado correctamente
 - ✅ 1,931 fotos funcionando
+- ✅ 449 apartamentos cargados (Sistema V2)
+- ✅ 4 tablas de apartamentos operativas
 - ✅ Listo para usar
 
-**¡Felicidades! Sistema operativo al 100%**
+**¡Felicidades! Sistema operativo al 100% incluyendo Apartamentos V2**
 
 ---
 
-**Última actualización:** 2025-11-11
-**Versión:** 1.0
+**Última actualización:** 2025-11-11 (Apartamentos V2 agregados)
+**Versión:** 2.0
 **Autor:** Claude Code
