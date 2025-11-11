@@ -10,7 +10,7 @@ import { AreaChartCard, EmployeeTrendChart, WorkHoursTrendChart, SalaryTrendChar
 import { BarChartCard, MonthlySalaryBarChart } from '@/components/dashboard/charts/BarChartCard';
 import { DonutChartCard, EmployeeStatusDonutChart, NationalityDonutChart } from '@/components/dashboard/charts/DonutChartCard';
 import { TrendCard, EmployeeTrendCard, HoursTrendCard, SalaryTrendCard, CandidatesTrendCard } from '@/components/dashboard/charts/TrendCard';
-import { Users, UserCheck, Building2, Clock, UserPlus, FileCheck, AlertTriangle, DollarSign, TrendingUp } from 'lucide-react';
+import { Users, UserCheck, Building2, Clock, UserPlus, FileCheck, AlertTriangle, DollarSign, TrendingUp, Home } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useEffect, useState } from 'react';
@@ -78,6 +78,7 @@ export default function DashboardPage() {
     activeEmployees: Array.isArray(employeeItems) ? employeeItems.filter((e: any) => e.status === 'active').length : 0,
     totalFactories: Array.isArray(factoryItems) ? factoryItems.length : 0,
     totalTimerCards: Array.isArray(timerCardItems) ? timerCardItems.length : 0,
+    employeesInCorporateHousing: Array.isArray(employeeItems) ? employeeItems.filter((e: any) => e.is_corporate_housing === true).length : 0,
   };
 
   // Combined loading state for components that need it
@@ -262,6 +263,16 @@ export default function DashboardPage() {
             trend={{ value: 3, isPositive: true }}
             loading={isLoading}
             variant="default"
+            theme="default"
+          />
+          <MetricCard
+            title="社宅利用者"
+            value={stats.employeesInCorporateHousing}
+            description="Corporate Housing"
+            icon={Home}
+            trend={{ value: 0, isPositive: true }}
+            loading={isLoading}
+            variant="compact"
             theme="default"
           />
           <MetricCard
