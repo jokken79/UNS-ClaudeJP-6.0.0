@@ -16,7 +16,7 @@ from slowapi.util import get_remote_address
 
 from app.core.database import get_db
 from app.core.config import settings
-from app.models.models import Candidate, Document, Employee, User, CandidateStatus, DocumentType, CandidateForm
+from app.models.models import Candidate, Document, Employee, User, CandidateStatus, DocumentType, CandidateForm, Request, RequestType, RequestStatus
 from app.schemas.candidate import (
     CandidateCreate, CandidateUpdate, CandidateResponse,
     CandidateApprove, CandidateReject, DocumentUpload, OCRData,
@@ -590,6 +590,8 @@ async def quick_evaluate_candidate(
 
     Sets candidate status to "approved" (合格) or "pending" (審査中)
     Coordinator or higher can evaluate candidates
+
+    🆕 NEW BEHAVIOR: When approved, automatically creates a 入社連絡票 (NYUUSHA) request
     """
     candidate = db.query(Candidate).filter(Candidate.id == candidate_id).first()
     if not candidate:
@@ -599,9 +601,36 @@ async def quick_evaluate_candidate(
         )
 
     # Update status based on evaluation
-    candidate.status = "approved" if evaluation.approved else "pending"
-    candidate.approved_by = current_user.id
-    candidate.approved_at = datetime.now()
+    if evaluation.approved:
+        candidate.status = "approved"
+        candidate.approved_by = current_user.id
+        candidate.approved_at = datetime.now()
+
+        # 🆕 AUTO-CREATE 入社連絡票 (New Hire Notification Form)
+        # Check if a NYUUSHA request already exists for this candidate
+        existing_nyuusha = db.query(Request).filter(
+            Request.candidate_id == candidate.id,
+            Request.request_type == RequestType.NYUUSHA
+        ).first()
+
+        if not existing_nyuusha:
+            # Create new 入社連絡票 request
+            nyuusha_request = Request(
+                candidate_id=candidate.id,
+                hakenmoto_id=None,  # Will be filled after employee creation
+                request_type=RequestType.NYUUSHA,
+                status=RequestStatus.PENDING,
+                start_date=date.today(),
+                end_date=date.today(),
+                reason=f"新規採用: {candidate.full_name_kanji or candidate.full_name_roman}",
+                notes=evaluation.notes if hasattr(evaluation, 'notes') and evaluation.notes else None,
+                employee_data={}  # Empty JSON, to be filled later
+            )
+            db.add(nyuusha_request)
+
+            logger.info(f"Created 入社連絡票 request for candidate {candidate.id} ({candidate.rirekisho_id})")
+    else:
+        candidate.status = "pending"
 
     db.commit()
     db.refresh(candidate)
