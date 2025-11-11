@@ -124,4 +124,3 @@ echo ===========================================================================
 echo    PRESIONA CUALQUIER TECLA PARA CERRAR ESTA VENTANA
 echo ================================================================================
 pause >nul
-exit /b !PYTHON_EXIT_CODE!
