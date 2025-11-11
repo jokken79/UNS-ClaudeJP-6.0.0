@@ -83,6 +83,4 @@ echo.
 echo 🔄 Para restaurar: scripts\RESTAURAR_DATOS_FUN.bat
 echo.
 
-pause
-
 pause >nul
