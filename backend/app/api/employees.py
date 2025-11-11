@@ -738,7 +738,8 @@ async def import_employees_from_excel(
                         return value.date()
                     try:
                         return pd.to_datetime(value).date()
-                    except:
+                    except (ValueError, TypeError):
+                        # Return None for unparseable date formats
                         return None
 
                 # Parse integer
@@ -747,7 +748,8 @@ async def import_employees_from_excel(
                         return None
                     try:
                         return int(value)
-                    except:
+                    except (ValueError, TypeError):
+                        # Return None for non-integer values
                         return None
 
                 # Parse boolean
