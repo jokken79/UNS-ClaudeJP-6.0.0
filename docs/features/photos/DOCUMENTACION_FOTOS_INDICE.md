@@ -1,8 +1,26 @@
 # 📚 Índice Completo: Documentación de Fotos de Candidatos
 
 **Status**: ✅ COMPLETAMENTE DOCUMENTADO
-**Fecha**: 2025-11-09
+**Última actualización**: 2025-11-11
 **Acceso**: Leer primero este archivo, luego seleccionar según tu necesidad
+
+---
+
+## 🚨 NUEVO: Solución OLE Garbage Bytes (2025-11-11)
+
+### ⚠️ SI LAS FOTOS NO SE VEN - LEE PRIMERO:
+👉 **`SOLUCION_FOTOS_OLE_2025-11-11.md`**
+- ✅ Solución completa para fotos no visibles
+- ✅ Fix OLE garbage bytes (1,931 fotos reparadas)
+- ✅ Scripts de limpieza incluidos
+- ✅ Checklist para reinstalaciones/cambio de PC
+- ✅ **100% garantizado que funciona**
+
+**Este documento es CRÍTICO si**:
+- ✅ Vas a hacer reinstalación
+- ✅ Vas a cambiar de PC
+- ✅ Las fotos no se muestran en candidatos/empleados
+- ✅ Necesitas prevenir problemas futuros
 
 ---
 

@@ -25,6 +25,29 @@ import type {
   DashboardStats,
 } from '@/types/api';
 
+import type {
+  ApartmentResponse,
+  ApartmentWithStats,
+  ApartmentCreate,
+  ApartmentUpdate,
+  ApartmentListParams,
+  AssignmentResponse,
+  AssignmentListItem,
+  AssignmentCreate,
+  AssignmentUpdate,
+  AssignmentListParams,
+  TransferRequest,
+  TransferResponse,
+  AdditionalChargeResponse,
+  AdditionalChargeCreate,
+  AdditionalChargeUpdate,
+  ChargeListParams,
+  DeductionResponse,
+  DeductionListParams,
+  ProratedCalculationRequest,
+  ProratedCalculationResponse,
+} from '@/types/apartments-v2';
+
 // Normalize base URL to ensure it includes `/api` and no trailing slash
 const normalizeBaseUrl = (url: string): string => {
   if (!url) return 'http://localhost:8000/api';
@@ -328,6 +351,261 @@ export const dashboardService = {
     const response = await api.get('/dashboard/recent-activity/');
     return response.data;
   }
+};
+
+// =============================================================================
+// APARTMENTS V2 SERVICES
+// =============================================================================
+
+export const apartmentsV2Service = {
+  // -----------------------------------------------------------------------------
+  // APARTMENTS
+  // -----------------------------------------------------------------------------
+
+  /**
+   * List apartments with filters and pagination
+   */
+  listApartments: async (params?: ApartmentListParams): Promise<PaginatedResponse<ApartmentWithStats>> => {
+    const response = await api.get<PaginatedResponse<ApartmentWithStats>>('/apartments-v2/apartments', { params });
+    return response.data;
+  },
+
+  /**
+   * Get apartment by ID with stats
+   */
+  getApartment: async (id: number): Promise<ApartmentWithStats> => {
+    const response = await api.get<ApartmentWithStats>(`/apartments-v2/apartments/${id}`);
+    return response.data;
+  },
+
+  /**
+   * Create new apartment
+   */
+  createApartment: async (data: ApartmentCreate): Promise<ApartmentResponse> => {
+    const response = await api.post<ApartmentResponse>('/apartments-v2/apartments', data);
+    return response.data;
+  },
+
+  /**
+   * Update existing apartment
+   */
+  updateApartment: async (id: number, data: ApartmentUpdate): Promise<ApartmentResponse> => {
+    const response = await api.put<ApartmentResponse>(`/apartments-v2/apartments/${id}`, data);
+    return response.data;
+  },
+
+  /**
+   * Soft delete apartment
+   */
+  deleteApartment: async (id: number): Promise<void> => {
+    await api.delete(`/apartments-v2/apartments/${id}`);
+  },
+
+  // -----------------------------------------------------------------------------
+  // ASSIGNMENTS
+  // -----------------------------------------------------------------------------
+
+  /**
+   * List assignments with filters and pagination
+   */
+  listAssignments: async (params?: AssignmentListParams): Promise<PaginatedResponse<AssignmentListItem>> => {
+    const response = await api.get<PaginatedResponse<AssignmentListItem>>('/apartments-v2/assignments', { params });
+    return response.data;
+  },
+
+  /**
+   * Get assignment by ID with full details
+   */
+  getAssignment: async (id: number): Promise<AssignmentResponse> => {
+    const response = await api.get<AssignmentResponse>(`/apartments-v2/assignments/${id}`);
+    return response.data;
+  },
+
+  /**
+   * Create new assignment
+   */
+  createAssignment: async (data: AssignmentCreate): Promise<AssignmentResponse> => {
+    const response = await api.post<AssignmentResponse>('/apartments-v2/assignments', data);
+    return response.data;
+  },
+
+  /**
+   * Update/end assignment
+   */
+  updateAssignment: async (id: number, data: AssignmentUpdate): Promise<AssignmentResponse> => {
+    const response = await api.put<AssignmentResponse>(`/apartments-v2/assignments/${id}`, data);
+    return response.data;
+  },
+
+  /**
+   * End assignment (convenience method)
+   */
+  endAssignment: async (
+    id: number,
+    data: {
+      end_date: string;
+      include_cleaning_fee?: boolean;
+      cleaning_fee?: number;
+      additional_charges?: Array<{
+        charge_type: string;
+        description: string;
+        amount: number;
+        charge_date: string;
+      }>;
+    }
+  ): Promise<AssignmentResponse> => {
+    const response = await api.put<AssignmentResponse>(`/apartments-v2/assignments/${id}/end`, data);
+    return response.data;
+  },
+
+  /**
+   * Get active assignment for employee
+   */
+  getActiveAssignmentByEmployee: async (employeeId: number): Promise<AssignmentResponse | null> => {
+    const response = await api.get<AssignmentResponse | null>(
+      `/apartments-v2/assignments/employee/${employeeId}/active`
+    );
+    return response.data;
+  },
+
+  /**
+   * Get active assignments for apartment
+   */
+  getActiveAssignmentsByApartment: async (apartmentId: number): Promise<AssignmentResponse[]> => {
+    const response = await api.get<AssignmentResponse[]>(
+      `/apartments-v2/assignments/apartment/${apartmentId}/active`
+    );
+    return response.data;
+  },
+
+  // -----------------------------------------------------------------------------
+  // TRANSFERS
+  // -----------------------------------------------------------------------------
+
+  /**
+   * Transfer employee between apartments
+   */
+  transferEmployee: async (data: TransferRequest): Promise<TransferResponse> => {
+    const response = await api.post<TransferResponse>('/apartments-v2/assignments/transfer', data);
+    return response.data;
+  },
+
+  // -----------------------------------------------------------------------------
+  // ADDITIONAL CHARGES
+  // -----------------------------------------------------------------------------
+
+  /**
+   * List additional charges
+   */
+  listCharges: async (params?: ChargeListParams): Promise<PaginatedResponse<AdditionalChargeResponse>> => {
+    const response = await api.get<PaginatedResponse<AdditionalChargeResponse>>('/apartments-v2/charges', { params });
+    return response.data;
+  },
+
+  /**
+   * Get charge by ID
+   */
+  getCharge: async (id: number): Promise<AdditionalChargeResponse> => {
+    const response = await api.get<AdditionalChargeResponse>(`/apartments-v2/charges/${id}`);
+    return response.data;
+  },
+
+  /**
+   * Create additional charge
+   */
+  createCharge: async (data: AdditionalChargeCreate): Promise<AdditionalChargeResponse> => {
+    const response = await api.post<AdditionalChargeResponse>('/apartments-v2/charges', data);
+    return response.data;
+  },
+
+  /**
+   * Update additional charge
+   */
+  updateCharge: async (id: number, data: AdditionalChargeUpdate): Promise<AdditionalChargeResponse> => {
+    const response = await api.put<AdditionalChargeResponse>(`/apartments-v2/charges/${id}`, data);
+    return response.data;
+  },
+
+  /**
+   * Approve charge (admin only)
+   */
+  approveCharge: async (id: number): Promise<AdditionalChargeResponse> => {
+    const response = await api.put<AdditionalChargeResponse>(`/apartments-v2/charges/${id}/approve`);
+    return response.data;
+  },
+
+  /**
+   * Delete charge (soft delete)
+   */
+  deleteCharge: async (id: number): Promise<void> => {
+    await api.delete(`/apartments-v2/charges/${id}`);
+  },
+
+  // -----------------------------------------------------------------------------
+  // DEDUCTIONS
+  // -----------------------------------------------------------------------------
+
+  /**
+   * List rent deductions
+   */
+  listDeductions: async (params?: DeductionListParams): Promise<PaginatedResponse<DeductionResponse>> => {
+    const response = await api.get<PaginatedResponse<DeductionResponse>>('/apartments-v2/deductions', { params });
+    return response.data;
+  },
+
+  /**
+   * Get deductions for specific year/month
+   */
+  getDeductionsByPeriod: async (year: number, month: number): Promise<DeductionResponse[]> => {
+    const response = await api.get<DeductionResponse[]>(`/apartments-v2/deductions/${year}/${month}`);
+    return response.data;
+  },
+
+  /**
+   * Generate deductions for specific month
+   */
+  generateDeductions: async (year: number, month: number): Promise<{ created: number; skipped: number }> => {
+    const response = await api.post<{ created: number; skipped: number }>(
+      '/apartments-v2/deductions/generate',
+      { year, month }
+    );
+    return response.data;
+  },
+
+  /**
+   * Export deductions to CSV
+   */
+  exportDeductions: async (year: number, month: number): Promise<Blob> => {
+    const response = await api.get(`/apartments-v2/deductions/export/${year}/${month}`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  // -----------------------------------------------------------------------------
+  // CALCULATIONS
+  // -----------------------------------------------------------------------------
+
+  /**
+   * Calculate prorated rent
+   */
+  calculateProratedRent: async (data: ProratedCalculationRequest): Promise<ProratedCalculationResponse> => {
+    const response = await api.post<ProratedCalculationResponse>('/apartments-v2/calculate/prorated', data);
+    return response.data;
+  },
+
+  /**
+   * Calculate transfer cost (preview)
+   */
+  calculateTransferCost: async (data: TransferRequest): Promise<{
+    old_apartment_cost: number;
+    new_apartment_cost: number;
+    total_monthly_cost: number;
+    breakdown: Record<string, any>;
+  }> => {
+    const response = await api.post('/apartments-v2/calculate/transfer', data);
+    return response.data;
+  },
 };
 
 export default api;

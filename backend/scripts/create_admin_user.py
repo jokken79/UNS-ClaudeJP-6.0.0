@@ -29,10 +29,22 @@ print("=" * 80)
 # Check if admin already exists
 existing_admin = db.query(User).filter(User.username == 'admin').first()
 
+# Get admin password from environment
+admin_password = os.getenv('ADMIN_PASSWORD')
+
 if existing_admin:
     print("\n⚠ Usuario 'admin' ya existe")
     print(f"   Email: {existing_admin.email}")
     print(f"   Rol: {existing_admin.role.value}")
+
+    # Si ADMIN_PASSWORD está en .env, actualizar la contraseña
+    if admin_password:
+        existing_admin.password_hash = AuthService.get_password_hash(admin_password)
+        db.commit()
+        print(f"\n✓ Contraseña actualizada desde ADMIN_PASSWORD en .env")
+        print(f"   Password: {admin_password}")
+    else:
+        print(f"\n⚠  Para resetear la contraseña, configura ADMIN_PASSWORD en .env")
 else:
     # Get admin password from environment or generate a secure one
     admin_password = os.getenv('ADMIN_PASSWORD')
