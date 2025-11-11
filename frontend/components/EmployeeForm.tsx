@@ -142,7 +142,7 @@ export default function EmployeeForm({ employeeId, isEdit = false }: EmployeeFor
 
       setFormData({
         rirekisho_id: employee.rirekisho_id || '',
-        factory_id: employee.factory_id || '',
+        factory_id: employee.factory_id ? employee.factory_id.toString() : '',
         hakensaki_shain_id: employee.hakensaki_shain_id || '',
         photo_url: employee.photo_url || '',
         full_name_kanji: employee.full_name_kanji || '',

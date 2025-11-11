@@ -61,11 +61,11 @@ export default function SalaryPage() {
         year: selectedYear,
       };
       if (searchTerm) params.search = searchTerm;
-      const response = await salaryService.getSalaries(params);
+      const response = await salaryService.getSalaries<SalaryCalculation[]>(params);
       return {
-        items: response as SalaryCalculation[],
-        total: 0
-      } as SalaryResponse;
+        items: response,
+        total: response.length,
+      };
     },
   });
 

@@ -52,11 +52,11 @@ export default function RequestsPage() {
       if (searchTerm) params.search = searchTerm;
       if (statusFilter !== 'all') params.status = statusFilter;
       if (typeFilter !== 'all') params.request_type = typeFilter;
-      const response = await requestService.getRequests(params);
+      const response = await requestService.getRequests<Request[]>(params);
       return {
-        items: response as Request[],
-        total: 0
-      } as RequestsResponse;
+        items: response,
+        total: response.length,
+      };
     },
   });
 

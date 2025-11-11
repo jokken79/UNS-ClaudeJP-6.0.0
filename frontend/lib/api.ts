@@ -6,6 +6,7 @@ import type {
   User,
   Candidate,
   CandidateCreateData,
+  CandidateUpdateData,
   CandidateListParams,
   PaginatedResponse,
   Employee,
@@ -170,8 +171,8 @@ export const employeeService = {
     return response.data;
   },
 
-  getEmployee: async (id: string | number): Promise<Employee> => {
-    const response = await api.get<Employee>(`/employees/${id}/`);
+  getEmployee: async <T = Employee>(id: string | number): Promise<T> => {
+    const response = await api.get<T>(`/employees/${id}/`);
     return response.data;
   },
 
@@ -207,7 +208,7 @@ export const candidateService = {
     return response.data;
   },
 
-  updateCandidate: async (id: string | number, data: Partial<CandidateCreateData>): Promise<Candidate> => {
+  updateCandidate: async (id: string | number, data: CandidateUpdateData): Promise<Candidate> => {
     const response = await api.put<Candidate>(`/candidates/${id}/`, data);
     return response.data;
   },
@@ -256,13 +257,13 @@ export const factoryService = {
 
 // Timer Card services
 export const timerCardService = {
-  getTimerCards: async (params?: TimerCardListParams): Promise<TimerCard[]> => {
-    const response = await api.get<TimerCard[]>('/timer-cards/', { params });
+  getTimerCards: async <T = TimerCard[]>(params?: TimerCardListParams): Promise<T> => {
+    const response = await api.get<T>('/timer-cards/', { params });
     return response.data;
   },
 
-  getTimerCard: async (id: string | number): Promise<TimerCard> => {
-    const response = await api.get<TimerCard>(`/timer-cards/${id}/`);
+  getTimerCard: async <T = TimerCard>(id: string | number): Promise<T> => {
+    const response = await api.get<T>(`/timer-cards/${id}/`);
     return response.data;
   },
 
@@ -296,13 +297,13 @@ export const timerCardService = {
 
 // Salary services
 export const salaryService = {
-  getSalaries: async (params?: SalaryListParams): Promise<SalaryCalculation[]> => {
-    const response = await api.get<SalaryCalculation[]>('/salary/', { params });
+  getSalaries: async <T = SalaryCalculation[]>(params?: SalaryListParams): Promise<T> => {
+    const response = await api.get<T>('/salary/', { params });
     return response.data;
   },
 
-  getSalary: async (id: string | number): Promise<SalaryCalculation> => {
-    const response = await api.get<SalaryCalculation>(`/salary/${id}/`);
+  getSalary: async <T = SalaryCalculation>(id: string | number): Promise<T> => {
+    const response = await api.get<T>(`/salary/${id}/`);
     return response.data;
   },
 
@@ -314,13 +315,13 @@ export const salaryService = {
 
 // Request services
 export const requestService = {
-  getRequests: async (params?: RequestListParams): Promise<Request[]> => {
-    const response = await api.get<Request[]>('/requests/', { params });
+  getRequests: async <T = Request[]>(params?: RequestListParams): Promise<T> => {
+    const response = await api.get<T>('/requests/', { params });
     return response.data;
   },
 
-  getRequest: async (id: string | number): Promise<Request> => {
-    const response = await api.get<Request>(`/requests/${id}/`);
+  getRequest: async <T = Request>(id: string | number): Promise<T> => {
+    const response = await api.get<T>(`/requests/${id}/`);
     return response.data;
   },
 

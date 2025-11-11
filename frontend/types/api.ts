@@ -123,6 +123,12 @@ export interface CandidateCreateData {
   address?: string;
 }
 
+export interface CandidateUpdateData extends Partial<CandidateCreateData> {
+  status?: CandidateStatus;
+  notes?: string;
+  [key: string]: unknown;
+}
+
 export interface CandidateListParams extends PaginationParams {
   status?: CandidateStatus;
   search?: string;
