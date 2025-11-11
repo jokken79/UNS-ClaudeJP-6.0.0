@@ -360,6 +360,33 @@ echo.
 %DOCKER_COMPOSE_CMD% ps
 echo.
 
+echo ┌────────────────────────────────────────────────────────────────────┐
+echo │ 📊 [6/6] VERIFICAR MÓDULO DE APARTAMENTOS V2                      │
+echo └────────────────────────────────────────────────────────────────────┘
+echo.
+echo   ▶ Verificando tablas de apartamentos en base de datos...
+docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "SELECT COUNT(*) FROM apartments;" 2>nul | findstr "449" >nul
+if !errorlevel! EQU 0 (
+    echo   ✓ Apartamentos verificados (449 registros)
+) else (
+    echo   ⚠ Verificando estructura de apartamentos...
+    docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "\d apartments" 2>nul | findstr "apartment_id\|base_rent" >nul
+    if !errorlevel! EQU 0 (
+        echo   ✓ Estructura de apartamentos V2 presente
+    ) else (
+        echo   ⚠ Nota: Apartamentos pueden necesitar migración
+    )
+)
+
+echo   ▶ Verificando servicios de apartamentos en backend...
+docker exec uns-claudejp-backend python -c "import sys; sys.path.insert(0, '/app'); from app.services.apartment_service import ApartmentService; from app.services.assignment_service import AssignmentService; print('✓ Services OK')" 2>nul
+if !errorlevel! EQU 0 (
+    echo   ✓ Services de apartamentos importados correctamente
+) else (
+    echo   ⚠ Services de apartamentos aún inicializando
+)
+echo.
+
 cls
 echo.
 echo          ███████╗██╗   ██╗ ██████╗ ██████╗███████╗███████╗███████╗ ██╗
