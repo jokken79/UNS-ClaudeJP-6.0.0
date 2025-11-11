@@ -18,7 +18,7 @@ import { SkeletonListItem } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { useDelayedLoading, getErrorType } from '@/lib/loading-utils';
-import type { Candidate, PaginatedResponse } from '@/types/api';
+import { CandidateStatus, type Candidate, type PaginatedResponse } from '@/types/api';
 
 type CandidatesResponse = PaginatedResponse<Candidate>;
 
@@ -89,7 +89,7 @@ export default function CandidatesPage() {
     if (!confirm('この候補者を承認しますか？')) return;
 
     try {
-      await candidateService.updateCandidate(candidateId.toString(), { status: 'approved' });
+      await candidateService.updateCandidate(candidateId.toString(), { status: CandidateStatus.APPROVED });
       refetch(); // Reload the list
     } catch (error) {
       console.error('Error approving candidate:', error);
@@ -101,7 +101,7 @@ export default function CandidatesPage() {
     if (!confirm('この候補者を却下しますか？')) return;
 
     try {
-      await candidateService.updateCandidate(candidateId.toString(), { status: 'rejected' });
+      await candidateService.updateCandidate(candidateId.toString(), { status: CandidateStatus.REJECTED });
       refetch(); // Reload the list
     } catch (error) {
       console.error('Error rejecting candidate:', error);

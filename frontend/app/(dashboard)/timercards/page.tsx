@@ -56,10 +56,10 @@ export default function TimerCardsPage() {
       };
       if (searchTerm) params.search = searchTerm;
       if (selectedDate) params.work_date = selectedDate;
-      const response = await timerCardService.getTimerCards(params);
+      const response = await timerCardService.getTimerCards<TimerCard[]>(params);
       return {
-        items: response as TimerCard[],
-        total: 0
+        items: response,
+        total: response.length,
       };
     },
   });

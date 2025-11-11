@@ -18,7 +18,7 @@ import {
   ClockIcon,
 } from '@heroicons/react/24/outline';
 
-interface Employee {
+interface EmployeeDetails {
   id: number;
   hakenmoto_id: number;
   rirekisho_id: string | null;
@@ -110,14 +110,14 @@ export default function EmployeeDetailPage() {
   const params = useParams();
   const id = params?.id as string;
 
-  const { data: employee, isLoading, error } = useQuery<Employee>({
+  const { data: employee, isLoading, error } = useQuery<EmployeeDetails>({
     queryKey: ['employee', id],
-    queryFn: async (): Promise<Employee> => {
-      const response = await employeeService.getEmployee(id);
-      return response as Employee;
+    queryFn: async (): Promise<EmployeeDetails> => {
+      const response = await employeeService.getEmployee<EmployeeDetails>(id);
+      return response;
     },
     enabled: !!id,
-  }) as UseQueryResult<Employee, Error>;
+  }) as UseQueryResult<EmployeeDetails, Error>;
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '-';

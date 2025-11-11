@@ -386,7 +386,10 @@ function FontControl({ label, value, onChange, onReset }: FontControlProps) {
   const [isOpen, setIsOpen] = React.useState(false);
 
   // Get all categories
-  const categories = ['All', ...Object.keys(GOOGLE_FONTS)];
+  const categories = React.useMemo(
+    () => ['All', ...GOOGLE_FONTS.map(category => category.name)],
+    []
+  );
 
   // Filter fonts based on search and category
   const filteredFonts = React.useMemo(() => {
@@ -394,7 +397,8 @@ function FontControl({ label, value, onChange, onReset }: FontControlProps) {
 
     // Filter by category
     if (selectedCategory !== 'All') {
-      fonts = GOOGLE_FONTS[selectedCategory as keyof typeof GOOGLE_FONTS] || [];
+      const category = GOOGLE_FONTS.find(cat => cat.name === selectedCategory);
+      fonts = category ? category.fonts.map(font => font.family) : [];
     }
 
     // Filter by search
