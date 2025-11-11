@@ -4,13 +4,16 @@ Requests API Endpoints (Yukyu, Ikkikokoku, Taisha, etc.)
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
-from datetime import date
+from datetime import date, datetime
 
 from app.core.database import get_db
-from app.models.models import Request, Employee, User, RequestType, RequestStatus
-from app.schemas.request import RequestCreate, RequestUpdate, RequestResponse, RequestReview
+from app.models.models import Request, Employee, User, RequestType, RequestStatus, Candidate, CandidateStatus
+from app.schemas.request import RequestCreate, RequestUpdate, RequestResponse, RequestReview, EmployeeDataInput
 from app.schemas.base import PaginatedResponse, create_paginated_response
 from app.services.auth_service import auth_service
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -265,3 +268,201 @@ async def delete_request(
     db.delete(request)
     db.commit()
     return {"message": "Request deleted"}
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  🆕 ENDPOINTS FOR 入社連絡票 (NYUUSHA RENRAKUHYO) WORKFLOW
+# ═══════════════════════════════════════════════════════════════════════════
+
+@router.put("/{request_id}/employee-data")
+async def save_employee_data(
+    request_id: int,
+    employee_data: EmployeeDataInput,
+    current_user: User = Depends(auth_service.require_role("admin")),
+    db: Session = Depends(get_db)
+):
+    """
+    Save employee-specific data for a 入社連絡票 (New Hire Notification Form)
+
+    This endpoint allows admins to fill in the employee-specific fields
+    before approving the 入社連絡票 and creating the employee record.
+
+    The data is stored as JSON in the employee_data field and will be used
+    when the request is approved to create the employee.
+
+    **Required role**: admin or higher
+    """
+    # Get request
+    request = db.query(Request).filter(Request.id == request_id).first()
+    if not request:
+        raise HTTPException(status_code=404, detail="Request not found")
+
+    # Verify it's a NYUUSHA request
+    if request.request_type != RequestType.NYUUSHA:
+        raise HTTPException(
+            status_code=400,
+            detail="This endpoint is only for 入社連絡票 (NYUUSHA) requests"
+        )
+
+    # Verify request is still pending
+    if request.status != RequestStatus.PENDING:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot modify request with status: {request.status}"
+        )
+
+    # Save employee data as JSON
+    request.employee_data = employee_data.model_dump()
+
+    db.commit()
+    db.refresh(request)
+
+    logger.info(f"Saved employee data for 入社連絡票 request {request_id} by user {current_user.id}")
+
+    return {
+        "message": "Employee data saved successfully",
+        "request_id": request.id,
+        "employee_data": request.employee_data
+    }
+
+
+@router.post("/{request_id}/approve-nyuusha")
+async def approve_nyuusha_request(
+    request_id: int,
+    current_user: User = Depends(auth_service.require_role("admin")),
+    db: Session = Depends(get_db)
+):
+    """
+    Approve a 入社連絡票 (New Hire Notification Form) and create employee record
+
+    This endpoint:
+    1. Validates the request is a NYUUSHA type and has employee_data filled
+    2. Creates an Employee record with data from both candidate and employee_data
+    3. Updates the candidate status to HIRED
+    4. Updates the request status to COMPLETED
+    5. Links the employee to the request via hakenmoto_id
+
+    **Required role**: admin or higher
+    """
+    # 1. Get and validate request
+    request = db.query(Request).filter(Request.id == request_id).first()
+    if not request:
+        raise HTTPException(status_code=404, detail="Request not found")
+
+    if request.request_type != RequestType.NYUUSHA:
+        raise HTTPException(
+            status_code=400,
+            detail="This endpoint is only for 入社連絡票 (NYUUSHA) requests"
+        )
+
+    if request.status != RequestStatus.PENDING:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Request is already {request.status}"
+        )
+
+    if not request.employee_data:
+        raise HTTPException(
+            status_code=400,
+            detail="Employee data must be filled before approval. Use PUT /api/requests/{id}/employee-data first."
+        )
+
+    # 2. Get candidate
+    if not request.candidate_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Request has no associated candidate"
+        )
+
+    candidate = db.query(Candidate).filter(Candidate.id == request.candidate_id).first()
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Associated candidate not found")
+
+    # 3. Check if employee already exists
+    existing_employee = db.query(Employee).filter(
+        Employee.rirekisho_id == candidate.rirekisho_id
+    ).first()
+
+    if existing_employee:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Employee already exists for this candidate (hakenmoto_id: {existing_employee.hakenmoto_id})"
+        )
+
+    # 4. Generate hakenmoto_id
+    max_hakenmoto_id = db.query(func.max(Employee.hakenmoto_id)).scalar() or 0
+    new_hakenmoto_id = max_hakenmoto_id + 1
+
+    # 5. Extract employee data from JSON
+    emp_data = request.employee_data
+
+    # 6. Create Employee record
+    new_employee = Employee(
+        hakenmoto_id=new_hakenmoto_id,
+        rirekisho_id=candidate.rirekisho_id,
+
+        # Copy personal data from candidate (40+ fields)
+        full_name_roman=candidate.full_name_roman,
+        full_name_kanji=candidate.full_name_kanji,
+        full_name_kana=candidate.full_name_kana,
+        date_of_birth=candidate.date_of_birth,
+        gender=candidate.gender,
+        nationality=candidate.nationality,
+        email=candidate.email,
+        phone=candidate.phone,
+        address=candidate.address,
+        photo_data_url=candidate.photo_data_url,
+        passport_number=candidate.passport_number,
+        zairyu_card_number=candidate.zairyu_card_number,
+        visa_type=candidate.visa_type,
+        visa_expiration=candidate.visa_expiration,
+        marital_status=candidate.marital_status,
+        dependents=candidate.dependents,
+
+        # Add employee-specific data from employee_data JSON
+        factory_id=emp_data.get("factory_id"),
+        hire_date=emp_data.get("hire_date"),
+        jikyu=emp_data.get("jikyu"),
+        position=emp_data.get("position"),
+        contract_type=emp_data.get("contract_type"),
+        hakensaki_shain_id=emp_data.get("hakensaki_shain_id"),
+        apartment_id=emp_data.get("apartment_id"),
+        bank_name=emp_data.get("bank_name"),
+        bank_account=emp_data.get("bank_account"),
+        emergency_contact_name=emp_data.get("emergency_contact_name"),
+        emergency_contact_phone=emp_data.get("emergency_contact_phone"),
+
+        # Status
+        status="active",
+        created_at=datetime.now(),
+        updated_at=datetime.now()
+    )
+
+    db.add(new_employee)
+    db.flush()  # Get the employee ID without committing
+
+    # 7. Update candidate status to HIRED
+    candidate.status = CandidateStatus.HIRED
+
+    # 8. Update request
+    request.status = RequestStatus.COMPLETED  # 済
+    request.approved_by = current_user.id
+    request.approved_at = datetime.now()
+    request.hakenmoto_id = new_hakenmoto_id  # Link request to employee
+
+    db.commit()
+    db.refresh(new_employee)
+
+    logger.info(
+        f"入社連絡票 approved: Request {request_id} → Employee created "
+        f"(hakenmoto_id: {new_hakenmoto_id}, rirekisho_id: {candidate.rirekisho_id})"
+    )
+
+    return {
+        "message": "入社連絡票 approved successfully. Employee created.",
+        "employee_id": new_employee.id,
+        "hakenmoto_id": new_hakenmoto_id,
+        "rirekisho_id": new_employee.rirekisho_id,
+        "candidate_status": candidate.status,
+        "request_status": request.status
+    }

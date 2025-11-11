@@ -2,7 +2,7 @@
 Request Schemas (Yukyu, Ikkikokoku, etc.)
 """
 from pydantic import BaseModel, ConfigDict
-from typing import Optional
+from typing import Optional, Dict, Any
 from datetime import date, datetime
 from decimal import Decimal
 from app.models.models import RequestType, RequestStatus
@@ -10,13 +10,15 @@ from app.models.models import RequestType, RequestStatus
 
 class RequestBase(BaseModel):
     """Base request schema"""
-    employee_id: int
+    employee_id: Optional[int] = None  # Nullable for 入社連絡票 (NYUUSHA requests)
+    candidate_id: Optional[int] = None  # For 入社連絡票: links to candidate
     request_type: RequestType
     start_date: date
     end_date: date
     total_days: Optional[Decimal] = None
     reason: Optional[str] = None
     notes: Optional[str] = None
+    employee_data: Optional[Dict[str, Any]] = None  # For 入社連絡票: employee-specific data
 
 
 class RequestCreate(RequestBase):
@@ -84,3 +86,24 @@ class TaishaRequest(BaseModel):
     return_to_country: bool
     forwarding_address: Optional[str] = None
     final_payment_method: Optional[str] = None
+
+
+class EmployeeDataInput(BaseModel):
+    """
+    Employee-specific data for 入社連絡票 (New Hire Notification Form)
+
+    This data is collected after candidate approval and before employee creation.
+    Required fields are enforced at the API level when approving the 入社連絡票.
+    """
+    factory_id: str
+    hire_date: date
+    jikyu: int  # Time wage (時給)
+    position: str
+    contract_type: str
+    hakensaki_shain_id: Optional[str] = None  # 派遣先社員ID
+    apartment_id: Optional[str] = None
+    bank_name: Optional[str] = None
+    bank_account: Optional[str] = None
+    emergency_contact_name: Optional[str] = None
+    emergency_contact_phone: Optional[str] = None
+    notes: Optional[str] = None

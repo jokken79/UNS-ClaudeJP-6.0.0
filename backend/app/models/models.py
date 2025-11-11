@@ -2,6 +2,7 @@
 SQLAlchemy Models for UNS-ClaudeJP 1.0
 """
 from sqlalchemy import Boolean, Column, Integer, String, Text, DateTime, Date, Time, Numeric, Float, ForeignKey, Enum as SQLEnum, JSON, CheckConstraint, UniqueConstraint
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.sql import func
@@ -48,12 +49,14 @@ class RequestType(str, enum.Enum):
     HANKYU = "hankyu"
     IKKIKOKOKU = "ikkikokoku"
     TAISHA = "taisha"
+    NYUUSHA = "nyuusha"  # 入社連絡票 - New hire notification form
 
 
 class RequestStatus(str, enum.Enum):
     PENDING = "pending"
     APPROVED = "approved"
     REJECTED = "rejected"
+    COMPLETED = "completed"  # 済 - Completed/Archived (used for 入社連絡票 after employee creation)
 
 
 class YukyuStatus(str, enum.Enum):
@@ -377,6 +380,7 @@ class Candidate(Base, SoftDeleteMixin):
         primaryjoin="Candidate.rirekisho_id==Employee.rirekisho_id",
         cascade="all, delete-orphan"
     )
+    requests = relationship("Request", foreign_keys="Request.candidate_id", back_populates="candidate")
 
 
 class CandidateForm(Base):
@@ -848,7 +852,8 @@ class Request(Base):
     __tablename__ = "requests"
 
     id = Column(Integer, primary_key=True, index=True)
-    hakenmoto_id = Column(Integer, ForeignKey("employees.hakenmoto_id", ondelete="CASCADE"), nullable=False)
+    hakenmoto_id = Column(Integer, ForeignKey("employees.hakenmoto_id", ondelete="CASCADE"), nullable=True)  # Nullable for 入社連絡票
+    candidate_id = Column(Integer, ForeignKey("candidates.id", ondelete="SET NULL"), nullable=True)  # For 入社連絡票
     request_type = Column(SQLEnum(RequestType, name='request_type'), nullable=False)
     status = Column(SQLEnum(RequestStatus, name='request_status'), default=RequestStatus.PENDING)
 
@@ -860,6 +865,7 @@ class Request(Base):
     # Details
     reason = Column(Text)
     notes = Column(Text)
+    employee_data = Column(JSONB, nullable=True)  # For 入社連絡票: stores employee-specific data before approval
 
     # Approval
     approved_by = Column(Integer, ForeignKey("users.id"))
@@ -870,6 +876,7 @@ class Request(Base):
 
     # Relationships
     employee = relationship("Employee", foreign_keys=[hakenmoto_id], back_populates="requests")
+    candidate = relationship("Candidate", foreign_keys=[candidate_id], back_populates="requests")
 
     @property
     def total_days(self):

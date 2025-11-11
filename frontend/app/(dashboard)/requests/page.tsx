@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import Link from 'next/link';
 import {
   DocumentTextIcon,
   MagnifyingGlassIcon,
@@ -9,9 +10,12 @@ import {
   CalendarDaysIcon,
   CheckCircleIcon,
   XCircleIcon,
-  ClockIcon
+  ClockIcon,
+  ArrowTopRightOnSquareIcon
 } from '@heroicons/react/24/outline';
 import { requestService } from '@/lib/api';
+import { RequestTypeBadge, RequestStatusBadge } from '@/components/requests/RequestTypeBadge';
+import { RequestType, RequestStatus } from '@/types/api';
 
 interface Request {
   id: number;
@@ -60,44 +64,8 @@ export default function RequestsPage() {
     },
   });
 
-  const getRequestTypeLabel = (type: string) => {
-    const types: Record<string, string> = {
-      yukyu: '有給休暇',
-      hankyu: '半休',
-      ikkikokoku: '一時帰国',
-      taisha: '退社'
-    };
-    return types[type] || type;
-  };
-
-  const getRequestTypeColor = (type: string) => {
-    const colors: Record<string, string> = {
-      yukyu: 'bg-blue-100 text-blue-800',
-      hankyu: 'bg-green-100 text-green-800',
-      ikkikokoku: 'bg-purple-100 text-purple-800',
-      taisha: 'bg-red-100 text-red-800'
-    };
-    return colors[type] || 'bg-gray-100 text-gray-800';
-  };
-
-  const getStatusBadge = (status: string) => {
-    const badges: Record<string, { bg: string; text: string; label: string; icon: any }> = {
-      pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: '審査中', icon: ClockIcon },
-      approved: { bg: 'bg-green-100', text: 'text-green-800', label: '承認済み', icon: CheckCircleIcon },
-      rejected: { bg: 'bg-red-100', text: 'text-red-800', label: '却下', icon: XCircleIcon }
-    };
-    const badge = badges[status] || badges.pending;
-    const Icon = badge.icon;
-
-    return (
-      <div className="flex items-center gap-1">
-        <Icon className="h-4 w-4" />
-        <span className={`px-2 py-1 text-xs rounded-full ${badge.bg} ${badge.text}`}>
-          {badge.label}
-        </span>
-      </div>
-    );
-  };
+  // Helper to check if request is NYUUSHA type
+  const isNyuushaRequest = (type: string) => type === RequestType.NYUUSHA;
 
   const requests = data?.items || [];
   const total = data?.total || 0;
@@ -143,6 +111,7 @@ export default function RequestsPage() {
                 <option value="hankyu">半休</option>
                 <option value="ikkikokoku">一時帰国</option>
                 <option value="taisha">退社</option>
+                <option value="nyuusha">入社連絡票</option>
               </select>
             </div>
 
@@ -156,6 +125,7 @@ export default function RequestsPage() {
                 <option value="pending">審査中</option>
                 <option value="approved">承認済み</option>
                 <option value="rejected">却下</option>
+                <option value="completed">済</option>
               </select>
             </div>
           </div>
@@ -208,29 +178,45 @@ export default function RequestsPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {requests.map((request: Request) => (
-              <div key={request.id} className="bg-card rounded-xl shadow-sm border hover:shadow-md transition-shadow">
-                <div className="p-6">
-                  {/* Header */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <UserIcon className="h-8 w-8 text-muted-foreground" />
-                      <div>
-                        <h3 className="font-semibold text-foreground text-lg">
-                          {request.employee_name || `従業員ID: ${request.employee_id}`}
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          申請日: {new Date(request.created_at).toLocaleDateString('ja-JP')}
-                        </p>
+            {requests.map((request: Request) => {
+              const isNyuusha = isNyuushaRequest(request.request_type);
+              const CardWrapper = isNyuusha ? Link : 'div';
+              const wrapperProps = isNyuusha ? { href: `/requests/${request.id}` } : {};
+
+              return (
+                <CardWrapper key={request.id} {...wrapperProps}>
+                  <div className="bg-card rounded-xl shadow-sm border hover:shadow-md transition-shadow relative">
+                    {isNyuusha && (
+                      <div className="absolute top-4 right-4">
+                        <ArrowTopRightOnSquareIcon className="h-5 w-5 text-muted-foreground" />
                       </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                      {getStatusBadge(request.status)}
-                      <span className={`px-3 py-1 text-sm rounded-full font-medium ${getRequestTypeColor(request.request_type)}`}>
-                        {getRequestTypeLabel(request.request_type)}
-                      </span>
-                    </div>
-                  </div>
+                    )}
+                    <div className="p-6">
+                      {/* Header */}
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <UserIcon className="h-8 w-8 text-muted-foreground" />
+                          <div>
+                            <h3 className="font-semibold text-foreground text-lg">
+                              {request.employee_name ||
+                               (request.employee_id ? `従業員ID: ${request.employee_id}` :
+                               `候補者ID: ${request.candidate_id}`)}
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                              申請日: {new Date(request.created_at).toLocaleDateString('ja-JP')}
+                            </p>
+                            {isNyuusha && request.candidate_id && (
+                              <p className="text-xs text-orange-600 font-medium mt-1">
+                                📋 候補者 #{request.candidate_id} の入社手続き
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <RequestStatusBadge status={request.status as RequestStatus} />
+                          <RequestTypeBadge type={request.request_type as RequestType} />
+                        </div>
+                      </div>
 
                   {/* Request Details */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
@@ -292,9 +278,25 @@ export default function RequestsPage() {
                       </div>
                     </div>
                   )}
+
+                  {/* View Details Button for NYUUSHA */}
+                  {isNyuusha && (
+                    <div className="pt-4 border-t border-border">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">
+                          入社連絡票の詳細を確認・編集
+                        </span>
+                        <span className="text-sm font-medium text-primary flex items-center gap-1">
+                          詳細を見る <ArrowTopRightOnSquareIcon className="h-4 w-4" />
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-            ))}
+            </CardWrapper>
+          );
+        })}
           </div>
         )}
 
