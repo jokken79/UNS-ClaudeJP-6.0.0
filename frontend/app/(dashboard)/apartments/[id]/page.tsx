@@ -256,6 +256,17 @@ export default function ApartmentDetailsPage() {
                   {apartment.key_money > 0 && (
                     <p className="text-sm">Key Money: ¥{apartment.key_money.toLocaleString()}</p>
                   )}
+                  {apartment.parking_spaces && apartment.parking_spaces > 0 && (
+                    <p className="text-sm">
+                      Estacionamientos: {apartment.parking_spaces} espacio{apartment.parking_spaces > 1 ? 's' : ''}
+                      {apartment.parking_price_per_unit && apartment.parking_price_per_unit > 0 && (
+                        <> a ¥{apartment.parking_price_per_unit.toLocaleString()} c/u</>
+                      )}
+                    </p>
+                  )}
+                  {apartment.initial_plus && apartment.initial_plus > 0 && (
+                    <p className="text-sm">Plus Adicional: ¥{apartment.initial_plus.toLocaleString()}</p>
+                  )}
                 </div>
               </div>
             </div>

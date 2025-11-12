@@ -47,6 +47,9 @@ const apartmentCreateSchema = z.object({
   deposit: z.number().min(0).default(0),
   key_money: z.number().min(0).default(0),
   default_cleaning_fee: z.number().min(0).default(20000),
+  parking_spaces: z.number().min(0).optional(),
+  parking_price_per_unit: z.number().min(0).optional(),
+  initial_plus: z.number().min(0).default(5000),
   contract_start_date: z.string().optional(),
   contract_end_date: z.string().optional(),
   landlord_name: z.string().optional(),
@@ -104,6 +107,9 @@ export default function CreateApartmentPage() {
         deposit: data.deposit || 0,
         key_money: data.key_money || 0,
         default_cleaning_fee: data.default_cleaning_fee || 20000,
+        parking_spaces: data.parking_spaces,
+        parking_price_per_unit: data.parking_price_per_unit,
+        initial_plus: data.initial_plus || 5000,
         contract_start_date: data.contract_start_date || undefined,
         contract_end_date: data.contract_end_date || undefined,
         landlord_name: data.landlord_name || undefined,
@@ -372,6 +378,39 @@ export default function CreateApartmentPage() {
                   type="number"
                   {...register('default_cleaning_fee', { valueAsNumber: true })}
                   placeholder="ej. 20000"
+                  min="0"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="parking_spaces">Estacionamientos</Label>
+                <Input
+                  id="parking_spaces"
+                  type="number"
+                  {...register('parking_spaces', { valueAsNumber: true })}
+                  placeholder="ej. 1"
+                  min="0"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="parking_price_per_unit">Precio por Estacionamiento (¥)</Label>
+                <Input
+                  id="parking_price_per_unit"
+                  type="number"
+                  {...register('parking_price_per_unit', { valueAsNumber: true })}
+                  placeholder="ej. 5000"
+                  min="0"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="initial_plus">Plus Adicional (¥)</Label>
+                <Input
+                  id="initial_plus"
+                  type="number"
+                  {...register('initial_plus', { valueAsNumber: true })}
+                  placeholder="ej. 5000"
                   min="0"
                 />
               </div>

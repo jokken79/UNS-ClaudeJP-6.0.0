@@ -95,6 +95,9 @@ class ApartmentBase(BaseModel):
 
     # Cargos configurables
     default_cleaning_fee: int = Field(default=20000, ge=0, description="Cargo de limpieza por defecto")
+    parking_spaces: Optional[int] = Field(None, ge=0, description="Número de estacionamientos")
+    parking_price_per_unit: Optional[int] = Field(None, ge=0, description="Precio por estacionamiento (en yenes)")
+    initial_plus: Optional[int] = Field(default=5000, ge=0, description="Plus adicional (gastos iniciales)")
 
     # Contrato con propietario
     contract_start_date: Optional[date] = Field(None, description="Inicio de contrato")
@@ -139,6 +142,9 @@ class ApartmentUpdate(BaseModel):
     deposit: Optional[int] = Field(None, ge=0)
     key_money: Optional[int] = Field(None, ge=0)
     default_cleaning_fee: Optional[int] = Field(None, ge=0)
+    parking_spaces: Optional[int] = Field(None, ge=0)
+    parking_price_per_unit: Optional[int] = Field(None, ge=0)
+    initial_plus: Optional[int] = Field(None, ge=0)
 
     contract_start_date: Optional[date] = None
     contract_end_date: Optional[date] = None
@@ -173,6 +179,9 @@ class ApartmentResponse(BaseModel):
     deposit: Optional[int] = 0
     key_money: Optional[int] = 0
     default_cleaning_fee: Optional[int] = 20000
+    parking_spaces: Optional[int] = None
+    parking_price_per_unit: Optional[int] = None
+    initial_plus: Optional[int] = None
 
     contract_start_date: Optional[date]
     contract_end_date: Optional[date]
@@ -636,6 +645,17 @@ class PaginationInfo(BaseModel):
     skip: int
     limit: int
     total: int
+    has_next: bool
+    has_previous: bool
+
+
+class PaginatedResponse(BaseModel):
+    """Respuesta paginada genérica"""
+    items: List[ApartmentWithStats]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
     has_next: bool
     has_previous: bool
 

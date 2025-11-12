@@ -66,6 +66,9 @@ export interface ApartmentBase {
   deposit?: number;
   key_money?: number;
   default_cleaning_fee?: number;
+  parking_spaces?: number | null;
+  parking_price_per_unit?: number | null;
+  initial_plus?: number | null;
 
   // Contract
   contract_start_date?: string | null;
@@ -90,6 +93,9 @@ export interface ApartmentResponse extends ApartmentBase {
   deposit: number;
   key_money: number;
   default_cleaning_fee: number;
+  parking_spaces?: number | null;
+  parking_price_per_unit?: number | null;
+  initial_plus?: number | null;
   status: string;
   created_at: string;
   updated_at?: string | null;
