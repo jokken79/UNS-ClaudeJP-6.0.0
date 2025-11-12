@@ -240,6 +240,7 @@ from app.api import (
     azure_ocr,  # noqa: E402  pylint: disable=wrong-import-position
     admin,
     apartments_v2,  # Official Apartments API (V1 removed 2025-11-12)
+    audit,
     auth,
     candidates,
     dashboard,
@@ -263,6 +264,7 @@ from app.api import (
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(admin.router, tags=["Admin Panel"])
+app.include_router(audit.router, tags=["Admin Audit Log"])
 
 # Apartments API (consolidated from V2, V1 removed 2025-11-12)
 app.include_router(apartments_v2.router, prefix="/api/apartments", tags=["Apartments"])
