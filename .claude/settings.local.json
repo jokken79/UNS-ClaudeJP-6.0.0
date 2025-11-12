@@ -14,7 +14,8 @@
       "Bash(token.json)",
       "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImV4cCI6MTc2Mjk2OTk0NywiaWF0IjoxNzYyOTQxMTQ3LCJuYmYiOjE3NjI5NDExNDcsImlzcyI6InVucy1jbGF1ZGVqcCIsImF1ZCI6InVucy1jbGF1ZGVqcDo6YXBpIiwianRpIjoiNDAxNDVmYTMtOTIwMC00NDNmLTk3ZjItZjcxMzdjMTVlNTg4IiwidHlwZSI6ImFjY2VzcyJ9.UqBeQRmXBdCExuHe-qUALTSSEhX-_klFPJlb5tGbDv4\")",
       "Bash(python -m json.tool:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
