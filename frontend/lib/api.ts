@@ -315,6 +315,40 @@ export const salaryService = {
   calculateSalary: async (data: SalaryCalculationCreateData): Promise<SalaryCalculation> => {
     const response = await api.post<SalaryCalculation>('/salary/calculate/', data);
     return response.data;
+  },
+
+  updateSalary: async (id: string | number, data: Partial<SalaryCalculation>): Promise<SalaryCalculation> => {
+    const response = await api.put<SalaryCalculation>(`/salary/${id}/`, data);
+    return response.data;
+  },
+
+  deleteSalary: async (id: string | number): Promise<void> => {
+    await api.delete(`/salary/${id}/`);
+  },
+
+  markSalaryPaid: async (id: string | number): Promise<SalaryCalculation> => {
+    const response = await api.put<SalaryCalculation>(`/salary/${id}/mark-paid/`);
+    return response.data;
+  },
+
+  generatePayslip: async (id: string | number): Promise<Blob> => {
+    const response = await api.post(`/salary/${id}/payslip/`, {}, { responseType: 'blob' });
+    return response.data;
+  },
+
+  getSalaryReport: async (filters?: any): Promise<any> => {
+    const response = await api.get('/salary/reports/', { params: filters });
+    return response.data;
+  },
+
+  exportSalaryExcel: async (filters?: any): Promise<Blob> => {
+    const response = await api.post('/salary/export/excel/', filters, { responseType: 'blob' });
+    return response.data;
+  },
+
+  exportSalaryPdf: async (filters?: any): Promise<Blob> => {
+    const response = await api.post('/salary/export/pdf/', filters, { responseType: 'blob' });
+    return response.data;
   }
 };
 
