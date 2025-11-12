@@ -438,21 +438,11 @@ class AuthService:
             - Requiere que tipo de token sea "access"
             - Usuario debe existir en base de datos
         """
-        import os
-        from os import environ
-
         credentials_exception = HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
-
-        # DEV MODE: Allow dev tokens without JWT verification
-        if settings.ENVIRONMENT == "development" and token and token.startswith("dev-admin-token-"):
-            # In development mode, return a mock admin user for dev tokens
-            user = db.query(User).filter(User.username == "admin").first()
-            if user:
-                return user
 
         try:
             payload = jwt.decode(
