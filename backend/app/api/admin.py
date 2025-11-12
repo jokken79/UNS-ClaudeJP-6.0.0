@@ -1,7 +1,7 @@
 """
 Admin API - Panel de Control para gestionar módulos y configuraciones
 """
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import update, func
 from typing import List, Optional
@@ -11,9 +11,30 @@ import json
 from app.core.database import get_db
 from app.models.models import PageVisibility, SystemSettings, User
 from app.api.deps import get_current_user, require_admin
+from app.services.audit_service import AuditService
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
+
+
+# ============================================
+# HELPER FUNCTIONS
+# ============================================
+
+def get_client_ip(request: Request) -> Optional[str]:
+    """Extract client IP address from request"""
+    if "x-forwarded-for" in request.headers:
+        return request.headers["x-forwarded-for"].split(",")[0].strip()
+    elif "x-real-ip" in request.headers:
+        return request.headers["x-real-ip"]
+    else:
+        return request.client.host if request.client else None
+
+
+def get_user_agent(request: Request) -> Optional[str]:
+    """Extract user agent from request"""
+    return request.headers.get("user-agent")
+
 
 # ============================================
 # SCHEMAS
@@ -90,6 +111,7 @@ async def get_page_visibility_by_key(
 async def update_page_visibility(
     page_key: str,
     page_data: PageVisibilityUpdate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin)
 ):
@@ -99,6 +121,9 @@ async def update_page_visibility(
     page = db.query(PageVisibility).filter(PageVisibility.page_key == page_key).first()
     if not page:
         raise HTTPException(status_code=404, detail="Página no encontrada")
+
+    # Store old value for audit log
+    old_value = page.is_enabled
 
     # Update page
     page.is_enabled = page_data.is_enabled
@@ -111,17 +136,32 @@ async def update_page_visibility(
     db.commit()
     db.refresh(page)
 
+    # Log the change in audit log
+    AuditService.log_page_visibility_change(
+        db=db,
+        admin_id=current_user.id,
+        page_key=page_key,
+        old_value=old_value,
+        new_value=page_data.is_enabled,
+        ip_address=get_client_ip(request),
+        user_agent=get_user_agent(request)
+    )
+
     return page
 
 @router.post("/pages/bulk-toggle")
 async def bulk_toggle_pages(
     bulk_data: BulkPageToggle,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin)
 ):
     """
     Habilitar/deshabilitar múltiples páginas simultáneamente
     """
+    # Count successful updates
+    pages_count = len(bulk_data.page_keys)
+
     # Update all pages in bulk
     stmt = (
         update(PageVisibility)
@@ -133,8 +173,22 @@ async def bulk_toggle_pages(
             updated_at=datetime.utcnow()
         )
     )
-    db.execute(stmt)
+    result = db.execute(stmt)
     db.commit()
+
+    # Log the bulk operation in audit log
+    operation_type = "bulk_enable" if bulk_data.is_enabled else "bulk_disable"
+    AuditService.log_bulk_operation(
+        db=db,
+        admin_id=current_user.id,
+        operation_type=operation_type,
+        pages_affected=bulk_data.page_keys,
+        total_count=pages_count,
+        success_count=result.rowcount,
+        failed_count=pages_count - result.rowcount,
+        ip_address=get_client_ip(request),
+        user_agent=get_user_agent(request)
+    )
 
     return {
         "message": f"{len(bulk_data.page_keys)} páginas actualizadas",
