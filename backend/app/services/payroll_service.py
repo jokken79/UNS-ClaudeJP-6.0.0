@@ -312,7 +312,12 @@ class PayrollService:
 
             # Reducir horas por días de yukyu aprobados
             if yukyu_days_approved > 0:
-                yukyu_reduction_hours = yukyu_days_approved * 8  # 8 horas/día
+                # Calcular teiji (定時/horario estándar del empleado)
+                # teiji = horas_estándar_mes / días_laborales_mes (típicamente 20)
+                standard_hours_per_month = employee_data.get('standard_hours_per_month', 160)
+                teiji_hours_per_day = Decimal(str(standard_hours_per_month)) / Decimal('20')  # 20 días laborales típicos
+                yukyu_reduction_hours = Decimal(str(yukyu_days_approved)) * teiji_hours_per_day
+
                 total_worked_hours = (
                     hours_breakdown['normal_hours'] +
                     hours_breakdown['overtime_hours'] +
@@ -338,7 +343,7 @@ class PayrollService:
 
                 logger.info(
                     f"Employee {employee_data.get('employee_id')}: "
-                    f"Reduced hours by {yukyu_days_approved} days (¥{yukyu_days_approved * 8 * float(employee_data.get('base_hourly_rate', 0)):.2f})"
+                    f"Reduced hours by {yukyu_days_approved} days teiji={teiji_hours_per_day:.2f}h/day (¥{yukyu_days_approved * teiji_hours_per_day * Decimal(str(employee_data.get('base_hourly_rate', 0))):.2f})"
                 )
 
             # Calculate base hourly rate from employee data
@@ -407,7 +412,10 @@ class PayrollService:
             yukyu_deduction = 0
             if yukyu_days_approved > 0:
                 base_rate = Decimal(str(employee_data.get('base_hourly_rate', 0)))
-                yukyu_deduction = int(yukyu_days_approved * 8 * base_rate)  # 8 horas/día
+                # Usar teiji (定時/horario estándar del empleado) en lugar de 8 horas fijas
+                standard_hours_per_month = employee_data.get('standard_hours_per_month', 160)
+                teiji_hours_per_day = Decimal(str(standard_hours_per_month)) / Decimal('20')
+                yukyu_deduction = int(yukyu_days_approved * teiji_hours_per_day * base_rate)
 
             total_deductions = (
                 apartment_rent + health_insurance + pension +
