@@ -29,12 +29,14 @@ export enum RequestType {
   HANKYU = 'hankyu',
   IKKIKOKOKU = 'ikkikokoku',
   TAISHA = 'taisha',
+  NYUUSHA = 'nyuusha',  // 入社連絡票 - New hire notification form
 }
 
 export enum RequestStatus {
   PENDING = 'pending',
   APPROVED = 'approved',
   REJECTED = 'rejected',
+  COMPLETED = 'completed',  // 済 - Completed/Archived (for 入社連絡票)
 }
 
 export enum ShiftType {
@@ -253,14 +255,33 @@ export interface SalaryListParams extends PaginationParams {
   period_end?: string;
 }
 
+export interface EmployeeData {
+  factory_id: string;
+  hire_date: string;
+  jikyu: number;
+  position: string;
+  contract_type: string;
+  hakensaki_shain_id?: string;
+  apartment_id?: string;
+  bank_name?: string;
+  bank_account?: string;
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
+  notes?: string;
+}
+
 export interface Request {
   id: number;
-  employee_id: number;
+  employee_id?: number;  // Nullable for 入社連絡票
+  candidate_id?: number;  // For 入社連絡票: links to candidate
   type: RequestType;
   status: RequestStatus;
   start_date: string;
   end_date?: string;
   reason?: string;
+  employee_data?: EmployeeData;  // For 入社連絡票: employee-specific data
+  approved_by?: number;
+  approved_at?: string;
   created_at: string;
   updated_at?: string;
   [key: string]: any;
