@@ -109,7 +109,8 @@ class PayrollIntegrationService:
                     'full_name_kana': employee.full_name_kana,
                     'jikyu': employee.jikyu or 0,
                     'factory_info': factory_info,
-                    'apartment_rent': employee.apartment_rent or 0
+                    'apartment_rent': employee.apartment_rent or 0,
+                    'standard_hours_per_month': 160  # Default teiji (定時), puede venir de PayrollSettings
                 },
                 'timer_records': timer_records,
                 'date_range': {

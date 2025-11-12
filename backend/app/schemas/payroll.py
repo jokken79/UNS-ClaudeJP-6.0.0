@@ -74,6 +74,7 @@ class EmployeeData(BaseModel):
     prefecture: str = Field(default="Tokyo", description="Prefecture for resident tax")
     apartment_rent: float = Field(default=30000, ge=0, description="Monthly apartment rent")
     dependents: int = Field(default=0, ge=0, description="Number of dependents")
+    standard_hours_per_month: float = Field(default=160, gt=0, le=300, description="Standard hours per month for teiji (定時) calculation")
     yukyu_days_approved: float = Field(default=0, ge=0, description="Approved yukyu days in period (有給休暇)")
 
 
