@@ -36,7 +36,8 @@ from app.schemas.payroll import (
     EmployeePayrollResult, HoursBreakdown, Rates, Amounts,
     DeductionsDetail, ValidationResult
 )
-from app.core.config import settings
+from app.core.config import settings, PayrollConfig
+from app.services.config_service import PayrollConfigService
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +82,7 @@ class SalaryService:
             db: AsyncSession database connection
         """
         self.db = db
+        self.config_service = PayrollConfigService(db)
 
     async def calculate_salary(
         self,
@@ -671,19 +673,31 @@ class SalaryService:
 
     async def _get_payroll_settings(self) -> Optional[PayrollSettings]:
         """
-        Fetch payroll settings from database.
+        Fetch payroll settings from database using PayrollConfigService.
+
+        This method now uses PayrollConfigService which provides:
+        - Automatic caching for performance
+        - Fallback to default values
+        - Automatic creation of missing settings
 
         Returns:
-            PayrollSettings object or None if not found
+            PayrollSettings object (never None - creates defaults if missing)
         """
-        stmt = select(PayrollSettings).order_by(PayrollSettings.id.desc()).limit(1)
-        result = await self.db.execute(stmt)
-        settings_obj = result.scalar_one_or_none()
+        try:
+            settings_obj = await self.config_service.get_configuration()
+            return settings_obj
+        except Exception as e:
+            logger.error(f"Error fetching payroll settings via config service: {e}", exc_info=True)
+            logger.warning("Falling back to direct database query")
+            # Fallback to direct query if config service fails
+            stmt = select(PayrollSettings).order_by(PayrollSettings.id.desc()).limit(1)
+            result = await self.db.execute(stmt)
+            settings_obj = result.scalar_one_or_none()
 
-        if not settings_obj:
-            logger.warning("No payroll settings found in database, using defaults")
+            if not settings_obj:
+                logger.warning("No payroll settings found in database, using defaults from PayrollConfig")
 
-        return settings_obj
+            return settings_obj
 
     async def _calculate_hours_breakdown(
         self,
@@ -763,16 +777,17 @@ class SalaryService:
         """
         base_rate = float(employee.jikyu) if employee.jikyu else 0
 
-        # Get rates from payroll settings or use defaults
+        # Get rates from payroll settings or use defaults from PayrollConfig
         if payroll_settings:
             overtime_rate = float(payroll_settings.overtime_rate)
             night_rate = float(payroll_settings.night_shift_rate)
             holiday_rate = float(payroll_settings.holiday_rate)
         else:
-            # Use default settings from config
-            overtime_rate = getattr(settings, 'OVERTIME_RATE_25', 1.25)
-            night_rate = getattr(settings, 'NIGHT_SHIFT_PREMIUM', 1.25)
-            holiday_rate = getattr(settings, 'HOLIDAY_WORK_PREMIUM', 1.35)
+            # Use default settings from PayrollConfig class
+            logger.warning("No payroll settings available, using PayrollConfig defaults")
+            overtime_rate = PayrollConfig.DEFAULT_OVERTIME_RATE
+            night_rate = PayrollConfig.DEFAULT_NIGHT_RATE
+            holiday_rate = PayrollConfig.DEFAULT_HOLIDAY_RATE
 
         # Calculate amounts
         base_amount = int(

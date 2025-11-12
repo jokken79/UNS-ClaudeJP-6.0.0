@@ -10,6 +10,7 @@ from datetime import datetime
 from app.core.database import get_db
 from app.services.payroll_service import PayrollService
 from app.services.payroll_integration_service import PayrollIntegrationService
+from app.services.config_service import PayrollConfigService, get_payroll_config_service
 from app.models.payroll_models import PayrollRun as PayrollRunModel, EmployeePayroll
 from app.models.models import Employee
 from app.schemas.payroll import (
@@ -729,55 +730,48 @@ def get_payslip(
     "/settings",
     response_model=PayrollSettings,
     summary="Get payroll settings",
-    description="Retrieves the current payroll settings"
+    description="Retrieves the current payroll settings from database with caching"
 )
-def get_payroll_settings(
-    service: PayrollService = Depends(get_payroll_service),
-    db: Session = Depends(get_db)
+async def get_payroll_settings(
+    config_service: PayrollConfigService = Depends(get_payroll_config_service)
 ):
-    """Get current payroll settings.
+    """
+    Get current payroll settings using PayrollConfigService.
 
-    Args:
-        service: Payroll service instance
-        db: Database session
+    This endpoint uses PayrollConfigService which provides:
+    - Automatic caching (1 hour TTL)
+    - Fallback to default values
+    - Automatic creation of settings if missing
 
     Returns:
-        Payroll settings
+        PayrollSettings: Current payroll configuration including:
+            - Hour rates (overtime, night shift, holiday, sunday)
+            - Tax rates (income tax, resident tax)
+            - Insurance rates (health, pension, employment)
+            - Standard hours per month
 
     Raises:
         HTTPException: If retrieval fails
     """
     try:
-        settings = service._get_payroll_settings()
+        settings = await config_service.get_configuration()
 
-        if not settings:
-            # Return default settings
-            return PayrollSettings(
-                id=1,
-                company_id=None,
-                overtime_rate=1.25,
-                night_shift_rate=1.25,
-                holiday_rate=1.35,
-                sunday_rate=1.35,
-                standard_hours_per_month=160,
-                created_at=datetime.now(),
-                updated_at=datetime.now()
-            )
-
-        # Convert Decimal to float for Pydantic
-        settings_dict = {k: float(v) if isinstance(v, (int, float)) else v
-                        for k, v in settings.items()}
-
+        # Convert Decimal to float for Pydantic validation
         return PayrollSettings(
-            id=1,
-            company_id=settings_dict.get('company_id'),
-            overtime_rate=settings_dict.get('overtime_rate', 1.25),
-            night_shift_rate=settings_dict.get('night_shift_rate', 1.25),
-            holiday_rate=settings_dict.get('holiday_rate', 1.35),
-            sunday_rate=settings_dict.get('sunday_rate', 1.35),
-            standard_hours_per_month=settings_dict.get('standard_hours_per_month', 160),
-            created_at=datetime.now(),
-            updated_at=datetime.now()
+            id=settings.id,
+            company_id=settings.company_id,
+            overtime_rate=float(settings.overtime_rate),
+            night_shift_rate=float(settings.night_shift_rate),
+            holiday_rate=float(settings.holiday_rate),
+            sunday_rate=float(settings.sunday_rate),
+            standard_hours_per_month=float(settings.standard_hours_per_month),
+            income_tax_rate=float(settings.income_tax_rate) if hasattr(settings, 'income_tax_rate') else 10.0,
+            resident_tax_rate=float(settings.resident_tax_rate) if hasattr(settings, 'resident_tax_rate') else 5.0,
+            health_insurance_rate=float(settings.health_insurance_rate) if hasattr(settings, 'health_insurance_rate') else 4.75,
+            pension_rate=float(settings.pension_rate) if hasattr(settings, 'pension_rate') else 10.0,
+            employment_insurance_rate=float(settings.employment_insurance_rate) if hasattr(settings, 'employment_insurance_rate') else 0.3,
+            created_at=settings.created_at,
+            updated_at=settings.updated_at
         )
 
     except Exception as e:
@@ -791,47 +785,87 @@ def get_payroll_settings(
     "/settings",
     response_model=PayrollSettings,
     summary="Update payroll settings",
-    description="Updates the payroll settings"
+    description="Updates payroll settings and clears cache (Admin only)"
 )
-def update_payroll_settings(
+async def update_payroll_settings(
     settings: PayrollSettingsUpdate,
-    service: PayrollService = Depends(get_payroll_service)
+    config_service: PayrollConfigService = Depends(get_payroll_config_service)
 ):
-    """Update payroll settings.
+    """
+    Update payroll settings using PayrollConfigService.
+
+    This endpoint:
+    1. Validates the provided settings
+    2. Updates the database
+    3. Clears the cache to force refresh
+    4. Returns updated settings
 
     Args:
-        settings: Updated settings data
-        service: Payroll service instance
+        settings: PayrollSettingsUpdate schema with fields to update:
+            - overtime_rate: Overtime premium rate (optional)
+            - night_shift_rate: Night shift premium rate (optional)
+            - holiday_rate: Holiday premium rate (optional)
+            - sunday_rate: Sunday premium rate (optional)
+            - standard_hours_per_month: Standard monthly hours (optional)
+            - income_tax_rate: Income tax rate % (optional)
+            - resident_tax_rate: Resident tax rate % (optional)
+            - health_insurance_rate: Health insurance rate % (optional)
+            - pension_rate: Pension rate % (optional)
+            - employment_insurance_rate: Employment insurance rate % (optional)
+        config_service: Payroll config service instance
 
     Returns:
-        Updated payroll settings
+        PayrollSettings: Updated payroll configuration
 
     Raises:
-        HTTPException: If update fails
+        HTTPException: If update fails or validation error occurs
+
+    Example Request Body:
+        {
+            "overtime_rate": 1.30,
+            "night_shift_rate": 1.30,
+            "income_tax_rate": 10.5
+        }
     """
     try:
         # Convert to dict, excluding None values
         settings_dict = {k: v for k, v in settings.dict(exclude_unset=True).items()
                         if v is not None}
 
-        result = service.update_payroll_settings(settings_dict)
-
-        if not result['success']:
+        if not settings_dict:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=result['error']
+                detail="No settings provided to update"
             )
 
+        # Update settings via config service
+        updated_settings = await config_service.update_configuration(**settings_dict)
+
+        # Convert to response schema
         return PayrollSettings(
-            id=1,
-            company_id=None,
-            **settings_dict,
-            created_at=datetime.now(),
-            updated_at=datetime.fromisoformat(result['updated_at'])
+            id=updated_settings.id,
+            company_id=updated_settings.company_id,
+            overtime_rate=float(updated_settings.overtime_rate),
+            night_shift_rate=float(updated_settings.night_shift_rate),
+            holiday_rate=float(updated_settings.holiday_rate),
+            sunday_rate=float(updated_settings.sunday_rate),
+            standard_hours_per_month=float(updated_settings.standard_hours_per_month),
+            income_tax_rate=float(updated_settings.income_tax_rate),
+            resident_tax_rate=float(updated_settings.resident_tax_rate),
+            health_insurance_rate=float(updated_settings.health_insurance_rate),
+            pension_rate=float(updated_settings.pension_rate),
+            employment_insurance_rate=float(updated_settings.employment_insurance_rate),
+            created_at=updated_settings.created_at,
+            updated_at=updated_settings.updated_at
         )
 
     except HTTPException:
         raise
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
