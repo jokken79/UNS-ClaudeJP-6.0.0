@@ -730,4 +730,57 @@ export const apartmentsV2Service = {
   },
 };
 
+// =============================================================================
+// ADMIN CONTROL PANEL SERVICES
+// =============================================================================
+
+export interface AuditLogEntry {
+  id: number;
+  admin_username: string;
+  action_type: 'enable' | 'disable' | 'bulk_enable' | 'bulk_disable' | 'update';
+  target_type: 'page' | 'role_permission' | 'global';
+  target_name: string;
+  role_key?: string;
+  details?: string;
+  timestamp: string;
+  created_at: string;
+}
+
+export interface RoleStatsResponse {
+  role_key: string;
+  role_name: string;
+  total_pages: number;
+  enabled_pages: number;
+  disabled_pages: number;
+  percentage: number;
+}
+
+export const adminControlPanelService = {
+  /**
+   * Get recent audit log entries
+   */
+  getRecentAuditLog: async (limit: number = 10): Promise<AuditLogEntry[]> => {
+    const response = await api.get<AuditLogEntry[]>('/admin/audit-log/recent', {
+      params: { limit },
+    });
+    return response.data;
+  },
+
+  /**
+   * Get all audit log entries with pagination
+   */
+  getAllAuditLog: async (params?: { skip?: number; limit?: number }): Promise<PaginatedResponse<AuditLogEntry>> => {
+    const response = await api.get<PaginatedResponse<AuditLogEntry>>('/admin/audit-log', { params });
+    return response.data;
+  },
+
+  /**
+   * Get role statistics (access percentages)
+   */
+  getRoleStats: async (): Promise<RoleStatsResponse[]> => {
+    const response = await api.get<RoleStatsResponse[]>('/admin/role-stats');
+    return response.data;
+  },
+};
+
 export default api;

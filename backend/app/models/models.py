@@ -119,6 +119,26 @@ class DeductionStatus(str, enum.Enum):
     CANCELLED = "cancelled"
 
 
+class AdminActionType(str, enum.Enum):
+    """Types of admin actions for audit logging"""
+    PAGE_VISIBILITY_CHANGE = "PAGE_VISIBILITY_CHANGE"
+    ROLE_PERMISSION_CHANGE = "ROLE_PERMISSION_CHANGE"
+    BULK_OPERATION = "BULK_OPERATION"
+    CONFIG_CHANGE = "CONFIG_CHANGE"
+    CACHE_CLEAR = "CACHE_CLEAR"
+    USER_MANAGEMENT = "USER_MANAGEMENT"
+    SYSTEM_SETTINGS = "SYSTEM_SETTINGS"
+
+
+class ResourceType(str, enum.Enum):
+    """Types of resources that can be audited"""
+    PAGE = "PAGE"
+    ROLE = "ROLE"
+    SYSTEM = "SYSTEM"
+    USER = "USER"
+    PERMISSION = "PERMISSION"
+
+
 # ============================================
 # MODELS
 # ============================================
@@ -925,6 +945,48 @@ class AuditLog(Base):
     ip_address = Column(String(50))
     user_agent = Column(Text)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class AdminAuditLog(Base):
+    """
+    Audit trail for admin permission changes and system configuration changes.
+    Tracks who made what changes, when, and from where.
+    """
+    __tablename__ = "admin_audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    # Who made the change
+    admin_user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    admin_user = relationship("User", foreign_keys=[admin_user_id])
+
+    # What type of action
+    action_type = Column(SQLEnum(AdminActionType), nullable=False, index=True)
+
+    # What resource was affected
+    resource_type = Column(SQLEnum(ResourceType), nullable=False, index=True)
+    resource_key = Column(String(255), index=True)  # e.g., 'timer-cards', 'EMPLOYEE'
+
+    # Change details
+    previous_value = Column(Text)  # JSON string or text representation
+    new_value = Column(Text)  # JSON string or text representation
+
+    # Request metadata
+    ip_address = Column(String(45))  # IPv6 max length
+    user_agent = Column(Text)
+
+    # Human-readable description
+    description = Column(Text)
+
+    # Additional metadata
+    metadata = Column(JSONB)  # For additional context (e.g., affected_count for bulk operations)
+
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    def __repr__(self):
+        return f"<AdminAuditLog(id={self.id}, admin={self.admin_user_id}, action={self.action_type}, resource={self.resource_type}:{self.resource_key})>"
 
 
 class SocialInsuranceRate(Base):
