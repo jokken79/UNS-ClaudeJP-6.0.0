@@ -440,6 +440,7 @@ class Factory(Base, SoftDeleteMixin):
     # Relationships
     employees = relationship("Employee", back_populates="factory", foreign_keys="[Employee.factory_id]")
     contract_workers = relationship("ContractWorker", back_populates="factory", foreign_keys="[ContractWorker.factory_id]")
+    apartment_associations = relationship("ApartmentFactory", back_populates="factory", cascade="all, delete-orphan")
 
 
 class Apartment(Base, SoftDeleteMixin):
@@ -456,11 +457,15 @@ class Apartment(Base, SoftDeleteMixin):
 
     # Address information
     postal_code = Column(String(10))
-    prefecture = Column(String(50))
-    city = Column(String(100))
+    prefecture = Column(String(50), index=True)
+    city = Column(String(100), index=True)
     address = Column(Text)  # Legacy field, kept for compatibility
     address_line1 = Column(String(200))
     address_line2 = Column(String(200))
+
+    # Geographic organization (added for apartment-factory relationship)
+    region_id = Column(Integer, ForeignKey("regions.id"), index=True)
+    zone = Column(String(50), index=True)
 
     # Room specifications
     room_type = Column(SQLEnum(RoomType, name='room_type'))
@@ -474,6 +479,9 @@ class Apartment(Base, SoftDeleteMixin):
     deposit = Column(Integer, default=0)  # 敷金 (Shikikin)
     key_money = Column(Integer, default=0)  # 礼金 (Reikin)
     default_cleaning_fee = Column(Integer, default=20000)  # Default cleaning charge on move-out
+    parking_spaces = Column(Integer, nullable=True)  # Number of parking spaces
+    parking_price_per_unit = Column(Integer, nullable=True)  # Price per parking space in yen
+    initial_plus = Column(Integer, nullable=True, default=5000)  # Additional initial costs
 
     # Contract with landlord/agency
     contract_start_date = Column(Date)
@@ -494,6 +502,29 @@ class Apartment(Base, SoftDeleteMixin):
     employees = relationship("Employee", back_populates="apartment")
     contract_workers = relationship("ContractWorker", back_populates="apartment")
     assignments = relationship("ApartmentAssignment", back_populates="apartment", cascade="all, delete-orphan")
+    factory_associations = relationship("ApartmentFactory", back_populates="apartment", cascade="all, delete-orphan")
+
+
+class ApartmentFactory(Base):
+    """Many-to-many relationship between apartments and factories with temporal tracking"""
+    __tablename__ = "apartment_factory"
+
+    id = Column(Integer, primary_key=True)
+    apartment_id = Column(Integer, ForeignKey("apartments.id", ondelete="CASCADE"), nullable=False, index=True)
+    factory_id = Column(Integer, ForeignKey("factories.id", ondelete="CASCADE"), nullable=False, index=True)
+    is_primary = Column(Boolean, default=True, index=True)
+    priority = Column(Integer, default=1)
+    distance_km = Column(Numeric(6, 2))
+    commute_minutes = Column(Integer)
+    effective_from = Column(Date, default=func.current_date())
+    effective_until = Column(Date)
+    notes = Column(Text)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # Relationships
+    apartment = relationship("Apartment", back_populates="factory_associations")
+    factory = relationship("Factory", back_populates="apartment_associations")
 
 
 class Employee(Base, SoftDeleteMixin):
@@ -895,6 +926,11 @@ class Request(Base):
         if self.employee:
             return self.employee.id
         return None
+
+    @employee_id.expression
+    def employee_id(cls):
+        """Expression for querying by employee_id in SQLAlchemy filters"""
+        return cls.hakenmoto_id
 
 
 class Contract(Base, SoftDeleteMixin):
