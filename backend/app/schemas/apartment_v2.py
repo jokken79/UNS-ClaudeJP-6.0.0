@@ -233,6 +233,9 @@ class AssignmentBase(BaseModel):
     is_prorated: bool = Field(default=False, description="¿Es prorrateo?")
     total_deduction: int = Field(..., ge=0, description="Total a descontar")
 
+    # Parking payment responsibility
+    pays_parking: bool = Field(default=False, description="¿Paga estacionamiento?")
+
     # Metadata
     contract_type: Optional[str] = Field(None, max_length=50, description="Tipo de contrato")
     notes: Optional[str] = Field(None, description="Notas de la asignación")
@@ -273,6 +276,7 @@ class AssignmentResponse(BaseModel):
     prorated_rent: int
     is_prorated: bool
     total_deduction: int
+    pays_parking: bool
 
     contract_type: Optional[str]
     notes: Optional[str]

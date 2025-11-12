@@ -444,6 +444,11 @@ export default function ApartmentDetailsPage() {
                           <ClockIcon className="h-3 w-3" />
                           {assignment.is_prorated ? 'Prorrateado' : 'Mes completo'}
                         </span>
+                        {assignment.pays_parking && (
+                          <span className="text-xs font-medium text-green-600 flex items-center gap-1 bg-green-50 px-2 py-0.5 rounded">
+                            🅿️ Paga estacionamiento
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>

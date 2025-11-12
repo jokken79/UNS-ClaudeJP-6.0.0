@@ -1316,6 +1316,9 @@ class ApartmentAssignment(Base, SoftDeleteMixin):
     # Total deduction (rent + all additional charges)
     total_deduction = Column(Integer, nullable=False, default=0)
 
+    # Parking payment responsibility
+    pays_parking = Column(Boolean, default=False, nullable=False)  # Indica si este empleado paga el estacionamiento
+
     # Contract and status
     contract_type = Column(String(50))  # Type of housing contract
     status = Column(SQLEnum(AssignmentStatus, name='assignment_status'), default=AssignmentStatus.ACTIVE, nullable=False)

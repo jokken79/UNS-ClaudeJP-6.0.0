@@ -39,6 +39,7 @@ export default function AssignEmployeePage() {
   );
   const [calculation, setCalculation] = useState<ProratedCalculationResponse | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
+  const [paysParking, setPaysParking] = useState(false);
 
   // Fetch apartment details with stats
   const { data: apartment, isLoading: apartmentLoading, error: apartmentError } = useQuery({
@@ -141,6 +142,7 @@ export default function AssignEmployeePage() {
       prorated_rent: calculation.prorated_rent,
       is_prorated: calculation.is_prorated,
       total_deduction: calculation.prorated_rent,
+      pays_parking: paysParking,
       status: AssignmentStatus.ACTIVE,
       notes: calculation.is_prorated
         ? `Asignación con prorrateo (${calculation.days_occupied} de ${calculation.days_in_month} días)`
@@ -437,6 +439,26 @@ export default function AssignEmployeePage() {
               <div className="text-center text-sm text-muted-foreground py-2">
                 <CalculatorIcon className="h-4 w-4 inline animate-spin mr-2" />
                 Calculando renta prorrateada...
+              </div>
+            )}
+
+            {/* Parking payment checkbox */}
+            {apartment && apartment.parking_spaces > 0 && (
+              <div className="pt-4 border-t">
+                <label className="flex items-center space-x-3 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={paysParking}
+                    onChange={(e) => setPaysParking(e.target.checked)}
+                    className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2"
+                  />
+                  <span className="text-sm font-medium text-gray-700 group-hover:text-primary transition-colors">
+                    ¿Este empleado paga estacionamiento?
+                  </span>
+                </label>
+                <p className="text-xs text-muted-foreground mt-1 ml-7">
+                  Marcar si este empleado será responsable del pago de estacionamiento
+                </p>
               </div>
             )}
 
