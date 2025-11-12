@@ -83,8 +83,11 @@ class AuthService:
     Note:
         - Usa bcrypt para hashing de contraseñas (resistente a ataques de fuerza bruta)
         - JWT con algoritmo HS256 y claims completos
-        - Jerarquía de roles: SUPER_ADMIN > ADMIN > COORDINATOR > KANRININSHA > EMPLOYEE > CONTRACT_WORKER
+        - Jerarquía de roles completa (incluyendo legacy):
+          SUPER_ADMIN (100) > ADMIN (80) > KEITOSAN (70) > TANTOSHA (60) >
+          COORDINATOR (50) > KANRININSHA (40) > EMPLOYEE (20) > CONTRACT_WORKER (10)
         - Tokens expiran según configuración (default: 480 minutos)
+        - Ver app.core.permissions para funciones de verificación de roles
     """
 
     @staticmethod
@@ -438,21 +441,11 @@ class AuthService:
             - Requiere que tipo de token sea "access"
             - Usuario debe existir en base de datos
         """
-        import os
-        from os import environ
-
         credentials_exception = HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
-
-        # DEV MODE: Allow dev tokens without JWT verification
-        if settings.ENVIRONMENT == "development" and token and token.startswith("dev-admin-token-"):
-            # In development mode, return a mock admin user for dev tokens
-            user = db.query(User).filter(User.username == "admin").first()
-            if user:
-                return user
 
         try:
             payload = jwt.decode(
