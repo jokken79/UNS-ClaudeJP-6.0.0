@@ -809,7 +809,6 @@ class TimerCard(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     hakenmoto_id = Column(Integer, ForeignKey("employees.hakenmoto_id", ondelete="CASCADE"), nullable=True)
-    employee_id = Column(Integer, nullable=True)  # For easier querying
     factory_id = Column(String(20), nullable=True)  # For easier querying
     work_date = Column(Date, nullable=False)
 
