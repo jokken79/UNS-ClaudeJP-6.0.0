@@ -2,11 +2,15 @@
 
 ## Overview
 
-This directory contains Playwright E2E (End-to-End) tests for the UNS-ClaudeJP application. These tests validate critical user workflows from the frontend perspective.
+This directory contains Playwright E2E (End-to-End) tests for the UNS-ClaudeJP application. These tests validate critical user workflows from the frontend perspective across multiple modules including Apartments, Payroll, Candidates, and Yukyu systems.
 
-## Test Files
+---
 
-### 1. `apartments.spec.ts` - Apartment Assignment Workflow
+## 📋 Test Suites
+
+### Core System Tests
+
+#### 1. `apartments.spec.ts` - Apartment Assignment Workflow
 Tests the complete apartment assignment flow:
 - ✅ View apartments list
 - ✅ View apartment assignments
@@ -14,7 +18,7 @@ Tests the complete apartment assignment flow:
 - ✅ View apartment statistics
 - ✅ Handle pagination
 
-### 2. `payroll.spec.ts` - Payroll Run Workflow
+#### 2. `payroll.spec.ts` - Payroll Run Workflow
 Tests the complete payroll processing flow:
 - ✅ View payroll runs list
 - ✅ Display payroll run statuses
@@ -24,7 +28,7 @@ Tests the complete payroll processing flow:
 - ✅ View payroll run details page
 - ✅ Handle approval workflow
 
-### 3. `candidates.spec.ts` - Candidate Registration Workflow
+#### 3. `candidates.spec.ts` - Candidate Registration Workflow
 Tests the complete candidate management flow:
 - ✅ View candidates list
 - ✅ Display candidate status badges
@@ -36,7 +40,32 @@ Tests the complete candidate management flow:
 - ✅ Display candidate statistics
 - ✅ Paginate through candidates list
 
-## Prerequisites
+---
+
+### Yukyu (休暇) System Tests
+
+#### Individual Yukyu Page Tests
+- `01-login-dashboard.spec.ts` - Login and dashboard tests
+- `02-yukyu-main.spec.ts` - Yukyu main page (/yukyu)
+- `03-yukyu-requests.spec.ts` - Yukyu requests page (/yukyu-requests)
+- `04-yukyu-request-create.spec.ts` - Create request page (/yukyu-requests/create)
+- `05-yukyu-reports.spec.ts` - Yukyu reports page (/yukyu-reports)
+- `06-admin-yukyu.spec.ts` - Admin yukyu management (/admin/yukyu-management)
+- `07-payroll-yukyu.spec.ts` - Payroll yukyu summary (/payroll/yukyu-summary)
+- `08-yukyu-history.spec.ts` - Yukyu history page (/yukyu-history)
+
+#### Master Test Suite
+- `yukyu-all.spec.ts` - Runs through all yukyu pages in one test
+
+#### Yukyu Test Helpers
+- `helpers/auth.ts` - Authentication helpers (login, logout, isLoggedIn)
+- `helpers/common.ts` - Common test utilities (screenshots, navigation, verification)
+
+---
+
+## 🚀 Running Tests
+
+### Prerequisites
 
 1. **Docker Services Running**
    ```bash
@@ -58,7 +87,11 @@ Tests the complete candidate management flow:
    - Username: `admin`
    - Password: `admin123`
 
-## Running Tests
+5. **Install Dependencies**
+   ```bash
+   cd frontend
+   npm install
+   ```
 
 ### Run All E2E Tests
 ```bash
@@ -67,9 +100,15 @@ npm run test:e2e
 
 ### Run Specific Test File
 ```bash
+# Core system tests
 npx playwright test apartments.spec.ts
 npx playwright test payroll.spec.ts
 npx playwright test candidates.spec.ts
+
+# Yukyu tests
+npx playwright test 01-login-dashboard.spec.ts
+npx playwright test 02-yukyu-main.spec.ts
+npx playwright test yukyu-all.spec.ts
 ```
 
 ### Run Tests in UI Mode (Interactive)
@@ -92,63 +131,82 @@ npx playwright test --debug
 npx playwright test -g "should view apartments list"
 ```
 
-## Test Reports
+### Run Only Yukyu Tests
+```bash
+npx playwright test --grep yukyu
+```
+
+---
+
+## 📊 Test Reports
 
 After running tests, view the HTML report:
 ```bash
 npx playwright show-report
 ```
 
-## Configuration
+Report files:
+- `playwright-report/` - HTML report
+- `playwright-results.json` - JSON results for CI/CD
+
+---
+
+## ⚙️ Configuration
 
 Tests are configured in `playwright.config.ts`:
-- **Base URL**: http://localhost:3000
+- **Base URL**: http://localhost:3000 (configurable via `PLAYWRIGHT_BASE_URL`)
 - **Timeout**: 30 seconds per test
 - **Retries**: 2 on CI, 0 locally
 - **Browsers**: Chromium (default)
 - **Screenshots**: Only on failure
 - **Videos**: Retained on failure
 - **Traces**: On first retry
+- **Action Timeout**: 10 seconds
+- **Navigation Timeout**: 30 seconds
 
-## Writing New Tests
+---
+
+## 📝 Writing New Tests
 
 When adding new E2E tests:
 
-1. **Follow existing patterns**
-   - Use `test.beforeEach()` for login
-   - Wait for elements with timeouts
-   - Use descriptive test names
+### 1. Follow Existing Patterns
+- Use `test.beforeEach()` for login
+- Wait for elements with timeouts
+- Use descriptive test names
 
-2. **Use proper selectors**
-   ```typescript
-   // Good - role-based or data attributes
-   await page.getByRole('button', { name: 'Submit' });
-   await page.locator('[data-testid="candidate-form"]');
+### 2. Use Proper Selectors
+```typescript
+// Good - role-based or data attributes
+await page.getByRole('button', { name: 'Submit' });
+await page.locator('[data-testid="candidate-form"]');
 
-   // Avoid - fragile class or ID selectors
-   await page.locator('#btn-123');
-   await page.locator('.some-dynamic-class');
-   ```
+// Avoid - fragile class or ID selectors
+await page.locator('#btn-123');
+await page.locator('.some-dynamic-class');
+```
 
-3. **Handle async operations**
-   ```typescript
-   // Wait for navigation
-   await page.waitForURL('/dashboard');
+### 3. Handle Async Operations
+```typescript
+// Wait for navigation
+await page.waitForURL('/dashboard');
 
-   // Wait for element
-   await page.waitForSelector('h1', { timeout: 5000 });
+// Wait for element
+await page.waitForSelector('h1', { timeout: 5000 });
 
-   // Wait for network idle
-   await page.waitForLoadState('networkidle');
-   ```
+// Wait for network idle
+await page.waitForLoadState('networkidle');
+```
 
-4. **Add assertions**
-   ```typescript
-   expect(page.url()).toContain('/candidates');
-   expect(await element.textContent()).toMatch(/expected text/i);
-   ```
+### 4. Add Assertions
+```typescript
+expect(page.url()).toContain('/candidates');
+expect(await element.textContent()).toMatch(/expected text/i);
+```
 
-## Troubleshooting
+---
+
+## 🐛 Troubleshooting
 
 ### Tests Failing with Timeout
 
@@ -211,7 +269,9 @@ When adding new E2E tests:
 2. Run: `npx playwright test --headed` to see what's happening
 3. Close manually if needed
 
-## Best Practices
+---
+
+## 🎯 Best Practices
 
 1. **Keep tests independent** - Each test should be able to run alone
 2. **Use realistic data** - Test with data that mimics production
@@ -221,7 +281,9 @@ When adding new E2E tests:
 6. **Clean up after tests** - Delete test data if created
 7. **Use page objects** - For complex pages, create page object models
 
-## CI/CD Integration
+---
+
+## 🔧 CI/CD Integration
 
 To run E2E tests in CI/CD pipeline:
 
@@ -241,35 +303,47 @@ To run E2E tests in CI/CD pipeline:
     path: playwright-report/
 ```
 
-## Next Steps
+---
+
+## 📈 Next Steps
 
 To improve E2E test coverage:
 
-1. **Add more workflows**
-   - Employee management
-   - Factory CRUD
-   - Timer card entry
-   - Request submission
+### 1. Add More Workflows
+- Employee management
+- Factory CRUD
+- Timer card entry
+- Request submission
 
-2. **Add error scenarios**
-   - Invalid form data
-   - Unauthorized access
-   - Network failures
+### 2. Add Error Scenarios
+- Invalid form data
+- Unauthorized access
+- Network failures
 
-3. **Add visual regression**
-   ```typescript
-   await expect(page).toHaveScreenshot();
-   ```
+### 3. Add Visual Regression
+```typescript
+await expect(page).toHaveScreenshot();
+```
 
-4. **Add API mocking**
-   ```typescript
-   await page.route('**/api/candidates', route => {
-     route.fulfill({ json: mockData });
-   });
-   ```
+### 4. Add API Mocking
+```typescript
+await page.route('**/api/candidates', route => {
+  route.fulfill({ json: mockData });
+});
+```
 
 ---
 
-**Last Updated**: 2025-11-11
+## 📚 Resources
+
+- [Playwright Documentation](https://playwright.dev/docs/intro)
+- [Playwright Best Practices](https://playwright.dev/docs/best-practices)
+- [Playwright API Reference](https://playwright.dev/docs/api/class-playwright)
+- [Project CLAUDE.md](../../CLAUDE.md) - Development guidelines
+
+---
+
+**Last Updated**: 2025-11-12
 **Version**: 5.4.1
+**Test Coverage**: Core Systems + Yukyu Module
 **By**: Claude AI Agent
