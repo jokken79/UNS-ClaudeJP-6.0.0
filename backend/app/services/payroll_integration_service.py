@@ -61,14 +61,15 @@ class PayrollIntegrationService:
                     'error': f'Employee with ID {employee_id} not found'
                 }
 
-            # Get timer cards for the date range
+            # Get timer cards for the date range (ONLY APPROVED)
             timer_cards = (
                 self.db.query(TimerCard)
                 .filter(
                     and_(
                         TimerCard.employee_id == employee_id,
                         TimerCard.work_date >= start_dt,
-                        TimerCard.work_date <= end_dt
+                        TimerCard.work_date <= end_dt,
+                        TimerCard.is_approved == True  # SECURITY: Only use approved timer cards for payroll
                     )
                 )
                 .order_by(TimerCard.work_date.asc())
