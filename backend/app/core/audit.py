@@ -80,6 +80,12 @@ def _serialize_value(value: Any) -> Any:
         return value.decode("utf-8", errors="ignore")
     if isinstance(value, str) and len(value) > MAX_STRING_LENGTH:
         return value[: MAX_STRING_LENGTH - 3] + "..."
+    # Handle lists and collections (relationships) - convert to string representation
+    if isinstance(value, (list, tuple, set)):
+        return f"<collection with {len(value)} items>"
+    # Handle SQLAlchemy model instances (relationships) - just return their repr
+    if hasattr(value, '__tablename__'):
+        return f"<{value.__class__.__name__} object>"
     return value
 
 

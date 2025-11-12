@@ -37,7 +37,7 @@ router = APIRouter()
 @router.post("/balances/calculate", response_model=YukyuCalculationResponse)
 async def calculate_employee_yukyus(
     calc_request: YukyuCalculationRequest,
-    current_user: User = Depends(auth_service.require_role(["admin", "keitosan"])),
+    current_user: User = Depends(auth_service.require_role("admin")),
     db: Session = Depends(get_db)
 ):
     """
@@ -176,7 +176,7 @@ async def get_employee_yukyu_summary(
 @router.post("/requests/", response_model=YukyuRequestResponse, status_code=status.HTTP_201_CREATED)
 async def create_yukyu_request(
     request_data: YukyuRequestCreate,
-    current_user: User = Depends(auth_service.require_role(["tantosha", "admin", "keitosan"])),
+    current_user: User = Depends(auth_service.require_role("employee")),
     db: Session = Depends(get_db)
 ):
     """
@@ -240,7 +240,7 @@ async def list_yukyu_requests(
 async def approve_yukyu_request(
     request_id: int,
     approval_data: YukyuRequestApprove,
-    current_user: User = Depends(auth_service.require_role(["keitosan", "admin"])),
+    current_user: User = Depends(auth_service.require_role("admin")),
     db: Session = Depends(get_db)
 ):
     """
@@ -272,7 +272,7 @@ async def approve_yukyu_request(
 async def reject_yukyu_request(
     request_id: int,
     rejection_data: YukyuRequestReject,
-    current_user: User = Depends(auth_service.require_role(["keitosan", "admin"])),
+    current_user: User = Depends(auth_service.require_role("admin")),
     db: Session = Depends(get_db)
 ):
     """
@@ -300,7 +300,7 @@ async def reject_yukyu_request(
 @router.get("/employees/by-factory/{factory_id}", response_model=List[EmployeeByFactoryResponse])
 async def get_employees_by_factory(
     factory_id: str,
-    current_user: User = Depends(auth_service.require_role(["tantosha", "admin", "keitosan"])),
+    current_user: User = Depends(auth_service.require_role("employee")),
     db: Session = Depends(get_db)
 ):
     """
@@ -326,7 +326,7 @@ async def get_employees_by_factory(
 
 @router.post("/maintenance/expire-old-yukyus", response_model=dict)
 async def expire_old_yukyus(
-    current_user: User = Depends(auth_service.require_role(["admin"])),
+    current_user: User = Depends(auth_service.require_role("admin")),
     db: Session = Depends(get_db)
 ):
     """
