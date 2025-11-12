@@ -102,6 +102,18 @@ services:
         python scripts/sync_candidate_employee_status.py &&
         echo '✅ Status synchronized' &&
         echo '' &&
+        echo '--- Step 6.5: Linking employees to candidates (rirekisho_id + photos) ---' &&
+        python scripts/link_employees_to_candidates.py &&
+        echo '✅ Employees linked with candidates and photos' &&
+        echo '' &&
+        echo '--- Step 6.6: Creating SQL functions for apartment-factory relationships ---' &&
+        PGPASSWORD=$${POSTGRES_PASSWORD} psql -h db -U $${POSTGRES_USER} -d $${POSTGRES_DB} -f alembic/versions/create_populate_apartment_factory_function.sql &&
+        echo '✅ SQL functions created' &&
+        echo '' &&
+        echo '--- Step 6.7: Linking employees to factories and creating apartment-factory relationships ---' &&
+        python scripts/link_employees_to_factories.py &&
+        echo '✅ Employees linked to factories, apartment-factory relationships created' &&
+        echo '' &&
         echo '--- Step 7: Checking for photo mappings file ---' &&
         if [ -f /app/config/access_photo_mappings.json ]; then
           echo '✅ Photo mappings file found - importing photos...' &&
@@ -129,7 +141,9 @@ services:
         echo '   - 142 columns in candidates table' &&
         echo '   - 100% field mapping enabled' &&
         echo '   - Percentage support for Japanese skills' &&
-        echo '   - 449 apartments created and loaded' &&
+        echo '   - 472 apartments created and loaded' &&
+        echo '   - Employees linked to factories (95%)' &&
+        echo '   - Apartment-factory relationships (437 apartments)' &&
         echo '   - Apartment V2 system fully initialized' &&
         echo '========================================'
       "

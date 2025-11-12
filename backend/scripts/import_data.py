@@ -253,12 +253,17 @@ def import_factories(db: Session):
                     config = json.load(f)
 
                 # Create factory record
+                # Make contact_person optional (some factories don't have 'assignment' field)
+                contact_person = None
+                if 'assignment' in config and 'supervisor' in config['assignment']:
+                    contact_person = config['assignment']['supervisor'].get('name')
+
                 factory = Factory(
                     factory_id=factory_id,
                     name=f"{config['client_company']['name']} - {config['plant']['name']}".strip(),
                     address=config['plant']['address'],
                     phone=config['plant']['phone'],
-                    contact_person=config['assignment']['supervisor']['name'],
+                    contact_person=contact_person,
                     config=config,
                     is_active=True
                 )

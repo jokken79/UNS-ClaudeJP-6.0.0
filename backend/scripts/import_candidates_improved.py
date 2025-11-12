@@ -451,8 +451,8 @@ def main():
             return 0
         else:
             logger.info("")
-            logger.info("[WARNING] No candidates imported")
-            return 1
+            logger.info("[WARNING] No candidates imported (all duplicates)")
+            return 0
 
     finally:
         db.close()

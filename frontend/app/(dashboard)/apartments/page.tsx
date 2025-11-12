@@ -18,6 +18,7 @@ import {
   EyeIcon,
   MapPinIcon,
   HomeIcon,
+  MapIcon,
 } from '@heroicons/react/24/outline';
 
 export default function ApartmentsPage() {
@@ -28,6 +29,9 @@ export default function ApartmentsPage() {
   const [prefecture, setPrefecture] = useState<string>('');
   const [minRent, setMinRent] = useState<number | ''>('');
   const [maxRent, setMaxRent] = useState<number | ''>('');
+  const [factoryId, setFactoryId] = useState<number | ''>('');
+  const [regionId, setRegionId] = useState<number | ''>('');
+  const [zone, setZone] = useState<string>('');
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
   const pageSize = 12;
@@ -42,6 +46,10 @@ export default function ApartmentsPage() {
     prefecture: prefecture || undefined,
     min_rent: minRent ? Number(minRent) : undefined,
     max_rent: maxRent ? Number(maxRent) : undefined,
+    factory_id: factoryId ? Number(factoryId) : undefined,
+    region_id: regionId ? Number(regionId) : undefined,
+    zone: zone || undefined,
+    has_factory: undefined,
     sort_by: 'name',
     sort_order: 'asc',
   };
@@ -108,6 +116,9 @@ export default function ApartmentsPage() {
     setPrefecture('');
     setMinRent('');
     setMaxRent('');
+    setFactoryId('');
+    setRegionId('');
+    setZone('');
     setPage(1);
   };
 
@@ -251,6 +262,39 @@ export default function ApartmentsPage() {
               </div>
 
               <div>
+                <label className="block text-sm font-medium mb-2">Fábrica (ID)</label>
+                <input
+                  type="number"
+                  placeholder="ID de fábrica..."
+                  value={factoryId}
+                  onChange={(e) => setFactoryId(e.target.value === '' ? '' : Number(e.target.value))}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Región (ID)</label>
+                <input
+                  type="number"
+                  placeholder="ID de región..."
+                  value={regionId}
+                  onChange={(e) => setRegionId(e.target.value === '' ? '' : Number(e.target.value))}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Zona</label>
+                <input
+                  type="text"
+                  placeholder="Nombre de zona..."
+                  value={zone}
+                  onChange={(e) => setZone(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium mb-2">Renta Mínima (¥)</label>
                 <input
                   type="number"
@@ -343,6 +387,38 @@ export default function ApartmentsPage() {
                     </div>
                     <StatusBadge apartment={apartment} />
                   </div>
+
+                  {/* Factory and Region Context */}
+                  {(apartment.primary_factory || apartment.region_id || apartment.zone) && (
+                    <div className="mb-3 space-y-1 text-sm">
+                      {apartment.primary_factory && (
+                        <div className="flex items-start gap-1.5 text-muted-foreground">
+                          <BuildingOfficeIcon className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                          <div className="flex-1">
+                            <span className="font-medium">
+                              {apartment.primary_factory.company_name}
+                              {apartment.primary_factory.plant_name && ` - ${apartment.primary_factory.plant_name}`}
+                            </span>
+                            {apartment.factory_associations && apartment.factory_associations.length > 1 && (
+                              <span className="text-xs ml-1">
+                                (+{apartment.factory_associations.length - 1} más)
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      {(apartment.region_id || apartment.zone) && (
+                        <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
+                          <MapIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                          <span>
+                            {apartment.region_id && `Región: ${apartment.region_id}`}
+                            {apartment.region_id && apartment.zone && ' | '}
+                            {apartment.zone && `Zona: ${apartment.zone}`}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Stats */}
                   <div className="grid grid-cols-2 gap-3 mb-3 text-sm">
