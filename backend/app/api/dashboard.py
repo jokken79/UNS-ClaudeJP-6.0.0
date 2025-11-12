@@ -249,9 +249,10 @@ async def get_factories_dashboard(
         
         # Current month data
         employee_ids = [e.id for e in employees]
-        
+        hakenmoto_ids = [e.hakenmoto_id for e in employees]
+
         timer_cards = db.query(TimerCard).filter(
-            TimerCard.employee_id.in_(employee_ids),
+            TimerCard.hakenmoto_id.in_(hakenmoto_ids),
             TimerCard.is_approved == True,
             extract('month', TimerCard.work_date) == current_month,
             extract('year', TimerCard.work_date) == current_year
@@ -444,7 +445,7 @@ async def get_employee_dashboard(
     # Current month hours
     now = datetime.now()
     timer_cards = db.query(TimerCard).filter(
-        TimerCard.employee_id == employee_id,
+        TimerCard.hakenmoto_id == employee.hakenmoto_id,
         extract('month', TimerCard.work_date) == now.month,
         extract('year', TimerCard.work_date) == now.year
     ).all()
