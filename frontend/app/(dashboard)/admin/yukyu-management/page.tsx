@@ -3,7 +3,7 @@
 // Disable static generation for this page (uses client-side hooks)
 export const dynamic = 'force-dynamic';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -89,17 +89,21 @@ export default function AdminYukyuManagementPage() {
   // Calculate yukyu mutation
   const calculateMutation = useMutation<YukyuCalculationResponse, Error, number>({
     mutationFn: async (employeeId: number) => {
+      console.log('📡 Sending API request for employee:', employeeId);
       const res = await api.post('/yukyu/balances/calculate', {
         employee_id: employeeId,
         calculation_date: new Date().toISOString().split('T')[0]
       });
+      console.log('📥 API response:', res.data);
       return res.data;
     },
     onSuccess: (data) => {
+      console.log('✅ Success:', data);
       toast.success(`Yukyus calculados: ${data.total_available} días disponibles`);
       queryClient.invalidateQueries({ queryKey: ['employees'] });
     },
     onError: (error: Error) => {
+      console.log('❌ Error:', error);
       toast.error(`Error: ${error.message}`);
     }
   });
@@ -121,10 +125,14 @@ export default function AdminYukyuManagementPage() {
   });
 
   const handleCalculate = () => {
+    console.log('🔘 Calculate button clicked');
+    console.log('Selected Employee ID:', selectedEmployeeId);
     if (!selectedEmployeeId) {
+      console.log('❌ No employee selected');
       toast.error('Por favor selecciona un empleado');
       return;
     }
+    console.log('✅ Starting calculation for employee:', parseInt(selectedEmployeeId));
     calculateMutation.mutate(parseInt(selectedEmployeeId));
   };
 
@@ -155,6 +163,15 @@ export default function AdminYukyuManagementPage() {
     }
     return results;
   }, [employees, searchQuery]);
+
+  // Auto-select employee if only one result
+  useEffect(() => {
+    if (filteredEmployees.length === 1) {
+      setSelectedEmployeeId(filteredEmployees[0].id.toString());
+    } else if (filteredEmployees.length === 0) {
+      setSelectedEmployeeId('');
+    }
+  }, [filteredEmployees]);
 
   // Calcular estadísticas
   const stats = {
