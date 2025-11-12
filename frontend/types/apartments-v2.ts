@@ -107,6 +107,39 @@ export interface ApartmentWithStats extends ApartmentResponse {
   is_available: boolean;
   last_assignment_date?: string | null;
   average_stay_duration?: number | null;
+
+  // Factory associations (new)
+  region_id?: number | null;
+  zone?: string | null;
+  factory_associations?: FactoryAssociation[];
+  primary_factory?: FactoryInfo | null;
+}
+
+// =============================================================================
+// FACTORY ASSOCIATION TYPES (NEW)
+// =============================================================================
+
+export interface FactoryInfo {
+  id: number;
+  factory_id: string;
+  company_name: string;
+  plant_name: string;
+  address?: string | null;
+}
+
+export interface FactoryAssociation {
+  id: number;
+  apartment_id: number;
+  factory_id: number;
+  is_primary: boolean;
+  priority: number;
+  distance_km?: number | null;
+  commute_minutes?: number | null;
+  effective_from: string;
+  effective_until?: string | null;
+  notes?: string | null;
+  factory: FactoryInfo;
+  employee_count?: number;
 }
 
 // =============================================================================
@@ -306,6 +339,12 @@ export interface ApartmentListParams {
   search?: string;
   sort_by?: string;
   sort_order?: 'asc' | 'desc';
+
+  // NEW: Factory filtering
+  factory_id?: number;
+  region_id?: number;
+  zone?: string;
+  has_factory?: boolean;
 }
 
 export interface AssignmentListParams {
