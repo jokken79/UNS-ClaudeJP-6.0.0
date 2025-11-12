@@ -33,7 +33,7 @@ def calculate_employee_salary(db: Session, employee_id: int, month: int, year: i
     
     # Get approved timer cards for the month
     timer_cards = db.query(TimerCard).filter(
-        TimerCard.employee_id == employee_id,
+        TimerCard.hakenmoto_id == employee.hakenmoto_id,
         TimerCard.is_approved == True,
         extract('month', TimerCard.work_date) == month,
         extract('year', TimerCard.work_date) == year

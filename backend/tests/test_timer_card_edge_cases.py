@@ -33,7 +33,7 @@ class TestDuplicateRecords:
         # Create first timer card
         card1 = TimerCard(
             hakenmoto_id=test_employee.hakenmoto_id,
-            employee_id=test_employee.id,
+            
             work_date=work_date,
             clock_in=time(9, 0),
             clock_out=time(17, 0),
@@ -49,7 +49,7 @@ class TestDuplicateRecords:
         # Attempt to create duplicate
         card2 = TimerCard(
             hakenmoto_id=test_employee.hakenmoto_id,
-            employee_id=test_employee.id,
+            
             work_date=work_date,  # Same date
             clock_in=time(10, 0),
             clock_out=time(18, 0),
@@ -72,7 +72,7 @@ class TestDuplicateRecords:
         # Day 1
         card1 = TimerCard(
             hakenmoto_id=test_employee.hakenmoto_id,
-            employee_id=test_employee.id,
+            
             work_date=date(2025, 11, 12),
             clock_in=time(9, 0),
             clock_out=time(17, 0),
@@ -85,7 +85,7 @@ class TestDuplicateRecords:
         # Day 2 - Should succeed
         card2 = TimerCard(
             hakenmoto_id=test_employee.hakenmoto_id,
-            employee_id=test_employee.id,
+            
             work_date=date(2025, 11, 13),  # Different date
             clock_in=time(9, 0),
             clock_out=time(17, 0),

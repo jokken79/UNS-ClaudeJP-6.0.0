@@ -73,7 +73,13 @@ async def list_timer_cards(
 
     # Apply additional filters (available to authorized roles)
     if employee_id:
-        query = query.filter(TimerCard.employee_id == employee_id)
+        # Convert employee.id to hakenmoto_id for filtering
+        employee = db.query(Employee).filter(Employee.id == employee_id).first()
+        if employee:
+            query = query.filter(TimerCard.hakenmoto_id == employee.hakenmoto_id)
+        else:
+            # If employee not found, return empty result
+            return []
     if factory_id:
         query = query.filter(TimerCard.factory_id == factory_id)
     if is_approved is not None:
