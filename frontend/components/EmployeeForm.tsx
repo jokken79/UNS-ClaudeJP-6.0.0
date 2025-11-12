@@ -7,6 +7,7 @@ import { employeeService } from '@/lib/api';
 import { ArrowLeftIcon, UserPlusIcon, PencilIcon, UserCircleIcon } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
 import FactorySelector from './FactorySelector';
+import ApartmentSelector from './ApartmentSelector';
 
 interface EmployeeFormData {
   // Identificación
@@ -69,6 +70,8 @@ interface EmployeeFormData {
   apartment_start_date: string;
   apartment_move_out_date: string;
   apartment_rent: string;
+  is_corporate_housing: boolean;
+  housing_subsidy: string;
 
   // Status & Notes
   current_status: string;
@@ -131,6 +134,8 @@ export default function EmployeeForm({ employeeId, isEdit = false }: EmployeeFor
     apartment_start_date: '',
     apartment_move_out_date: '',
     apartment_rent: '',
+    is_corporate_housing: false,
+    housing_subsidy: '',
     current_status: 'active',
     notes: '',
   });
@@ -186,6 +191,8 @@ export default function EmployeeForm({ employeeId, isEdit = false }: EmployeeFor
         apartment_start_date: employee.apartment_start_date || '',
         apartment_move_out_date: employee.apartment_move_out_date || '',
         apartment_rent: employee.apartment_rent ? employee.apartment_rent.toString() : '',
+        is_corporate_housing: employee.is_corporate_housing || false,
+        housing_subsidy: employee.housing_subsidy ? employee.housing_subsidy.toString() : '',
         current_status: employee.current_status || 'active',
         notes: employee.notes || '',
       });
@@ -316,6 +323,8 @@ export default function EmployeeForm({ employeeId, isEdit = false }: EmployeeFor
         apartment_start_date: formData.apartment_start_date || null,
         apartment_move_out_date: formData.apartment_move_out_date || null,
         apartment_rent: formData.apartment_rent ? parseInt(formData.apartment_rent) : null,
+        is_corporate_housing: formData.is_corporate_housing,
+        housing_subsidy: formData.housing_subsidy ? parseInt(formData.housing_subsidy) : null,
         current_status: formData.current_status || null,
         notes: formData.notes || null,
       };
@@ -1061,70 +1070,109 @@ export default function EmployeeForm({ employeeId, isEdit = false }: EmployeeFor
           {/* Apartment Information */}
           <div className="bg-white/90 backdrop-blur-sm shadow-lg rounded-2xl border border-gray-200">
             <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-yellow-50 to-amber-50">
-              <h2 className="text-lg font-bold text-gray-900">アパート情報</h2>
+              <h2 className="text-lg font-bold text-gray-900">社宅・住宅情報</h2>
             </div>
             <div className="px-6 py-5 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    アパートID
-                  </label>
-                  <input
-                    type="text"
-                    name="apartment_id"
-                    value={formData.apartment_id}
-                    onChange={handleChange}
-                    placeholder="1"
-                    className="block w-full px-4 py-2.5 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                  />
-                </div>
+              {/* Checkbox: Corporate Housing */}
+              <div className="flex items-center p-4 bg-indigo-50/50 rounded-xl border border-indigo-100">
+                <input
+                  type="checkbox"
+                  name="is_corporate_housing"
+                  checked={formData.is_corporate_housing}
+                  onChange={handleChange}
+                  className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                />
+                <label className="ml-3 block text-sm font-semibold text-gray-900">
+                  社宅に住んでいる（Corporate Housing）
+                </label>
+              </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    家賃
-                  </label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-gray-500 font-semibold">
-                      ¥
-                    </span>
+              {/* Conditional Fields - Only show if is_corporate_housing is true */}
+              {formData.is_corporate_housing && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-gray-200 pt-4">
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      アパート選択 <span className="text-red-500">*</span>
+                    </label>
+                    <ApartmentSelector
+                      value={formData.apartment_id}
+                      onChange={(apartmentId) => setFormData(prev => ({ ...prev, apartment_id: apartmentId }))}
+                      required={formData.is_corporate_housing}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      家賃（月額）
+                    </label>
+                    <div className="relative">
+                      <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-gray-500 font-semibold">
+                        ¥
+                      </span>
+                      <input
+                        type="number"
+                        name="apartment_rent"
+                        value={formData.apartment_rent}
+                        onChange={handleChange}
+                        min="0"
+                        step="1000"
+                        placeholder="30000"
+                        className="block w-full pl-8 pr-4 py-2.5 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      入居日
+                    </label>
                     <input
-                      type="number"
-                      name="apartment_rent"
-                      value={formData.apartment_rent}
+                      type="date"
+                      name="apartment_start_date"
+                      value={formData.apartment_start_date}
                       onChange={handleChange}
-                      min="0"
-                      step="1000"
-                      placeholder="30000"
-                      className="block w-full pl-8 pr-4 py-2.5 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                      className="block w-full px-4 py-2.5 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      退去日（予定）
+                    </label>
+                    <input
+                      type="date"
+                      name="apartment_move_out_date"
+                      value={formData.apartment_move_out_date}
+                      onChange={handleChange}
+                      className="block w-full px-4 py-2.5 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
                     />
                   </div>
                 </div>
+              )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    入居日
-                  </label>
+              {/* Housing Subsidy - Always visible */}
+              <div className="border-t border-gray-200 pt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  住宅手当（Housing Subsidy）
+                </label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-gray-500 font-semibold">
+                    ¥
+                  </span>
                   <input
-                    type="date"
-                    name="apartment_start_date"
-                    value={formData.apartment_start_date}
+                    type="number"
+                    name="housing_subsidy"
+                    value={formData.housing_subsidy}
                     onChange={handleChange}
-                    className="block w-full px-4 py-2.5 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                    min="0"
+                    step="1000"
+                    placeholder="10000"
+                    className="block w-full pl-8 pr-4 py-2.5 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
                   />
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    退去日
-                  </label>
-                  <input
-                    type="date"
-                    name="apartment_move_out_date"
-                    value={formData.apartment_move_out_date}
-                    onChange={handleChange}
-                    className="block w-full px-4 py-2.5 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                  />
-                </div>
+                <p className="mt-1 text-xs text-gray-500">
+                  {formData.is_corporate_housing ? '社宅の場合、会社が負担する補助金額を入力してください' : '社外住宅の場合の住宅手当を入力してください'}
+                </p>
               </div>
             </div>
           </div>

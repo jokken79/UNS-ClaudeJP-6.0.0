@@ -9,7 +9,7 @@ from decimal import Decimal
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.models.models import Employee, Factory, Apartment
+from app.models.models import Employee, Factory, Apartment, RentDeduction, DeductionStatus
 
 logger = logging.getLogger(__name__)
 
@@ -150,6 +150,125 @@ class PayrollService:
             logger.error(f"Error fetching employee data for ID {employee_id}: {e}", exc_info=True)
             raise ValueError(f"Error retrieving employee data: {str(e)}")
 
+    def get_apartment_deductions_for_month(
+        self,
+        employee_id: int,
+        year: int,
+        month: int
+    ) -> Dict[str, Any]:
+        """Obtiene las deducciones de apartamento para un empleado en un mes específico.
+
+        Consulta la tabla rent_deductions para obtener todas las deducciones de renta
+        del empleado para el mes y año especificados, incluyendo cargos adicionales.
+
+        Args:
+            employee_id: ID del empleado
+            year: Año (ej: 2025)
+            month: Mes (1-12)
+
+        Returns:
+            Diccionario con:
+            - total_amount: Monto total de deducciones de apartamento
+            - base_rent: Renta base (prorrateada o completa)
+            - additional_charges: Suma de cargos adicionales
+            - deductions: Lista detallada de deducciones
+            - apartment_id: ID del apartamento
+            - apartment_info: Información del apartamento
+
+        Raises:
+            ValueError: Si no hay conexión a base de datos
+        """
+        if not self.db:
+            logger.warning(f"No DB session for apartment deductions of employee {employee_id}")
+            return {
+                'total_amount': 0,
+                'base_rent': 0,
+                'additional_charges': 0,
+                'deductions': [],
+                'apartment_id': None,
+                'apartment_info': None
+            }
+
+        try:
+            # Consultar deducciones para este empleado en este mes
+            # Incluir deducciones pending y processed (not paid ni cancelled)
+            deductions = (
+                self.db.query(RentDeduction)
+                .filter(
+                    RentDeduction.employee_id == employee_id,
+                    RentDeduction.year == year,
+                    RentDeduction.month == month,
+                    RentDeduction.status.in_([DeductionStatus.PENDING, DeductionStatus.PROCESSED])
+                )
+                .all()
+            )
+
+            if not deductions:
+                logger.info(
+                    f"No apartment deductions found for employee {employee_id}, "
+                    f"period {year}-{month:02d}"
+                )
+                return {
+                    'total_amount': 0,
+                    'base_rent': 0,
+                    'additional_charges': 0,
+                    'deductions': [],
+                    'apartment_id': None,
+                    'apartment_info': None
+                }
+
+            # Sumar todos los montos
+            total_amount = sum(d.total_deduction for d in deductions)
+            total_base_rent = sum(d.base_rent for d in deductions)
+            total_additional = sum(d.additional_charges for d in deductions)
+
+            # Obtener información del apartamento (del primer registro)
+            first_deduction = deductions[0]
+            apartment = first_deduction.apartment
+            apartment_info = {
+                'apartment_id': apartment.id if apartment else None,
+                'apartment_code': apartment.apartment_code if apartment else None,
+                'name': apartment.name if apartment else None,
+                'address': apartment.address if apartment else None,
+                'building_name': apartment.building_name if apartment else None
+            } if apartment else None
+
+            # Construir lista de detalles de deducciones
+            deductions_detail = [
+                {
+                    'assignment_id': d.assignment_id,
+                    'period': f"{d.year}-{d.month:02d}",
+                    'base_rent': d.base_rent,
+                    'additional_charges': d.additional_charges,
+                    'total_deduction': d.total_deduction,
+                    'status': d.status.value,
+                    'notes': d.notes
+                }
+                for d in deductions
+            ]
+
+            logger.info(
+                f"Retrieved apartment deductions for employee {employee_id}, "
+                f"period {year}-{month:02d}: total=¥{total_amount:,}"
+            )
+
+            return {
+                'total_amount': int(total_amount),
+                'base_rent': int(total_base_rent),
+                'additional_charges': int(total_additional),
+                'deductions': deductions_detail,
+                'apartment_id': first_deduction.apartment_id,
+                'apartment_info': apartment_info
+            }
+
+        except Exception as e:
+            logger.error(
+                f"Error retrieving apartment deductions for employee {employee_id}, "
+                f"period {year}-{month:02d}: {e}",
+                exc_info=True
+            )
+            raise ValueError(f"Error retrieving apartment deductions: {str(e)}")
+
     def calculate_employee_payroll(
         self,
         employee_data: Optional[Dict[str, Any]] = None,
@@ -208,7 +327,42 @@ class PayrollService:
             gross_amount = base_amount + overtime_amount + night_amount + holiday_amount
 
             # Calculate deductions using employee-specific data
+            # Primero, intentar obtener deducciones de apartamento V2 desde la BD
             apartment_rent = employee_data.get('apartment_rent', 0)
+            housing_info = None
+
+            # Si tenemos employee_id y acceso a BD, consultar deducciones de apartamento del mes
+            if employee_id is not None and self.db and timer_records:
+                try:
+                    # Extraer año y mes de los timer records
+                    first_date_str = timer_records[0].get('work_date', '')
+                    if first_date_str:
+                        date_obj = datetime.strptime(str(first_date_str), '%Y-%m-%d')
+                        year = date_obj.year
+                        month = date_obj.month
+
+                        # Obtener deducciones de apartamento para este mes
+                        apartment_deductions = self.get_apartment_deductions_for_month(
+                            employee_id=employee_id,
+                            year=year,
+                            month=month
+                        )
+
+                        # Si hay deducciones de apartamento, usar ese monto
+                        if apartment_deductions['total_amount'] > 0:
+                            apartment_rent = apartment_deductions['total_amount']
+                            housing_info = apartment_deductions
+                            logger.info(
+                                f"Using apartment deductions for employee {employee_id}: "
+                                f"¥{apartment_rent:,} (base: ¥{apartment_deductions['base_rent']}, "
+                                f"additional: ¥{apartment_deductions['additional_charges']})"
+                            )
+                except Exception as e:
+                    logger.warning(
+                        f"Could not retrieve apartment deductions for employee {employee_id}: {e}. "
+                        f"Using fallback apartment_rent: ¥{apartment_rent:,}"
+                    )
+
             dependents = employee_data.get('dependents', 0)
 
             health_insurance = int(float(gross_amount) * 0.05)
@@ -273,6 +427,14 @@ class PayrollService:
                     'contract_type': employee_data.get('contract_type'),
                     'hire_date': employee_data.get('hire_date'),
                     'dependents': dependents
+                },
+                'housing_info': housing_info if housing_info else {
+                    'total_amount': apartment_rent,
+                    'base_rent': apartment_rent,
+                    'additional_charges': 0,
+                    'deductions': [],
+                    'apartment_id': employee_data.get('apartment_id'),
+                    'apartment_info': employee_data.get('apartment')
                 },
                 'validation': {
                     'is_valid': True,

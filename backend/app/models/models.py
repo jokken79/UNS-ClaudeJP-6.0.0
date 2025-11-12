@@ -370,6 +370,13 @@ class Candidate(Base, SoftDeleteMixin):
     # Relationships
     documents = relationship("Document", back_populates="candidate", foreign_keys="Document.candidate_id")
     form_submissions = relationship("CandidateForm", back_populates="candidate", cascade="all, delete-orphan")
+    employees = relationship(
+        "Employee",
+        back_populates="candidate",
+        foreign_keys="Employee.rirekisho_id",
+        primaryjoin="Candidate.rirekisho_id==Employee.rirekisho_id",
+        cascade="all, delete-orphan"
+    )
 
 
 class CandidateForm(Base):
@@ -574,6 +581,7 @@ class Employee(Base, SoftDeleteMixin):
     apartment_move_out_date = Column(Date) # 退去日
     apartment_rent = Column(Integer)
     is_corporate_housing = Column(Boolean, default=False, nullable=False)  # 社宅 (Corporate Housing)
+    housing_subsidy = Column(Integer, default=0)  # 住宅手当 (Housing Subsidy)
 
     # Yukyu (]~b]️有効)
     yukyu_total = Column(Integer, default=0)
@@ -590,6 +598,12 @@ class Employee(Base, SoftDeleteMixin):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
+    candidate = relationship(
+        "Candidate",
+        back_populates="employees",
+        foreign_keys=[rirekisho_id],
+        primaryjoin="Employee.rirekisho_id==Candidate.rirekisho_id"
+    )
     factory = relationship("Factory", back_populates="employees", foreign_keys=[factory_id])
     apartment = relationship("Apartment", back_populates="employees")
     workplace = relationship("Workplace", back_populates="employees")
@@ -677,6 +691,7 @@ class ContractWorker(Base, SoftDeleteMixin):
     apartment_move_out_date = Column(Date)
     apartment_rent = Column(Integer)
     is_corporate_housing = Column(Boolean, default=False, nullable=False)  # 社宅 (Corporate Housing)
+    housing_subsidy = Column(Integer, default=0)  # 住宅手当 (Housing Subsidy)
 
     # Yukyu (有給休暇)
     yukyu_total = Column(Integer, default=0)
@@ -738,6 +753,7 @@ class Staff(Base, SoftDeleteMixin):
     yukyu_total = Column(Integer, default=0)
     yukyu_used = Column(Integer, default=0)
     is_corporate_housing = Column(Boolean, default=False, nullable=False)  # 社宅 (Corporate Housing) - para contabilidad keiri
+    housing_subsidy = Column(Integer, default=0)  # 住宅手当 (Housing Subsidy)
     yukyu_remaining = Column(Integer, default=0)
 
     # Status
