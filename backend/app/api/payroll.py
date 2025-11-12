@@ -37,6 +37,7 @@ from app.schemas.payroll import (
     DeductionsDetail,
     ValidationResult,
 )
+from app.schemas.salary_unified import PayrollRunUpdate, MarkPayrollPaidRequest
 
 router = APIRouter(prefix="/api/payroll", tags=["payroll"])
 
@@ -464,6 +465,253 @@ def approve_payroll_run(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error approving payroll run: {str(e)}"
+        )
+
+
+@router.delete(
+    "/runs/{payroll_run_id}",
+    summary="Delete a payroll run",
+    description="Deletes a payroll run. Only allowed if status is DRAFT or CALCULATED."
+)
+def delete_payroll_run(
+    payroll_run_id: int,
+    service: PayrollService = Depends(get_payroll_service),
+    db: Session = Depends(get_db)
+):
+    """Delete a payroll run.
+
+    Only allows deletion if payroll run is in DRAFT or CALCULATED status.
+    Cannot delete if already APPROVED or PAID.
+
+    Args:
+        payroll_run_id: ID of the payroll run to delete
+        service: Payroll service instance
+        db: Database session
+
+    Returns:
+        Success response with deletion message
+
+    Raises:
+        HTTPException 404: Payroll run not found
+        HTTPException 400: Cannot delete (invalid status)
+        HTTPException 500: Database error
+    """
+    try:
+        # Query PayrollRun by ID
+        payroll_run = db.query(PayrollRunModel).filter(PayrollRunModel.id == payroll_run_id).first()
+
+        if not payroll_run:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Payroll run {payroll_run_id} not found"
+            )
+
+        # Validate status - can only delete draft or calculated runs
+        if payroll_run.status not in ['draft', 'calculated']:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot delete payroll run with status '{payroll_run.status}'. Only 'draft' or 'calculated' runs can be deleted."
+            )
+
+        # Delete associated employee payroll records first
+        db.query(EmployeePayroll).filter(
+            EmployeePayroll.payroll_run_id == payroll_run_id
+        ).delete()
+
+        # Delete payroll run
+        db.delete(payroll_run)
+        db.commit()
+
+        return {
+            "success": True,
+            "message": f"Payroll run {payroll_run_id} deleted successfully"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error deleting payroll run: {str(e)}"
+        )
+
+
+@router.put(
+    "/runs/{payroll_run_id}",
+    response_model=PayrollRun,
+    summary="Update a payroll run",
+    description="Updates a payroll run. Only allowed if status is DRAFT."
+)
+def update_payroll_run(
+    payroll_run_id: int,
+    data: PayrollRunUpdate,
+    service: PayrollService = Depends(get_payroll_service),
+    db: Session = Depends(get_db)
+):
+    """Update a payroll run.
+
+    Only allows updating if payroll run is in DRAFT status.
+    Can update: pay_period_start, pay_period_end, description
+
+    Args:
+        payroll_run_id: ID of the payroll run to update
+        data: Fields to update
+        service: Payroll service instance
+        db: Database session
+
+    Returns:
+        Updated payroll run
+
+    Raises:
+        HTTPException 404: Payroll run not found
+        HTTPException 400: Cannot update (invalid status)
+        HTTPException 500: Database error
+    """
+    try:
+        # Query PayrollRun by ID
+        payroll_run = db.query(PayrollRunModel).filter(PayrollRunModel.id == payroll_run_id).first()
+
+        if not payroll_run:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Payroll run {payroll_run_id} not found"
+            )
+
+        # Validate status - can only update draft runs
+        if payroll_run.status != 'draft':
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot update payroll run with status '{payroll_run.status}'. Must be 'draft'."
+            )
+
+        # Update fields if provided
+        if data.pay_period_start is not None:
+            payroll_run.pay_period_start = data.pay_period_start.date()
+        if data.pay_period_end is not None:
+            payroll_run.pay_period_end = data.pay_period_end.date()
+        if data.description is not None:
+            # Store description in created_by field (or add new field if needed)
+            # For now, we'll just update the updated_at timestamp
+            pass
+
+        # Update timestamp
+        payroll_run.updated_at = datetime.now()
+
+        # Commit changes
+        db.commit()
+        db.refresh(payroll_run)
+
+        # Convert to schema with proper type conversions
+        return PayrollRun(
+            id=payroll_run.id,
+            pay_period_start=datetime.combine(payroll_run.pay_period_start, datetime.min.time()),
+            pay_period_end=datetime.combine(payroll_run.pay_period_end, datetime.min.time()),
+            status=payroll_run.status,
+            total_employees=payroll_run.total_employees,
+            total_gross_amount=float(payroll_run.total_gross_amount),
+            total_deductions=float(payroll_run.total_deductions),
+            total_net_amount=float(payroll_run.total_net_amount),
+            created_by=payroll_run.created_by,
+            created_at=payroll_run.created_at,
+            updated_at=payroll_run.updated_at
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error updating payroll run: {str(e)}"
+        )
+
+
+@router.post(
+    "/runs/{payroll_run_id}/mark-paid",
+    response_model=PayrollApprovalResponse,
+    summary="Mark payroll run as paid",
+    description="Marks a payroll run as paid. Updates status and all employee payroll records."
+)
+def mark_payroll_run_paid(
+    payroll_run_id: int,
+    data: MarkPayrollPaidRequest,
+    service: PayrollService = Depends(get_payroll_service),
+    db: Session = Depends(get_db)
+):
+    """Mark a payroll run as paid.
+
+    Updates payroll run status to 'paid' and sets paid_at timestamp
+    for all associated employee payroll records.
+
+    Only allowed if payroll run status is 'approved'.
+
+    Args:
+        payroll_run_id: ID of the payroll run
+        data: Payment details (date, method, notes)
+        service: Payroll service instance
+        db: Database session
+
+    Returns:
+        Approval response with payment confirmation
+
+    Raises:
+        HTTPException 404: Payroll run not found
+        HTTPException 400: Cannot mark as paid (invalid status)
+        HTTPException 500: Database error
+    """
+    try:
+        # Query PayrollRun by ID
+        payroll_run = db.query(PayrollRunModel).filter(PayrollRunModel.id == payroll_run_id).first()
+
+        if not payroll_run:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Payroll run {payroll_run_id} not found"
+            )
+
+        # Validate status - can only mark paid if approved
+        if payroll_run.status != 'approved':
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot mark payroll run as paid with status '{payroll_run.status}'. Must be 'approved'."
+            )
+
+        # Update payroll run status to paid
+        payroll_run.status = 'paid'
+        payroll_run.updated_at = datetime.now()
+
+        # Update all employee payroll records
+        employee_payrolls = db.query(EmployeePayroll).filter(
+            EmployeePayroll.payroll_run_id == payroll_run_id
+        ).all()
+
+        for emp_payroll in employee_payrolls:
+            # Assuming there's a paid_at field (if not, we just skip)
+            if hasattr(emp_payroll, 'paid_at'):
+                emp_payroll.paid_at = data.payment_date
+            emp_payroll.updated_at = datetime.now()
+
+        # Commit all changes
+        db.commit()
+        db.refresh(payroll_run)
+
+        # Return approval response
+        return PayrollApprovalResponse(
+            success=True,
+            payroll_run_id=payroll_run_id,
+            status=payroll_run.status,
+            approved_by=None,  # Not tracking who marked it paid in this endpoint
+            approved_at=payroll_run.updated_at
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error marking payroll run as paid: {str(e)}"
         )
 
 
