@@ -1051,3 +1051,161 @@ class SalaryError(BaseModel):
             }
         }
     )
+
+
+# ============================================================================
+# NEW SCHEMAS FOR MISSING ENDPOINTS
+# ============================================================================
+
+
+class SalaryUpdate(BaseModel):
+    """
+    Schema for updating existing salary calculation.
+    Only allows updating bonus, gasoline_allowance, other_deductions, and notes.
+    """
+    bonus: Optional[float] = Field(None, ge=0, description="Update bonus amount")
+    gasoline_allowance: Optional[float] = Field(None, ge=0, description="Update gasoline allowance")
+    other_deductions: Optional[float] = Field(None, ge=0, description="Update other deductions")
+    notes: Optional[str] = Field(None, max_length=1000, description="Update notes")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "bonus": 25000.0,
+                "gasoline_allowance": 18000.0,
+                "other_deductions": 5000.0,
+                "notes": "Bonus adjusted for performance"
+            }
+        }
+    )
+
+
+class MarkSalaryPaidRequest(BaseModel):
+    """
+    Request schema for marking a salary as paid.
+    """
+    payment_date: datetime = Field(..., description="Date when payment was made")
+    payment_method: Optional[str] = Field(None, max_length=50, description="Payment method (transfer, cash, check)")
+    notes: Optional[str] = Field(None, max_length=1000, description="Payment notes")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "payment_date": "2025-10-31T15:00:00",
+                "payment_method": "transfer",
+                "notes": "Bank transfer completed successfully"
+            }
+        }
+    )
+
+
+class PayrollRunUpdate(BaseModel):
+    """
+    Schema for updating payroll run.
+    Only allows updating if status is DRAFT.
+    """
+    pay_period_start: Optional[datetime] = Field(None, description="Update pay period start date")
+    pay_period_end: Optional[datetime] = Field(None, description="Update pay period end date")
+    description: Optional[str] = Field(None, max_length=500, description="Update description")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "pay_period_start": "2025-10-01T00:00:00",
+                "pay_period_end": "2025-10-31T23:59:59",
+                "description": "October 2025 payroll run - updated"
+            }
+        }
+    )
+
+
+class MarkPayrollPaidRequest(BaseModel):
+    """
+    Request schema for marking an entire payroll run as paid.
+    """
+    payment_date: datetime = Field(..., description="Date when payments were made")
+    payment_method: Optional[str] = Field(None, max_length=50, description="Payment method")
+    notes: Optional[str] = Field(None, max_length=1000, description="Payment notes")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "payment_date": "2025-10-31T15:00:00",
+                "payment_method": "bank_transfer",
+                "notes": "All employees paid via bank transfer"
+            }
+        }
+    )
+
+
+class SalaryReportFilters(BaseModel):
+    """
+    Filters for salary report generation.
+    """
+    start_date: str = Field(..., description="Start date in YYYY-MM-DD format")
+    end_date: str = Field(..., description="End date in YYYY-MM-DD format")
+    employee_ids: Optional[List[int]] = Field(None, description="Filter by employee IDs")
+    factory_ids: Optional[List[str]] = Field(None, description="Filter by factory IDs")
+    is_paid: Optional[bool] = Field(None, description="Filter by paid status")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "start_date": "2025-10-01",
+                "end_date": "2025-10-31",
+                "employee_ids": [123, 124, 125],
+                "factory_ids": ["F001", "F002"],
+                "is_paid": False
+            }
+        }
+    )
+
+
+class SalaryExportResponse(BaseModel):
+    """
+    Response schema for salary export operations (Excel/PDF).
+    """
+    success: bool = Field(..., description="Export success status")
+    file_url: str = Field(..., description="URL to download the exported file")
+    filename: str = Field(..., description="Name of the exported file")
+    format: str = Field(..., description="File format (excel/pdf)")
+    generated_at: datetime = Field(..., description="Generation timestamp")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "success": True,
+                "file_url": "/api/salary/downloads/salary_report_2025-10.xlsx",
+                "filename": "salary_report_2025-10.xlsx",
+                "format": "excel",
+                "generated_at": "2025-10-31T16:00:00"
+            }
+        }
+    )
+
+
+class SalaryReportResponse(BaseModel):
+    """
+    Response schema for salary reports with summary statistics.
+    """
+    total_count: int = Field(..., ge=0, description="Total number of salaries in report")
+    salaries: List[SalaryCalculationResponse] = Field(..., description="List of salary calculations")
+    summary: Dict[str, Any] = Field(..., description="Summary statistics")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "total_count": 45,
+                "salaries": [],  # List of SalaryCalculationResponse
+                "summary": {
+                    "total_employees": 45,
+                    "total_gross": 13743900.0,
+                    "total_deductions": 3923170.0,
+                    "total_net": 9820730.0,
+                    "average_salary": 218238.44,
+                    "paid_count": 30,
+                    "unpaid_count": 15
+                }
+            }
+        }
+    )
