@@ -22,6 +22,7 @@ from app.schemas.yukyu import (
     YukyuCalculationRequest,
     YukyuCalculationResponse,
     EmployeeByFactoryResponse,
+    YukyuUsageHistoryResponse,
 )
 from app.services.auth_service import auth_service
 from app.services.yukyu_service import YukyuService
@@ -601,3 +602,123 @@ async def get_payroll_yukyu_summary(
             "average_days_per_employee": round(total_days / total_employees, 2) if total_employees > 0 else 0
         }
     }
+
+
+# ============================================================================
+# YUKYU USAGE HISTORY ENDPOINT
+# ============================================================================
+
+@router.get("/usage-history/{employee_id}", response_model=List[YukyuUsageHistoryResponse])
+async def get_yukyu_usage_history(
+    employee_id: int,
+    start_date: Optional[date] = Query(None, description="Filter by start date"),
+    end_date: Optional[date] = Query(None, description="Filter by end date"),
+    fiscal_year: Optional[int] = Query(None, description="Filter by fiscal year"),
+    include_expired: bool = Query(True, description="Include expired balances in results"),
+    current_user: User = Depends(auth_service.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get complete yukyu usage history for an employee.
+
+    **Permissions:** Any authenticated user (own data) or ADMIN/KEITOSAN (all data)
+
+    **What it does:**
+    - Returns ALL yukyu usage details including those from expired balances
+    - Shows which fiscal year each yukyu day was deducted from (LIFO logic)
+    - Allows filtering by date range and fiscal year
+    - Perfect for viewing historical usage from 4+ years ago
+
+    **Use cases:**
+    - Employee wants to see their complete yukyu history
+    - Admin needs to audit yukyu usage from previous years
+    - Compliance reporting for expired yukyus
+
+    **Example:**
+    - GET /api/yukyu/usage-history/123?start_date=2020-01-01&end_date=2024-12-31
+    - Returns all yukyu usage for employee 123 from 2020-2024, including expired balances
+    """
+    from app.models.models import Employee, YukyuUsageDetail, YukyuBalance, YukyuRequest
+    from sqlalchemy.orm import joinedload
+
+    # Permission check: users can only see their own data, admins see all
+    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.KEITOSAN]:
+        # Regular user - verify they're requesting their own data
+        employee = db.query(Employee).filter(
+            Employee.id == employee_id,
+            Employee.email == current_user.email
+        ).first()
+
+        if not employee:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only view your own yukyu history"
+            )
+
+    # Verify employee exists
+    employee = db.query(Employee).filter(Employee.id == employee_id).first()
+    if not employee:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Employee {employee_id} not found"
+        )
+
+    # Build query with joins to get all related data
+    query = db.query(
+        YukyuUsageDetail,
+        YukyuRequest,
+        YukyuBalance
+    ).join(
+        YukyuRequest, YukyuUsageDetail.request_id == YukyuRequest.id
+    ).join(
+        YukyuBalance, YukyuUsageDetail.balance_id == YukyuBalance.id
+    ).filter(
+        YukyuRequest.employee_id == employee_id
+    )
+
+    # Apply filters
+    if start_date:
+        query = query.filter(YukyuUsageDetail.usage_date >= start_date)
+
+    if end_date:
+        query = query.filter(YukyuUsageDetail.usage_date <= end_date)
+
+    if fiscal_year:
+        query = query.filter(YukyuBalance.fiscal_year == fiscal_year)
+
+    if not include_expired:
+        # Only show usage from balances that are still ACTIVE
+        from app.models.models import YukyuStatus
+        query = query.filter(YukyuBalance.status == YukyuStatus.ACTIVE)
+
+    # Order by usage date descending (most recent first)
+    query = query.order_by(YukyuUsageDetail.usage_date.desc())
+
+    results = query.all()
+
+    # Transform to response schema
+    history = []
+    for usage_detail, request, balance in results:
+        history.append(YukyuUsageHistoryResponse(
+            id=usage_detail.id,
+            request_id=usage_detail.request_id,
+            balance_id=usage_detail.balance_id,
+            usage_date=usage_detail.usage_date,
+            days_deducted=usage_detail.days_deducted,
+
+            # Request info
+            request_type=request.request_type,
+            request_status=request.status.value if hasattr(request.status, 'value') else str(request.status),
+            request_start_date=request.start_date,
+            request_end_date=request.end_date,
+
+            # Balance info
+            fiscal_year=balance.fiscal_year,
+            balance_status=balance.status.value if hasattr(balance.status, 'value') else str(balance.status),
+
+            # Notes
+            notes=request.notes
+        ))
+
+    logger.info(f"Retrieved {len(history)} yukyu usage records for employee {employee_id}")
+    return history

@@ -18,6 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import api from '@/lib/api';
 
 interface YukyuUsageDetail {
   id: number;
@@ -27,7 +28,10 @@ interface YukyuUsageDetail {
   days_deducted: number;
   request_type: string;
   request_status: string;
+  request_start_date: string;
+  request_end_date: string;
   fiscal_year: number;
+  balance_status: string;
   notes?: string;
 }
 
@@ -50,12 +54,8 @@ export default function YukyuHistoryPage() {
   const { data: employees } = useQuery({
     queryKey: ['employees'],
     queryFn: async () => {
-      const res = await fetch('/api/employees', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
-      });
-      if (!res.ok) throw new Error('Failed to fetch employees');
-      const data = await res.json();
-      return data.items || [];
+      const res = await api.get('/employees');
+      return res.data.items || [];
     }
   });
 
@@ -63,38 +63,36 @@ export default function YukyuHistoryPage() {
   const { data: employeeInfo } = useQuery({
     queryKey: ['yukyu-employee-info', selectedEmployeeId],
     queryFn: async () => {
-      const res = await fetch(`/api/yukyu/balances/${selectedEmployeeId}`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
-      });
-      if (!res.ok) throw new Error('Failed to fetch employee info');
-      return res.json();
+      const res = await api.get(`/yukyu/balances/${selectedEmployeeId}`);
+      return res.data;
     },
     enabled: !!selectedEmployeeId
   });
 
-  // Fetch usage history (simulated - backend endpoint may need to be created)
-  const { data: usageHistory, isLoading: historyLoading } = useQuery({
+  // Fetch usage history from real backend endpoint
+  const { data: usageHistory, isLoading: historyLoading, refetch: refetchHistory } = useQuery({
     queryKey: ['yukyu-usage-history', selectedEmployeeId, startDate, endDate, fiscalYear],
     queryFn: async () => {
-      // TODO: Este endpoint debe ser creado en el backend si no existe
-      // Por ahora retorna datos mock
-      const res = await fetch(`/api/yukyu/usage-history/${selectedEmployeeId}?start_date=${startDate}&end_date=${endDate}&fiscal_year=${fiscalYear}`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
-      });
-      if (!res.ok) {
-        // Fallback a datos mock si el endpoint no existe aún
-        return [];
-      }
-      return res.json();
+      if (!selectedEmployeeId) return [];
+
+      const params = new URLSearchParams();
+      if (startDate) params.append('start_date', startDate);
+      if (endDate) params.append('end_date', endDate);
+      if (fiscalYear) params.append('fiscal_year', fiscalYear);
+      params.append('include_expired', 'true'); // Always include expired balances for history
+
+      const res = await api.get(`/yukyu/usage-history/${selectedEmployeeId}?${params.toString()}`);
+      return res.data;
     },
-    enabled: false // Solo ejecutar cuando usuario haga click en buscar
+    enabled: false // Only execute when user clicks "Buscar"
   });
 
   const handleSearch = () => {
     if (!selectedEmployeeId) {
       return;
     }
-    // Trigger refetch
+    // Trigger refetch to load history
+    refetchHistory();
   };
 
   const getRequestTypeLabel = (type: string) => {

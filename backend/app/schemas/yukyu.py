@@ -214,3 +214,34 @@ class EmployeeByFactoryResponse(BaseModel):
     yukyu_available: int  # Total yukyu days currently available
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# ============================================
+# YUKYU HISTORY SCHEMA (Extended with request/balance info)
+# ============================================
+
+class YukyuUsageHistoryResponse(BaseModel):
+    """
+    Extended yukyu usage detail with request and balance information.
+    Used for displaying complete history including expired yukyus from past years.
+    """
+    id: int
+    request_id: int
+    balance_id: int
+    usage_date: date
+    days_deducted: Decimal
+
+    # Request information
+    request_type: str  # 'yukyu', 'hankyu', 'ikkikokoku', 'taisha'
+    request_status: str  # 'pending', 'approved', 'rejected'
+    request_start_date: date
+    request_end_date: date
+
+    # Balance information (which fiscal year was used)
+    fiscal_year: int
+    balance_status: str  # 'ACTIVE', 'EXPIRED', 'USED_UP'
+
+    # Optional notes
+    notes: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
