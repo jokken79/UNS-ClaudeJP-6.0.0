@@ -274,7 +274,8 @@ class PayrollService:
         employee_data: Optional[Dict[str, Any]] = None,
         timer_records: Optional[List[Dict[str, Any]]] = None,
         payroll_run_id: Optional[int] = None,
-        employee_id: Optional[int] = None
+        employee_id: Optional[int] = None,
+        yukyu_days_approved: float = 0
     ) -> Dict[str, Any]:
         """Calculate payroll for a single employee.
 
@@ -308,6 +309,37 @@ class PayrollService:
 
             # Calculate hours from timer records
             hours_breakdown = self._calculate_hours(timer_records)
+
+            # Reducir horas por días de yukyu aprobados
+            if yukyu_days_approved > 0:
+                yukyu_reduction_hours = yukyu_days_approved * 8  # 8 horas/día
+                total_worked_hours = (
+                    hours_breakdown['normal_hours'] +
+                    hours_breakdown['overtime_hours'] +
+                    hours_breakdown['night_hours'] +
+                    hours_breakdown['holiday_hours']
+                )
+
+                # Reducir de horas normales primero
+                if hours_breakdown['normal_hours'] >= yukyu_reduction_hours:
+                    hours_breakdown['normal_hours'] -= yukyu_reduction_hours
+                    yukyu_reduction_hours = 0
+                else:
+                    yukyu_reduction_hours -= hours_breakdown['normal_hours']
+                    hours_breakdown['normal_hours'] = 0
+
+                # Luego de overtime si queda
+                if yukyu_reduction_hours > 0 and hours_breakdown['overtime_hours'] > 0:
+                    if hours_breakdown['overtime_hours'] >= yukyu_reduction_hours:
+                        hours_breakdown['overtime_hours'] -= yukyu_reduction_hours
+                    else:
+                        yukyu_reduction_hours -= hours_breakdown['overtime_hours']
+                        hours_breakdown['overtime_hours'] = 0
+
+                logger.info(
+                    f"Employee {employee_data.get('employee_id')}: "
+                    f"Reduced hours by {yukyu_days_approved} days (¥{yukyu_days_approved * 8 * float(employee_data.get('base_hourly_rate', 0)):.2f})"
+                )
 
             # Calculate base hourly rate from employee data
             base_rate = employee_data.get('base_hourly_rate', 0)
@@ -371,9 +403,15 @@ class PayrollService:
             income_tax = int(float(gross_amount) * 0.05)
             resident_tax = int(float(gross_amount) * 0.10)
 
+            # Calcular deducción por yukyu
+            yukyu_deduction = 0
+            if yukyu_days_approved > 0:
+                base_rate = Decimal(str(employee_data.get('base_hourly_rate', 0)))
+                yukyu_deduction = int(yukyu_days_approved * 8 * base_rate)  # 8 horas/día
+
             total_deductions = (
                 apartment_rent + health_insurance + pension +
-                employment_insurance + income_tax + resident_tax
+                employment_insurance + income_tax + resident_tax + yukyu_deduction
             )
 
             net_amount = float(gross_amount) - total_deductions
@@ -417,7 +455,8 @@ class PayrollService:
                     'pension': pension,
                     'employment_insurance': employment_insurance,
                     'apartment': apartment_rent,
-                    'other': 0
+                    'other': 0,
+                    'yukyu_deduction': yukyu_deduction
                 },
                 'employee_info': {
                     'employee_id': employee_data.get('employee_id'),
