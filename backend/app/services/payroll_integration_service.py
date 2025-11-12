@@ -61,14 +61,15 @@ class PayrollIntegrationService:
                     'error': f'Employee with ID {employee_id} not found'
                 }
 
-            # Get timer cards for the date range
+            # Get timer cards for the date range (ONLY APPROVED)
             timer_cards = (
                 self.db.query(TimerCard)
                 .filter(
                     and_(
-                        TimerCard.employee_id == employee_id,
+                        TimerCard.hakenmoto_id == employee.hakenmoto_id,
                         TimerCard.work_date >= start_dt,
-                        TimerCard.work_date <= end_dt
+                        TimerCard.work_date <= end_dt,
+                        TimerCard.is_approved == True  # SECURITY: Only use approved timer cards for payroll
                     )
                 )
                 .order_by(TimerCard.work_date.asc())
@@ -350,7 +351,13 @@ class PayrollIntegrationService:
             query = self.db.query(TimerCard).filter(TimerCard.is_approved == True)
 
             if employee_id:
-                query = query.filter(TimerCard.employee_id == employee_id)
+                # Convert employee.id to hakenmoto_id for filtering
+                employee = self.db.query(Employee).filter(Employee.id == employee_id).first()
+                if employee:
+                    query = query.filter(TimerCard.hakenmoto_id == employee.hakenmoto_id)
+                else:
+                    # If employee not found, return empty result
+                    return {'success': True, 'records': [], 'total': 0}
 
             if start_date:
                 start_dt = datetime.strptime(start_date, '%Y-%m-%d').date()
@@ -362,18 +369,18 @@ class PayrollIntegrationService:
 
             timer_cards = query.order_by(TimerCard.work_date.desc()).limit(limit).all()
 
-            # Group by employee
+            # Group by employee hakenmoto_id
             grouped_records = {}
             for card in timer_cards:
-                emp_id = card.employee_id
-                if emp_id not in grouped_records:
-                    grouped_records[emp_id] = {
-                        'employee_id': emp_id,
+                hakenmoto_id = card.hakenmoto_id
+                if hakenmoto_id not in grouped_records:
+                    grouped_records[hakenmoto_id] = {
+                        'hakenmoto_id': hakenmoto_id,
                         'employee_name': card.employee.full_name_kanji if card.employee else 'Unknown',
                         'timer_cards': []
                     }
 
-                grouped_records[emp_id]['timer_cards'].append({
+                grouped_records[hakenmoto_id]['timer_cards'].append({
                     'id': card.id,
                     'work_date': card.work_date.isoformat(),
                     'clock_in': card.clock_in.strftime('%H:%M') if card.clock_in else None,

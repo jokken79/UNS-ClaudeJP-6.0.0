@@ -18,6 +18,7 @@ from app.core.observability import (
     record_ocr_request,
     trace_ocr_operation,
 )
+from app.core.timeout_utils import timeout_executor, TimeoutException
 
 logger = logging.getLogger(__name__)
 
@@ -89,72 +90,19 @@ class HybridOCRService:
             logger.warning(f"EasyOCR no disponible: {e}")
             self.easyocr_service = None
     
-    def process_document_hybrid(self, image_data: bytes, document_type: str = "zairyu_card",
-                               preferred_method: str = "auto") -> Dict[str, Any]:
-        """Procesa un documento usando estrategia híbrida inteligente de OCR.
+    def _process_document_hybrid_internal(self, image_data: bytes, document_type: str,
+                                         preferred_method: str) -> Dict[str, Any]:
+        """Internal method for hybrid OCR processing (without timeout wrapper).
 
-        Este método implementa una estrategia sofisticada que:
-        1. Si preferred_method='azure': Usa Azure primero, EasyOCR como fallback
-        2. Si preferred_method='easyocr': Usa EasyOCR primero, Azure como fallback
-        3. Si preferred_method='auto': Ejecuta ambos y combina los mejores resultados
-
-        La estrategia automática proporciona la máxima precisión al combinar
-        resultados de múltiples proveedores OCR y completar campos faltantes.
+        This method is called by process_document_hybrid with timeout protection.
 
         Args:
-            image_data (bytes): Bytes de la imagen del documento a procesar
-            document_type (str): Tipo de documento. Opciones:
-                - "zairyu_card": Tarjeta de residencia
-                - "rirekisho": Curriculum vitae japonés
-                - "license": Licencia de conducir
-                - "timer_card": Timer card (タイムカード)
-            preferred_method (str): Estrategia de procesamiento. Opciones:
-                - "azure": Priorizar Azure OCR
-                - "easyocr": Priorizar EasyOCR
-                - "auto": Estrategia híbrida automática (recomendado)
+            image_data (bytes): Document image bytes
+            document_type (str): Document type
+            preferred_method (str): Processing strategy
 
         Returns:
-            Dict[str, Any]: Diccionario con estructura:
-                {
-                    "success": bool,  # True si al menos un método funcionó
-                    "method_used": str,  # "hybrid", "azure", "easyocr", "none"
-                    "confidence_score": float,  # 0.0-0.95 (mayor=mejor)
-                    "azure_result": Dict | None,  # Resultado de Azure
-                    "easyocr_result": Dict | None,  # Resultado de EasyOCR
-                    "combined_data": Dict,  # Datos combinados finales
-                    "document_type": str,
-                    # Campos extraídos (según tipo de documento):
-                    "name_kanji": str,
-                    "birthday": str,
-                    "nationality": str,
-                    # ... más campos según document_type
-                }
-
-        Raises:
-            Exception: Si ambos métodos OCR fallan completamente
-
-        Examples:
-            >>> # Estrategia automática (recomendado)
-            >>> result = service.process_document_hybrid(
-            ...     image_bytes,
-            ...     document_type="zairyu_card",
-            ...     preferred_method="auto"
-            ... )
-            >>> if result['success']:
-            ...     print(f"Método usado: {result['method_used']}")
-            ...     print(f"Confianza: {result['confidence_score']}")
-            ...     print(f"Nombre: {result['combined_data']['name_kanji']}")
-
-            >>> # Forzar uso de Azure con fallback a EasyOCR
-            >>> result = service.process_document_hybrid(
-            ...     image_bytes,
-            ...     preferred_method="azure"
-            ... )
-
-        Note:
-            - El score de confianza es mayor cuando se combinan múltiples métodos
-            - La estrategia 'auto' es la más precisa pero más lenta
-            - Si ningún método está disponible, success=False
+            Dict[str, Any]: OCR processing results
         """
         try:
             logger.info(f"Procesando documento con método híbrido: {document_type}, preferencia: {preferred_method}")
@@ -307,7 +255,7 @@ class HybridOCRService:
             
             logger.info(f"Procesamiento híbrido completado - Método: {results['method_used']}, Éxito: {results['success']}")
             return results
-            
+
         except Exception as e:
             logger.error(f"Error en procesamiento híbrido: {e}", exc_info=True)
             return {
@@ -316,9 +264,132 @@ class HybridOCRService:
                 "method_used": "error",
                 "confidence_score": 0.0
             }
-    
+
+    def process_document_hybrid(self, image_data: bytes, document_type: str = "zairyu_card",
+                               preferred_method: str = "auto") -> Dict[str, Any]:
+        """Procesa un documento usando estrategia híbrida inteligente de OCR (with 90s timeout).
+
+        Este método implementa una estrategia sofisticada que:
+        1. Si preferred_method='azure': Usa Azure primero, EasyOCR como fallback
+        2. Si preferred_method='easyocr': Usa EasyOCR primero, Azure como fallback
+        3. Si preferred_method='auto': Ejecuta ambos y combina los mejores resultados
+
+        La estrategia automática proporciona la máxima precisión al combinar
+        resultados de múltiples proveedores OCR y completar campos faltantes.
+
+        Args:
+            image_data (bytes): Bytes de la imagen del documento a procesar
+            document_type (str): Tipo de documento. Opciones:
+                - "zairyu_card": Tarjeta de residencia
+                - "rirekisho": Curriculum vitae japonés
+                - "license": Licencia de conducir
+                - "timer_card": Timer card (タイムカード)
+            preferred_method (str): Estrategia de procesamiento. Opciones:
+                - "azure": Priorizar Azure OCR
+                - "easyocr": Priorizar EasyOCR
+                - "auto": Estrategia híbrida automática (recomendado)
+
+        Returns:
+            Dict[str, Any]: Diccionario con estructura:
+                {
+                    "success": bool,  # True si al menos un método funcionó
+                    "method_used": str,  # "hybrid", "azure", "easyocr", "none"
+                    "confidence_score": float,  # 0.0-0.95 (mayor=mejor)
+                    "azure_result": Dict | None,  # Resultado de Azure
+                    "easyocr_result": Dict | None,  # Resultado de EasyOCR
+                    "combined_data": Dict,  # Datos combinados finales
+                    "document_type": str,
+                    # Campos extraídos (según tipo de documento):
+                    "name_kanji": str,
+                    "birthday": str,
+                    "nationality": str,
+                    # ... más campos según document_type
+                }
+
+        Raises:
+            Exception: Si ambos métodos OCR fallan completamente
+
+        Examples:
+            >>> # Estrategia automática (recomendado)
+            >>> result = service.process_document_hybrid(
+            ...     image_bytes,
+            ...     document_type="zairyu_card",
+            ...     preferred_method="auto"
+            ... )
+            >>> if result['success']:
+            ...     print(f"Método usado: {result['method_used']}")
+            ...     print(f"Confianza: {result['confidence_score']}")
+            ...     print(f"Nombre: {result['combined_data']['name_kanji']}")
+
+            >>> # Forzar uso de Azure con fallback a EasyOCR
+            >>> result = service.process_document_hybrid(
+            ...     image_bytes,
+            ...     preferred_method="azure"
+            ... )
+
+        Note:
+            - El score de confianza es mayor cuando se combinan múltiples métodos
+            - La estrategia 'auto' es la más precisa pero más lenta
+            - Si ningún método está disponible, success=False
+            - **TIMEOUT: 90 segundos total** - Prevents indefinite hanging (allows for both OCR methods + processing)
+        """
+        try:
+            # Execute with 90 second total timeout (allows for both Azure 30s + EasyOCR 30s + overhead)
+            result = timeout_executor(
+                self._process_document_hybrid_internal,
+                timeout_seconds=90,
+                image_data=image_data,
+                document_type=document_type,
+                preferred_method=preferred_method
+            )
+            return result
+
+        except TimeoutException as e:
+            logger.error(f"Hybrid OCR processing timed out after 90 seconds: {e}")
+            return {
+                "success": False,
+                "error": "Hybrid OCR processing timeout after 90 seconds",
+                "method_used": "timeout",
+                "confidence_score": 0.0,
+                "document_type": document_type
+            }
+
+        except Exception as e:
+            logger.error(f"Error in process_document_hybrid: {e}", exc_info=True)
+            return {
+                "success": False,
+                "error": str(e),
+                "method_used": "error",
+                "confidence_score": 0.0,
+                "document_type": document_type
+            }
+
+    def _process_with_azure_internal(self, image_data: bytes, document_type: str, temp_path: str) -> Dict[str, Any]:
+        """Internal method to process document with Azure OCR (without timeout wrapper).
+
+        This method is called by _process_with_azure with timeout protection.
+
+        Args:
+            image_data (bytes): Image bytes
+            document_type (str): Document type
+            temp_path (str): Temporary file path for Azure
+
+        Returns:
+            Dict[str, Any]: Azure OCR result
+        """
+        with open(temp_path, 'wb') as f:
+            f.write(image_data)
+
+        started = time.perf_counter()
+        with trace_ocr_operation("azure.process_document", document_type, "azure"):
+            result = self.azure_service.process_document(temp_path, document_type)
+        duration = time.perf_counter() - started
+        record_ocr_request(document_type=document_type, method="azure", duration_seconds=duration)
+
+        return result
+
     def _process_with_azure(self, image_data: bytes, document_type: str) -> Optional[Dict[str, Any]]:
-        """Procesa documento con Azure Computer Vision OCR.
+        """Procesa documento con Azure Computer Vision OCR (with 30s timeout).
 
         Args:
             image_data (bytes): Imagen del documento en bytes
@@ -341,35 +412,65 @@ class HybridOCRService:
             - Registra métricas de observabilidad (duración, errores)
             - Crea archivo temporal para Azure OCR
             - Limpia archivo temporal después del procesamiento
+            - **TIMEOUT: 30 segundos** - Prevents indefinite hanging
         """
         if not self.azure_available:
             return None
 
+        temp_path = "/tmp/temp_azure_image.jpg"
         try:
-            # Guardar imagen temporal para Azure
-            temp_path = "/tmp/temp_azure_image.jpg"
-            with open(temp_path, 'wb') as f:
-                f.write(image_data)
+            # Execute with 30 second timeout
+            result = timeout_executor(
+                self._process_with_azure_internal,
+                timeout_seconds=30,
+                image_data=image_data,
+                document_type=document_type,
+                temp_path=temp_path
+            )
 
-            started = time.perf_counter()
-            with trace_ocr_operation("azure.process_document", document_type, "azure"):
-                result = self.azure_service.process_document(temp_path, document_type)
-            duration = time.perf_counter() - started
-            record_ocr_request(document_type=document_type, method="azure", duration_seconds=duration)
-
-            # Limpiar archivo temporal
+            # Clean up temp file
             if os.path.exists(temp_path):
                 os.remove(temp_path)
 
             return result
 
+        except TimeoutException as e:
+            logger.error(f"Azure OCR timed out after 30 seconds: {e}")
+            record_ocr_failure(document_type=document_type, method="azure")
+            # Clean up temp file
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+            return {"success": False, "error": "Azure OCR timeout after 30 seconds"}
+
         except Exception as e:
             logger.error(f"Error procesando con Azure: {e}")
             record_ocr_failure(document_type=document_type, method="azure")
+            # Clean up temp file
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
             return {"success": False, "error": str(e)}
 
+    def _process_with_easyocr_internal(self, image_data: bytes, document_type: str) -> Dict[str, Any]:
+        """Internal method to process document with EasyOCR (without timeout wrapper).
+
+        This method is called by _process_with_easyocr with timeout protection.
+
+        Args:
+            image_data (bytes): Image bytes
+            document_type (str): Document type
+
+        Returns:
+            Dict[str, Any]: EasyOCR result
+        """
+        started = time.perf_counter()
+        with trace_ocr_operation("easyocr.process_document", document_type, "easyocr"):
+            result = self.easyocr_service.process_document_with_easyocr(image_data, document_type)
+        duration = time.perf_counter() - started
+        record_ocr_request(document_type=document_type, method="easyocr", duration_seconds=duration)
+        return result
+
     def _process_with_easyocr(self, image_data: bytes, document_type: str) -> Optional[Dict[str, Any]]:
-        """Procesa documento con EasyOCR.
+        """Procesa documento con EasyOCR (with 30s timeout).
 
         Args:
             image_data (bytes): Imagen del documento en bytes
@@ -392,17 +493,25 @@ class HybridOCRService:
         Note:
             - Registra métricas de observabilidad (duración, errores)
             - No requiere archivo temporal (procesa bytes directamente)
+            - **TIMEOUT: 30 segundos** - Prevents indefinite hanging
         """
         if not self.easyocr_available:
             return None
 
         try:
-            started = time.perf_counter()
-            with trace_ocr_operation("easyocr.process_document", document_type, "easyocr"):
-                result = self.easyocr_service.process_document_with_easyocr(image_data, document_type)
-            duration = time.perf_counter() - started
-            record_ocr_request(document_type=document_type, method="easyocr", duration_seconds=duration)
+            # Execute with 30 second timeout
+            result = timeout_executor(
+                self._process_with_easyocr_internal,
+                timeout_seconds=30,
+                image_data=image_data,
+                document_type=document_type
+            )
             return result
+
+        except TimeoutException as e:
+            logger.error(f"EasyOCR timed out after 30 seconds: {e}")
+            record_ocr_failure(document_type=document_type, method="easyocr")
+            return {"success": False, "error": "EasyOCR timeout after 30 seconds"}
 
         except Exception as e:
             logger.error(f"Error procesando con EasyOCR: {e}")
