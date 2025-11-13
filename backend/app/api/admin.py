@@ -6,7 +6,7 @@ CONSOLIDATED (2025-11-12):
 - SystemSettings endpoints kept for backward compatibility
 - Maintenance mode, statistics, export/import endpoints kept (unique functionality)
 """
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import update, func
 from typing import List, Optional
@@ -16,9 +16,30 @@ import json
 from app.core.database import get_db
 from app.models.models import PageVisibility, SystemSettings, User
 from app.api.deps import get_current_user, require_admin
+from app.services.audit_service import AuditService
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
+
+
+# ============================================
+# HELPER FUNCTIONS
+# ============================================
+
+def get_client_ip(request: Request) -> Optional[str]:
+    """Extract client IP address from request"""
+    if "x-forwarded-for" in request.headers:
+        return request.headers["x-forwarded-for"].split(",")[0].strip()
+    elif "x-real-ip" in request.headers:
+        return request.headers["x-real-ip"]
+    else:
+        return request.client.host if request.client else None
+
+
+def get_user_agent(request: Request) -> Optional[str]:
+    """Extract user agent from request"""
+    return request.headers.get("user-agent")
+
 
 # ============================================
 # SCHEMAS
