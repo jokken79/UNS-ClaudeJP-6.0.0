@@ -1,14 +1,13 @@
 @echo off
-chcp 65001 >nul
 setlocal EnableDelayedExpansion
 
-title UNS-ClaudeJP 5.4 - Reinstalación Completa
+title UNS-ClaudeJP 5.4 - Reinstalacion Completa
 
 echo.
-echo ╔══════════════════════════════════════════════════════════════════════╗
-echo ║                UNS-CLAUDEJP 5.4 - REINSTALACIÓN                   ║
-echo ║                  Versión 2025-11-11 (FIXED)                        ║
-echo ╚══════════════════════════════════════════════════════════════════════╝
+echo ============================================================================
+echo                   UNS-CLAUDEJP 5.4 - REINSTALACION
+echo                   Version 2025-11-13 (FIXED)
+echo ============================================================================
 echo.
 
 :: Variables globales
@@ -79,13 +78,12 @@ echo.
 
 :: Verificar resultado del diagnóstico
 if %ERROR_FLAG% EQU 1 (
-    echo ╔══════════════════════════════════════════════════════════════════════╗
-    echo ║ [X] DIAGNÓSTICO FALLIDO - Corrige los errores antes de continuar  ║
-    echo ╚══════════════════════════════════════════════════════════════════════╝
     echo.
-    echo ════════════════════════════════════════════════════════════════════
+    echo [X] DIAGNOSTICO FALLIDO - Corrige los errores antes de continuar
+    echo.
+    echo ============================================================================
     echo  [X] ERROR - PRESIONA CUALQUIER TECLA PARA CERRAR
-    echo ════════════════════════════════════════════════════════════════════
+    echo ============================================================================
     pause >nul
     goto :eof
 )
@@ -97,18 +95,18 @@ echo.
 ::  FASE 2: CONFIRMACIÓN
 :: ══════════════════════════════════════════════════════════════════════════
 
-echo [FASE 2/3] Confirmación
+echo [FASE 2/3] Confirmacion
 echo.
-echo ╔══════════════════════════════════════════════════════════════════════╗
-echo ║                    ! ADVERTENCIA IMPORTANTE                         ║
-echo ╠══════════════════════════════════════════════════════════════════════╣
-echo ║ Esta acción eliminará TODOS los datos existentes:                   ║
-echo ║   • Contenedores Docker                                              ║
-echo ║   • Base de Datos PostgreSQL                                         ║
-echo ║   • Volúmenes Docker                                                 ║
-echo ║                                                                      ║
-echo ║ Se creará una instalación completamente nueva.                       ║
-echo ╚══════════════════════════════════════════════════════════════════════╝
+echo ============================================================================
+echo                    ! ADVERTENCIA IMPORTANTE
+echo ============================================================================
+echo  Esta accion eliminara TODOS los datos existentes:
+echo    * Contenedores Docker
+echo    * Base de Datos PostgreSQL
+echo    * Volumenes Docker
+echo.
+echo  Se creara una instalacion completamente nueva.
+echo ============================================================================
 echo.
 
 set /p "CONFIRMAR=¿Continuar con la reinstalación? (S/N): "
@@ -133,9 +131,9 @@ echo [FASE 3/3] Reinstalación
 echo.
 
 :: Paso 1: Generar .env
-echo ╔══════════════════════════════════════════════════════════════════════╗
-echo ║ [1/6] GENERACIÓN DE ARCHIVO DE CONFIGURACIÓN (.env)                 ║
-echo ╚══════════════════════════════════════════════════════════════════════╝
+echo ============================================================================
+echo  [1/6] GENERACION DE ARCHIVO DE CONFIGURACION (.env)
+echo ============================================================================
 echo.
 if not exist .env (
     echo   ▶ Ejecutando generate_env.py...
@@ -155,9 +153,9 @@ if not exist .env (
 echo.
 
 :: Paso 2: Detener y limpiar servicios
-echo ╔══════════════════════════════════════════════════════════════════════╗
-echo ║ [2/6] DETENER Y LIMPIAR SERVICIOS EXISTENTES                        ║
-echo ╚══════════════════════════════════════════════════════════════════════╝
+echo ============================================================================
+echo  [2/6] DETENER Y LIMPIAR SERVICIOS EXISTENTES
+echo ============================================================================
 echo.
 echo   ▶ Deteniendo contenedores Docker...
 echo   i Comando: %DOCKER_COMPOSE_CMD% down -v
@@ -172,10 +170,10 @@ echo   [OK] Volúmenes eliminados (base de datos limpia)
 echo   i Se creará una instalación completamente nueva
 echo.
 
-:: Paso 3: Reconstruir imágenes
-echo ╔══════════════════════════════════════════════════════════════════════╗
-echo ║ [3/6] RECONSTRUIR IMÁGENES DOCKER                                   ║
-echo ╚══════════════════════════════════════════════════════════════════════╝
+:: Paso 3: Reconstruir imagenes
+echo ============================================================================
+echo  [3/6] RECONSTRUIR IMAGENES DOCKER
+echo ============================================================================
 echo.
 echo   ▶ Construyendo imágenes Docker (puede tardar 5-10 minutos)...
 echo   i Se compilarán: Backend (FastAPI) + Frontend (Next.js)
@@ -199,9 +197,9 @@ echo   i Frontend: Node.js + Next.js 16
 echo.
 
 :: Paso 4: Iniciar servicios base (sin importer)
-echo ╔══════════════════════════════════════════════════════════════════════╗
-echo ║ [4/6] INICIAR SERVICIOS BASE (DB + REDIS)                           ║
-echo ╚══════════════════════════════════════════════════════════════════════╝
+echo ============================================================================
+echo  [4/6] INICIAR SERVICIOS BASE (DB + REDIS)
+echo ============================================================================
 echo.
 echo   ▶ Iniciando PostgreSQL (base de datos)...
 echo   i Comando: %DOCKER_COMPOSE_CMD% --profile dev up -d db redis
@@ -236,10 +234,10 @@ echo   [OK] PostgreSQL está lista y saludable
 echo   i Base de datos: uns_claudejp ^| Puerto: 5432
 echo.
 
-:: Paso 5: Crear tablas y datos (método directo)
-echo ╔══════════════════════════════════════════════════════════════════════╗
-echo ║ [5/6] CREAR TABLAS Y DATOS DE NEGOCIO                               ║
-echo ╚══════════════════════════════════════════════════════════════════════╝
+:: Paso 5: Crear tablas y datos (metodo directo)
+echo ============================================================================
+echo  [5/6] CREAR TABLAS Y DATOS DE NEGOCIO
+echo ============================================================================
 echo.
 
 echo   ▶ Iniciando servicio backend temporalmente...
@@ -311,9 +309,9 @@ if !errorlevel! NEQ 0 (
 echo.
 
 :: Paso 6: Iniciar servicios finales
-echo ╔══════════════════════════════════════════════════════════════════════╗
-echo ║ [6/6] INICIAR SERVICIOS FINALES                                     ║
-echo ╚══════════════════════════════════════════════════════════════════════╝
+echo ============================================================================
+echo  [6/6] INICIAR SERVICIOS FINALES
+echo ============================================================================
 echo.
 echo   ▶ Iniciando frontend y servicios adicionales...
 echo   i Backend ya está corriendo desde paso 5
@@ -338,13 +336,14 @@ for /l %%N in (1,1,6) do (
 echo   [OK] Compilación completada
 echo.
 
-:: ══════════════════════════════════════════════════════════════════════════
-::  FINALIZACIÓN
-:: ══════════════════════════════════════════════════════════════════════════
+:: ===========================================================================
+::  FINALIZACION
+:: ===========================================================================
 
-echo ╔══════════════════════════════════════════════════════════════════════╗
-echo ║            [OK] REINSTALACIÓN COMPLETADA EXITOSAMENTE                ║
-echo ╚══════════════════════════════════════════════════════════════════════╝
+echo.
+echo ============================================================================
+echo             [OK] REINSTALACION COMPLETADA EXITOSAMENTE
+echo ============================================================================
 echo.
 echo URLs de Acceso:
 echo   • Frontend:    http://localhost:3000
@@ -362,10 +361,9 @@ echo   • Detener:     scripts\STOP.bat
 echo.
 echo   i Primera carga del frontend puede tardar 1-2 minutos
 echo.
-echo.
-echo ╔══════════════════════════════════════════════════════════════════════╗
-echo ║      [PASO FINAL] LIMPIEZA AUTOMÁTICA DE FOTOS OLE                 ║
-echo ╚══════════════════════════════════════════════════════════════════════╝
+echo ============================================================================
+echo       [PASO FINAL] LIMPIEZA AUTOMATICA DE FOTOS OLE
+echo ============================================================================
 echo.
 if exist "%~dp0LIMPIAR_FOTOS_OLE.bat" (
     echo   ▶ Ejecutando LIMPIAR_FOTOS_OLE.bat automáticamente...
@@ -380,12 +378,12 @@ if exist "%~dp0LIMPIAR_FOTOS_OLE.bat" (
     echo   i Saltando este paso (opcional)
 )
 echo.
-echo ╔══════════════════════════════════════════════════════════════════════╗
-echo ║         REINSTALACIÓN + LIMPIEZA COMPLETADA AL 100%%                ║
-echo ╚══════════════════════════════════════════════════════════════════════╝
+echo ============================================================================
+echo          REINSTALACION + LIMPIEZA COMPLETADA AL 100%%
+echo ============================================================================
 echo.
-echo ════════════════════════════════════════════════════════════════════
-echo  ✓ TODO LISTO - PRESIONA CUALQUIER TECLA PARA CERRAR
-echo ════════════════════════════════════════════════════════════════════
+echo ============================================================================
+echo  [OK] TODO LISTO - PRESIONA CUALQUIER TECLA PARA CERRAR
+echo ============================================================================
 echo.
 pause >nul
