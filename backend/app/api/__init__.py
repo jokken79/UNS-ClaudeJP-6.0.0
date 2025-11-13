@@ -1,16 +1,17 @@
 """
-API routers package for UNS-ClaudeJP 5.4
+API routers package for UNS-ClaudeJP 5.4.1
 
 This module exports all FastAPI router modules for easy importing in main.py.
 Use: from app.api import auth, candidates, employees
 
 API Modules (24 routers):
 - auth: JWT authentication and user management
-- admin: Admin panel operations
-- apartments_v2: Apartment management
-- audit: Audit log tracking
+- admin: Admin panel and system administration
+- apartments_v2: Apartment management V2 with advanced features
+- audit: Audit log tracking and reporting
 - azure_ocr: Azure Vision OCR integration
 - candidates: Candidate (履歴書/Rirekisho) CRUD + OCR processing
+- contracts: Contract management
 - dashboard: Statistics and analytics
 - database: Database management utilities
 - employees: Employee (派遣社員) management
@@ -18,15 +19,16 @@ API Modules (24 routers):
 - import_export: Data import/export utilities
 - monitoring: System health monitoring
 - notifications: Email/LINE notification management
-- pages: Static pages management
+- pages: Page management
+- payroll: Payroll processing and calculations
 - reports: PDF report generation
 - requests: Leave request (申請) workflow
-- resilient_import: Resilient data import with fallbacks
-- role_permissions: Role-based access control
-- salary: Payroll (給与) calculations and management
+- resilient_import: Resilient data import utilities
+- role_permissions: Role-based access control (RBAC)
+- salary: Salary (給与) calculations and management
 - settings: Application settings management
 - timer_cards: Attendance (タイムカード) tracking with shift types
-- yukyu: Paid vacation (有給休暇) management
+- yukyu: Yukyu (有給休暇 - Paid Vacation) management
 
 Each module contains a 'router' variable (APIRouter instance).
 """
@@ -40,6 +42,7 @@ from . import (
     auth,
     azure_ocr,
     candidates,
+    contracts,
     dashboard,
     database,
     employees,
@@ -48,6 +51,7 @@ from . import (
     monitoring,
     notifications,
     pages,
+    payroll,
     reports,
     requests,
     resilient_import,
@@ -65,6 +69,7 @@ __all__ = [
     "auth",
     "azure_ocr",
     "candidates",
+    "contracts",
     "dashboard",
     "database",
     "employees",
@@ -73,6 +78,7 @@ __all__ = [
     "monitoring",
     "notifications",
     "pages",
+    "payroll",
     "reports",
     "requests",
     "resilient_import",
