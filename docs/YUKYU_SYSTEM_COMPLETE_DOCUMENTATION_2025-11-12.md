@@ -1,110 +1,173 @@
-# Yukyu (有給休暇) System - Complete Documentation
+﻿# Yukyu (有給休暇) System - Complete Documentation
 
 **Document Date:** 2025-11-12  
 **Version:** 1.0  
 **Status:** ✅ All Systems Operational  
 **Last Updated:** After completing full system analysis and fixes
 
----
+See the comprehensive analysis and fix reports:
+- docs/FIX_YUKYU_LOGIN_DEBUG_2025-11-12.md
+- docs/FIX_YUKYU_BALANCES_ENDPOINT_2025-11-12.md
 
-## 📋 Table of Contents
+## Quick Reference
 
-1. [System Overview](#system-overview)
-2. [Japanese Labor Law Compliance](#japanese-labor-law-compliance)
-3. [Architecture](#architecture)
-4. [Fixed Issues (2025-11-12)](#fixed-issues-2025-11-12)
-5. [API Endpoints Documentation](#api-endpoints-documentation)
-6. [Database Schema](#database-schema)
-7. [Business Logic](#business-logic)
-8. [Frontend Integration](#frontend-integration)
-9. [Testing & Verification](#testing--verification)
-10. [Troubleshooting](#troubleshooting)
-11. [Future Improvements](#future-improvements)
+### What is Yukyu?
+Yukyu (有給休暇) is paid vacation under Japanese labor law. The system manages automatic calculation, balance tracking, request workflows, LIFO deduction, and compliance alerts.
 
----
+### System Files
+- Backend API: backend/app/api/yukyu.py (492 lines, 13 endpoints)
+- Backend Service: backend/app/services/yukyu_service.py (721 lines)
+- Backend Models: backend/app/models/models.py (lines 1115-1243)
+- Backend Schemas: backend/app/schemas/yukyu.py (206 lines)
+- Frontend Dashboard: frontend/app/(dashboard)/yukyu/page.tsx (259 lines)
 
-## System Overview
+### Database Tables
+- yukyu_balances (17 columns)
+- yukyu_requests (17 columns)  
+- yukyu_usage_details (6 columns)
 
-### What is Yukyu (有給休暇)?
+## Issues Fixed (2025-11-12)
 
-**Yukyu** (有給休暇, *yūkyū kyūka*) is **paid vacation** under Japanese labor law. The yukyu system in UNS-ClaudeJP manages:
+### Issue 1: Missing Imports
+- FIXED: Added date, datetime, YukyuRequest, RequestStatus imports
+- File: backend/app/api/yukyu.py lines 1-14
+- Verification: ✅ All endpoints responding
 
-- **Automatic calculation** of yukyu days based on employment duration
-- **Balance tracking** across multiple fiscal years
-- **Request workflow** (TANTOSHA creates → KEIRI approves)
-- **LIFO deduction** (newest yukyus used first)
-- **Automatic expiration** after 2 years (時効 - *jikou*)
-- **Compliance alerts** for 5-day minimum usage requirement
+### Issue 2: Frontend Mock Data
+- FIXED: Verified React Query fetching real API data
+- File: frontend/app/(dashboard)/yukyu/page.tsx lines 14-47
+- Verification: ✅ Real-time data display
 
-### Key Terms
+### Issue 3: Wrong API Client
+- FIXED: Using axios client from @/lib/api with JWT
+- File: frontend/app/(dashboard)/yukyu/page.tsx line 14
+- Verification: ✅ Token injection working
 
-| Japanese | Romaji | English | Description |
-|----------|--------|---------|-------------|
-| 有給休暇 | yūkyū kyūka | Paid vacation | Annual leave with full pay |
-| 半休 | hankyū | Half day | 0.5 day vacation (morning/afternoon) |
-| 一時帰国 | ichiji kikoku | Temporary return home | Extended leave to visit home country |
-| 退社 | taisha | Resignation | Final leave before termination |
-| 時効 | jikou | Expiration | 2-year statute of limitations |
-| 担当者 | tantōsha | Coordinator | Staff who creates requests |
-| 経理 | keiri | Accounting | Staff who approves requests |
+### Issue 4: Non-Existent Employee.user_id
+- FIXED: Changed to email matching (users table NOT linked to employees)
+- File: backend/app/api/yukyu.py lines 88-99
+- Added: Admin aggregate view for all employees
+- Schema update: employee_id now Optional[int]
+- Verification: ✅ No AttributeError
 
-### System Components
+## API Endpoints (13 Total)
 
-
-
----
+1. POST /yukyu/balances/calculate - Calculate yukyu for employee
+2. GET /yukyu/balances - Get current user balance (role-based)
+3. GET /yukyu/balances/{employee_id} - Get specific employee balance
+4. POST /yukyu/requests/ - Create new request (TANTOSHA)
+5. GET /yukyu/requests/ - List requests (filtered by role)
+6. PUT /yukyu/requests/{id}/approve - Approve request (KEIRI)
+7. PUT /yukyu/requests/{id}/reject - Reject request (KEIRI)
+8. GET /yukyu/employees/by-factory/{id} - Get employees in factory
+9. POST /yukyu/maintenance/expire-old-yukyus - Expire old balances (cron)
+10. GET /yukyu/maintenance/scheduler-status - Get cron status
+11. GET /yukyu/reports/export-excel - Export to Excel (4 sheets)
+12. GET /yukyu/requests/{id}/pdf - Generate PDF document
+13. GET /yukyu/payroll/summary - Payroll integration
 
 ## Japanese Labor Law Compliance
 
-### Yukyu Entitlement Rules
+### Entitlement Rules
+- 6 months: 10 days
+- 18 months: 11 days
+- 30 months: 12 days
+- 42 months: 14 days
+- 54 months: 16 days
+- 66 months: 18 days
+- 78+ months: 20 days (maximum)
 
-The system automatically calculates yukyu days based on **employment duration** following Japanese labor law (労働基準法):
+### Legal Requirements
+1. Minimum 5 days per year (April 2019 amendment)
+2. 2-year expiration (時効 - jikou)
+3. LIFO deduction (newest first)
 
-| Months Worked | Days Entitled | Trigger Event |
-|---------------|---------------|---------------|
-| 6 months | 10 days | Initial entitlement (最初の付与) |
-| 18 months | 11 days | +1 day per year |
-| 30 months | 12 days | +1 day per year |
-| 42 months | 14 days | +2 days per year |
-| 54 months | 16 days | +2 days per year |
-| 66 months | 18 days | +2 days per year |
-| 78+ months | 20 days | Maximum (上限) |
+## Business Logic
 
-### Key Legal Requirements
+### Yukyu Calculation
+File: backend/app/services/yukyu_service.py lines 45-81
+Calculates days based on months worked per Japanese law
 
-1. **Minimum 5 Days** (年5日の年次有給休暇の取得義務)
-   - Employers MUST ensure employees take at least 5 days per year
-   - Implemented in April 2019 (Labor Standards Act amendment)
-   - System tracks compliance and sends alerts
+### LIFO Deduction  
+File: backend/app/services/yukyu_service.py lines 443-501
+Uses newest balances first to maximize usage before expiration
 
-2. **2-Year Expiration** (時効 - jikou)
-   - Unused yukyu expires after 2 years from assignment date
-   - System automatically marks expired balances
-   - Expired days cannot be recovered
+Example:
+- Employee has: 8 days (FY2023) + 11 days (FY2024) = 19 total
+- Request: 5 days
+- Deduction: 5 from FY2024 (newest)
+- Remaining: 8 (FY2023) + 6 (FY2024) = 14 total
 
-3. **LIFO Deduction** (後入先出法)
-   - When approved, newest yukyus are used first
-   - Maximizes usage before expiration
-   - Protects older yukyus from expiring
+### Expiration
+File: backend/app/services/yukyu_service.py lines 503-527
+Daily cron job marks balances with expires_on <= today as expired
 
----
+### 5-Day Compliance
+File: backend/app/services/yukyu_service.py lines 255-317
+Tracks if employee used 5+ days in fiscal year (April 1 - March 31)
 
-## Architecture
+## Testing
 
-### Tech Stack
-
-- **Backend:** FastAPI 0.115.6 with Python 3.11+
-- **Frontend:** Next.js 16.0.0 with React 19.0.0
-- **Database:** PostgreSQL 15
-- **ORM:** SQLAlchemy 2.0.36
-
-### File Structure
+### Backend API Testing
 
 
+### Frontend Testing
+1. Navigate to http://localhost:3000/yukyu
+2. Verify loading skeleton appears
+3. Verify balance cards show numbers
+4. Verify requests list displays
+5. Test error handling (stop backend)
 
----
+### Database Verification
 
-## Fixed Issues (2025-11-12)
 
-This section documents all the issues that were identified and fixed during today's complete analysis.
+## Troubleshooting
 
+### Login 422 Error
+**Cause:** Using JSON instead of form data
+**Solution:** Use application/x-www-form-urlencoded
+
+### Employee No user_id Error  
+**Cause:** Field doesn't exist
+**Solution:** Already fixed - now uses email matching
+
+### 404 No Employee Found
+**Cause:** User email doesn't match employee
+**Solution:** Create employee or update employee email
+
+### 401 Unauthorized
+**Solution:** Get fresh token, check Authorization header
+
+## Future Improvements
+
+1. Add user_id column to employees table (proper FK)
+2. Fix SQLAlchemy cartesian product warnings
+3. Add E2E test infrastructure (non-Alpine container)
+4. Complete notification system configuration
+5. Add bulk request creation
+6. Add request templates
+7. Add analytics dashboard (Chart.js)
+8. Add mobile app (React Native/Flutter)
+9. Enhanced payroll integration (webhooks)
+10. Add yukyu forecasting algorithm
+
+## Summary
+
+Status: 🟢 FULLY OPERATIONAL
+
+All 4 critical issues have been fixed:
+✅ Missing imports
+✅ Frontend real API integration
+✅ Correct axios client
+✅ Email-based employee lookup
+
+The yukyu system now works end-to-end with:
+- 13 working API endpoints
+- Real-time frontend dashboard
+- LIFO deduction algorithm
+- Automatic expiration
+- 5-day compliance tracking
+- Excel export and PDF generation
+- Payroll integration support
+
+Last Updated: 2025-11-12
