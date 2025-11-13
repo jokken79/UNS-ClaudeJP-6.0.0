@@ -340,7 +340,8 @@ async def save_employee_data(
     - `jikyu` (int, required): Hourly wage in yen (must be 800-5000)
     - `position` (str, required): Job position/title (e.g., "Machine Operator", "製造スタッフ")
     - `contract_type` (str, required): Contract type (正社員, 契約社員, パート, etc.)
-    - `apartment_id` (str, optional): Housing assignment ID
+    - `is_shatak` (bool, required, default=false): 社宅 (Company housing) - Yes/No checkbox
+    - `apartment_id` (str, optional): Housing assignment ID (used if is_shatak=true)
     - `hakensaki_shain_id` (str, optional): Dispatch staff ID
     - `bank_name` (str, optional): Bank name for salary deposit
     - `bank_account` (str, optional): Bank account number
@@ -366,6 +367,7 @@ async def save_employee_data(
         "jikyu": 1500,
         "position": "Machine Operator",
         "contract_type": "正社員",
+        "is_shatak": true,
         "apartment_id": "APT-001",
         "bank_name": "Test Bank",
         "bank_account": "1234567890",
