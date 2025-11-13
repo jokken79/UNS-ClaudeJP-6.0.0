@@ -149,6 +149,7 @@ def nyuusha_request_with_employee_data(
         "jikyu": 1500,
         "position": "Machine Operator",
         "contract_type": "正社員",
+        "is_shatak": True,
         "hakensaki_shain_id": "HS001",
         "apartment_id": "APT001",
         "bank_name": "Test Bank",
@@ -193,6 +194,7 @@ def test_save_employee_data_success(
         "jikyu": 1500,
         "position": "Machine Operator",
         "contract_type": "正社員",
+        "is_shatak": False,
     }
 
     response = client.put(
@@ -237,6 +239,7 @@ def test_save_employee_data_invalid_type(
         "jikyu": 1500,
         "position": "Machine Operator",
         "contract_type": "正社員",
+        "is_shatak": False,
     }
 
     response = client.put(
@@ -280,6 +283,7 @@ def test_save_employee_data_not_pending(
         "jikyu": 1500,
         "position": "Machine Operator",
         "contract_type": "正社員",
+        "is_shatak": False,
     }
 
     response = client.put(

@@ -101,6 +101,7 @@ class EmployeeDataInput(BaseModel):
     position: str
     contract_type: str
     hakensaki_shain_id: Optional[str] = None  # 派遣先社員ID
+    is_shatak: bool = False  # 社宅 (Company housing) - Yes/No checkbox
     apartment_id: Optional[str] = None
     bank_name: Optional[str] = None
     bank_account: Optional[str] = None
