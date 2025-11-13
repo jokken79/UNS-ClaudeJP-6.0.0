@@ -2,120 +2,77 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
-import api from '@/lib/api';
+import { apartmentsV2Service } from '@/lib/api';
+import type { ProratedCalculationRequest, ProratedCalculationResponse } from '@/types/apartments-v2';
 import {
   ArrowLeftIcon,
   CalculatorIcon,
   CalendarIcon,
   CurrencyYenIcon,
-  BuildingOfficeIcon,
   InformationCircleIcon,
+  ClipboardDocumentIcon,
 } from '@heroicons/react/24/outline';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
-interface ProratedCalculationForm {
-  apartment_id: number | '';
+interface FormData {
+  monthly_rent: string;
   start_date: string;
   end_date: string;
-  daily_rate: number | '';
 }
 
-interface Apartment {
-  id: number;
-  apartment_code: string;
-  address: string;
-  monthly_rent: number;
-  capacity: number;
-  employees_count: number;
-}
-
-interface ProratedResult {
-  apartment: Apartment;
-  total_days: number;
-  occupied_days: number;
-  daily_rate: number;
-  base_amount: number;
-  calculated_amount: number;
-  percentage: number;
-  breakdown: {
-    description: string;
-    amount: number;
-  }[];
-}
-
-export default function ProratedCalculationPage() {
+export default function ProratedCalculatorPage() {
   const router = useRouter();
-  const queryClient = useQueryClient();
-  const [form, setForm] = useState<ProratedCalculationForm>({
-    apartment_id: '',
-    start_date: new Date().toISOString().split('T')[0],
-    end_date: new Date().toISOString().split('T')[0],
-    daily_rate: '',
+  const [form, setForm] = useState<FormData>({
+    monthly_rent: '50000',
+    start_date: '',
+    end_date: '',
   });
-  const [result, setResult] = useState<ProratedResult | null>(null);
+  const [result, setResult] = useState<ProratedCalculationResponse | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Fetch apartments
-  const { data: apartments = [] } = useQuery({
-    queryKey: ['apartments'],
-    queryFn: async () => {
-      const response = await api.get('/apartments-v2/apartments');
-      return response.data as Apartment[];
-    },
-  });
-
-  // Calculate prorated mutation
+  // Calculate mutation
   const calculateMutation = useMutation({
-    mutationFn: async (data: ProratedCalculationForm) => {
-      const response = await api.post('/apartment-calculations/prorated', {
-        apartment_id: Number(data.apartment_id),
-        start_date: data.start_date,
-        end_date: data.end_date,
-        daily_rate: data.daily_rate ? Number(data.daily_rate) : undefined,
-      });
-      return response.data as ProratedResult;
+    mutationFn: async (data: ProratedCalculationRequest) => {
+      return await apartmentsV2Service.calculateProratedRent(data);
     },
     onSuccess: (data) => {
       setResult(data);
+      toast.success('Calculation completed!');
     },
     onError: (error: any) => {
-      if (error.response?.data?.detail) {
-        setErrors({ general: error.response.data.detail });
-      }
+      toast.error(error.response?.data?.detail || 'Calculation failed');
     },
   });
 
-  const handleChange = (field: keyof ProratedCalculationForm, value: string | number) => {
+  const handleChange = (field: keyof FormData, value: string) => {
     setForm(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
   };
 
-  // Auto-calculate daily rate when apartment changes
-  const selectedApartment = apartments.find(a => a.id === form.apartment_id);
-  React.useEffect(() => {
-    if (selectedApartment && !form.daily_rate) {
-      const daily = selectedApartment.monthly_rent / 30;
-      setForm(prev => ({ ...prev, daily_rate: daily }));
-    }
-  }, [selectedApartment, form.daily_rate]);
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
     setResult(null);
 
+    // Validation
     const newErrors: Record<string, string> = {};
-    if (!form.apartment_id) newErrors.apartment_id = 'Debes seleccionar un apartamento';
-    if (!form.start_date) newErrors.start_date = 'La fecha de inicio es requerida';
-    if (!form.end_date) newErrors.end_date = 'La fecha de fin es requerida';
-    if (form.start_date && form.end_date && form.start_date > form.end_date) {
-      newErrors.end_date = 'La fecha de fin debe ser posterior a la de inicio';
+    if (!form.monthly_rent || Number(form.monthly_rent) <= 0) {
+      newErrors.monthly_rent = 'Monthly rent must be greater than 0';
     }
-    if (form.daily_rate && Number(form.daily_rate) <= 0) {
-      newErrors.daily_rate = 'La tarifa diaria debe ser mayor a 0';
+    if (!form.start_date) {
+      newErrors.start_date = 'Start date is required';
+    }
+    if (!form.end_date) {
+      newErrors.end_date = 'End date is required';
+    }
+    if (form.start_date && form.end_date && form.start_date > form.end_date) {
+      newErrors.end_date = 'End date must be >= start date';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -123,11 +80,57 @@ export default function ProratedCalculationPage() {
       return;
     }
 
-    calculateMutation.mutate(form);
+    // Extract year and month from start_date
+    const startDate = new Date(form.start_date);
+    const year = startDate.getFullYear();
+    const month = startDate.getMonth() + 1;
+
+    calculateMutation.mutate({
+      monthly_rent: Number(form.monthly_rent),
+      start_date: form.start_date,
+      end_date: form.end_date,
+      year,
+      month,
+    });
   };
 
+  const handleClear = () => {
+    setForm({
+      monthly_rent: '50000',
+      start_date: '',
+      end_date: '',
+    });
+    setResult(null);
+    setErrors({});
+  };
+
+  const handleCopyToClipboard = () => {
+    if (!result) return;
+
+    const text = `
+Prorated Rent Calculation
+=======================
+Monthly Rent: ¥${result.monthly_rent.toLocaleString()}
+Period: ${form.start_date} to ${form.end_date}
+Days in Month: ${result.days_in_month}
+Days Occupied: ${result.days_occupied}
+Daily Rate: ¥${Math.round(result.daily_rate).toLocaleString()}
+PRORATED RENT: ¥${Math.round(result.prorated_rent).toLocaleString()}
+
+Formula: ${result.calculation_formula}
+    `.trim();
+
+    navigator.clipboard.writeText(text);
+    toast.success('Copied to clipboard!');
+  };
+
+  // Calculate percentage if form is filled
+  const daysOccupied = form.start_date && form.end_date
+    ? Math.floor((new Date(form.end_date).getTime() - new Date(form.start_date).getTime()) / (1000 * 60 * 60 * 24)) + 1
+    : 0;
+
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-6 max-w-5xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-4">
         <button
@@ -137,262 +140,239 @@ export default function ProratedCalculationPage() {
           <ArrowLeftIcon className="h-5 w-5" />
         </button>
         <div>
-          <h1 className="text-3xl font-bold">Cálculo de Prorrateo</h1>
+          <h1 className="text-3xl font-bold">Prorated Rent Calculator</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Calcula la renta proporcional por días de ocupación
+            Calculate prorated rent for any date range
           </p>
         </div>
       </div>
 
-      {/* Info Box */}
-      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <div className="flex items-start gap-3">
-          <InformationCircleIcon className="h-6 w-6 text-blue-600 mt-0.5" />
-          <div>
-            <h3 className="font-semibold text-blue-800">¿Qué es el prorrateo?</h3>
-            <p className="text-sm text-blue-700 mt-1">
-              El prorrateo calcula la renta proporcional basada en los días reales de ocupación
-              en un período determinado. Fórmula: (Renta Mensual ÷ 30) × Días Ocupados
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Form */}
-      <div className="bg-card border rounded-lg p-6">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {errors.general && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-              {errors.general}
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Apartment Selection */}
+      {/* Info Card */}
+      <Card className="border-blue-200 bg-blue-50/50">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <InformationCircleIcon className="h-6 w-6 text-blue-600 mt-0.5 flex-shrink-0" />
             <div>
-              <label className="block text-sm font-medium mb-2">
-                <BuildingOfficeIcon className="inline h-4 w-4 mr-1" />
-                Apartamento *
-              </label>
-              <select
-                value={form.apartment_id}
-                onChange={(e) => handleChange('apartment_id', e.target.value ? Number(e.target.value) : '')}
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${
-                  errors.apartment_id ? 'border-red-500' : ''
-                }`}
-              >
-                <option value="">Seleccionar apartamento</option>
-                {apartments.map((apartment) => (
-                  <option key={apartment.id} value={apartment.id}>
-                    {apartment.apartment_code} - {apartment.address}
-                  </option>
-                ))}
-              </select>
-              {errors.apartment_id && (
-                <p className="text-sm text-red-500 mt-1">{errors.apartment_id}</p>
-              )}
-            </div>
-
-            {/* Daily Rate */}
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                <CurrencyYenIcon className="inline h-4 w-4 mr-1" />
-                Tarifa Diaria (¥) *
-              </label>
-              <input
-                type="number"
-                value={form.daily_rate}
-                onChange={(e) => handleChange('daily_rate', e.target.value ? Number(e.target.value) : '')}
-                placeholder="Ej: 1666"
-                min="0"
-                step="0.01"
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${
-                  errors.daily_rate ? 'border-red-500' : ''
-                }`}
-              />
-              {errors.daily_rate && (
-                <p className="text-sm text-red-500 mt-1">{errors.daily_rate}</p>
-              )}
-              {selectedApartment && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Renta mensual: ¥{selectedApartment.monthly_rent.toLocaleString()} (¥{Math.round(selectedApartment.monthly_rent / 30).toLocaleString()}/día)
-                </p>
-              )}
-            </div>
-
-            {/* Start Date */}
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                <CalendarIcon className="inline h-4 w-4 mr-1" />
-                Fecha de Inicio *
-              </label>
-              <input
-                type="date"
-                value={form.start_date}
-                onChange={(e) => handleChange('start_date', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${
-                  errors.start_date ? 'border-red-500' : ''
-                }`}
-              />
-              {errors.start_date && (
-                <p className="text-sm text-red-500 mt-1">{errors.start_date}</p>
-              )}
-            </div>
-
-            {/* End Date */}
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                <CalendarIcon className="inline h-4 w-4 mr-1" />
-                Fecha de Fin *
-              </label>
-              <input
-                type="date"
-                value={form.end_date}
-                onChange={(e) => handleChange('end_date', e.target.value)}
-                min={form.start_date}
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${
-                  errors.end_date ? 'border-red-500' : ''
-                }`}
-              />
-              {errors.end_date && (
-                <p className="text-sm text-red-500 mt-1">{errors.end_date}</p>
-              )}
-            </div>
-          </div>
-
-          {/* Days Preview */}
-          {form.start_date && form.end_date && form.start_date <= form.end_date && (
-            <div className="p-4 bg-muted rounded-lg">
-              <p className="text-sm font-medium">
-                Período: {Math.floor(
-                  (new Date(form.end_date).getTime() - new Date(form.start_date).getTime()) /
-                    (1000 * 60 * 60 * 24)
-                ) + 1} días
+              <h3 className="font-semibold text-blue-800">What is prorated rent?</h3>
+              <p className="text-sm text-blue-700 mt-1">
+                Prorated rent is calculated based on the actual days occupied in a month.
+                Formula: <code className="bg-blue-100 px-1 rounded">(Monthly Rent ÷ Days in Month) × Days Occupied</code>
               </p>
             </div>
-          )}
-
-          {/* Actions */}
-          <div className="flex items-center gap-3 pt-4 border-t">
-            <button
-              type="submit"
-              disabled={calculateMutation.isPending}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
-            >
-              <CalculatorIcon className="h-5 w-5" />
-              {calculateMutation.isPending ? 'Calculando...' : 'Calcular Prorrateo'}
-            </button>
           </div>
-        </form>
-      </div>
+        </CardContent>
+      </Card>
+
+      {/* Input Form */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Input Details</CardTitle>
+          <CardDescription>Enter the monthly rent and date range</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Monthly Rent */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium mb-2">
+                  <CurrencyYenIcon className="inline h-4 w-4 mr-1" />
+                  Monthly Rent (¥) *
+                </label>
+                <Input
+                  type="number"
+                  value={form.monthly_rent}
+                  onChange={(e) => handleChange('monthly_rent', e.target.value)}
+                  placeholder="Ex: 50000"
+                  min="0"
+                  step="1000"
+                  className={errors.monthly_rent ? 'border-red-500' : ''}
+                />
+                {errors.monthly_rent && (
+                  <p className="text-sm text-red-500 mt-1">{errors.monthly_rent}</p>
+                )}
+              </div>
+
+              {/* Start Date */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  <CalendarIcon className="inline h-4 w-4 mr-1" />
+                  Start Date *
+                </label>
+                <Input
+                  type="date"
+                  value={form.start_date}
+                  onChange={(e) => handleChange('start_date', e.target.value)}
+                  className={errors.start_date ? 'border-red-500' : ''}
+                />
+                {errors.start_date && (
+                  <p className="text-sm text-red-500 mt-1">{errors.start_date}</p>
+                )}
+              </div>
+
+              {/* End Date */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  <CalendarIcon className="inline h-4 w-4 mr-1" />
+                  End Date *
+                </label>
+                <Input
+                  type="date"
+                  value={form.end_date}
+                  onChange={(e) => handleChange('end_date', e.target.value)}
+                  min={form.start_date}
+                  className={errors.end_date ? 'border-red-500' : ''}
+                />
+                {errors.end_date && (
+                  <p className="text-sm text-red-500 mt-1">{errors.end_date}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Days Preview */}
+            {form.start_date && form.end_date && form.start_date <= form.end_date && (
+              <div className="p-4 bg-muted rounded-lg">
+                <p className="text-sm font-medium">
+                  Period: {daysOccupied} days ({form.start_date} to {form.end_date})
+                </p>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex items-center gap-3 pt-4 border-t">
+              <Button
+                type="submit"
+                disabled={calculateMutation.isPending}
+                size="lg"
+                className="flex-1"
+              >
+                <CalculatorIcon className="h-5 w-5 mr-2" />
+                {calculateMutation.isPending ? 'Calculating...' : 'Calculate'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleClear}
+                size="lg"
+              >
+                Clear
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
 
       {/* Results */}
       {result && (
-        <div className="space-y-4">
-          {/* Result Card */}
-          <div className="bg-card border rounded-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">Resultado del Cálculo</h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Apartamento</p>
-                  <p className="font-medium">{result.apartment.apartment_code}</p>
-                  <p className="text-sm text-muted-foreground">{result.apartment.address}</p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total Días</p>
-                    <p className="text-2xl font-bold">{result.total_days}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Días Ocupados</p>
-                    <p className="text-2xl font-bold text-green-600">{result.occupied_days}</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Tarifa Diaria</p>
-                    <p className="text-lg font-medium">¥{result.daily_rate.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Porcentaje</p>
-                    <p className="text-lg font-medium">{result.percentage.toFixed(1)}%</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                <p className="text-sm text-green-700 mb-2">Monto a Cobrar</p>
-                <p className="text-4xl font-bold text-green-800">
-                  ¥{result.calculated_amount.toLocaleString()}
-                </p>
-                <p className="text-sm text-green-600 mt-2">
-                  De ¥{result.base_amount.toLocaleString()} (100%)
-                </p>
-              </div>
+        <Card className="border-green-200 bg-green-50/50">
+          <CardHeader>
+            <CardTitle className="text-green-800">Calculation Result</CardTitle>
+            <CardDescription>Detailed breakdown of prorated rent</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Main Result */}
+            <div className="bg-white rounded-xl p-6 border-2 border-green-300 shadow-md">
+              <p className="text-sm text-green-700 mb-2">Prorated Rent</p>
+              <p className="text-5xl font-bold text-green-800">
+                ¥{Math.round(result.prorated_rent).toLocaleString()}
+              </p>
+              <p className="text-sm text-green-600 mt-2">
+                {result.is_prorated ? 'Prorated (partial month)' : 'Full month'}
+              </p>
             </div>
 
             {/* Breakdown */}
-            <div className="mt-6 pt-6 border-t">
-              <h3 className="font-semibold mb-3">Desglose del Cálculo</h3>
-              <div className="space-y-2 text-sm">
-                {result.breakdown.map((item, index) => (
-                  <div key={index} className="flex justify-between">
-                    <span className="text-muted-foreground">{item.description}</span>
-                    <span className="font-medium">¥{item.amount.toLocaleString()}</span>
-                  </div>
-                ))}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-white p-4 rounded-lg border">
+                <p className="text-xs text-muted-foreground">Monthly Rent</p>
+                <p className="text-2xl font-bold mt-1">¥{result.monthly_rent.toLocaleString()}</p>
+              </div>
+              <div className="bg-white p-4 rounded-lg border">
+                <p className="text-xs text-muted-foreground">Days in Month</p>
+                <p className="text-2xl font-bold mt-1">{result.days_in_month}</p>
+              </div>
+              <div className="bg-white p-4 rounded-lg border">
+                <p className="text-xs text-muted-foreground">Days Occupied</p>
+                <p className="text-2xl font-bold mt-1 text-green-600">{result.days_occupied}</p>
+              </div>
+              <div className="bg-white p-4 rounded-lg border">
+                <p className="text-xs text-muted-foreground">Daily Rate</p>
+                <p className="text-2xl font-bold mt-1">¥{Math.round(result.daily_rate).toLocaleString()}</p>
               </div>
             </div>
-          </div>
 
-          {/* Save Button */}
-          <div className="flex justify-end">
-            <button
-              onClick={() => {
-                try {
-                  const calculationRecord = {
-                    id: Date.now(),
-                    timestamp: new Date().toISOString(),
-                    type: 'prorated',
-                    form: {
-                      apartment_id: form.apartment_id,
-                      start_date: form.start_date,
-                      end_date: form.end_date,
-                      daily_rate: form.daily_rate,
-                    },
-                    result: {
-                      apartment: result.apartment,
-                      total_days: result.total_days,
-                      occupied_days: result.occupied_days,
-                      daily_rate: result.daily_rate,
-                      base_amount: result.base_amount,
-                      calculated_amount: result.calculated_amount,
-                      percentage: result.percentage,
-                      breakdown: result.breakdown,
-                    },
-                  };
+            {/* Progress Bar */}
+            <div>
+              <div className="flex justify-between text-sm mb-2">
+                <span>Occupancy</span>
+                <span className="font-medium">
+                  {result.days_occupied}/{result.days_in_month} days ({Math.round((result.days_occupied / result.days_in_month) * 100)}%)
+                </span>
+              </div>
+              <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-green-500 rounded-full transition-all"
+                  style={{ width: `${(result.days_occupied / result.days_in_month) * 100}%` }}
+                />
+              </div>
+            </div>
 
-                  const saved = JSON.parse(localStorage.getItem('apartment_calculations') || '[]');
-                  saved.push(calculationRecord);
-                  localStorage.setItem('apartment_calculations', JSON.stringify(saved));
+            {/* Formula */}
+            <div className="bg-white p-4 rounded-lg border">
+              <h4 className="font-semibold mb-2">Calculation Formula</h4>
+              <code className="text-sm bg-gray-100 p-2 rounded block">
+                {result.calculation_formula}
+              </code>
+            </div>
 
-                  toast.success('計算結果を保存しました');
-                } catch (error) {
-                  console.error('Error saving calculation:', error);
-                  toast.error('保存に失敗しました');
-                }
-              }}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            >
-              Guardar Cálculo
-            </button>
-          </div>
-        </div>
+            {/* Actions */}
+            <div className="flex gap-3 pt-4 border-t">
+              <Button
+                onClick={handleCopyToClipboard}
+                variant="outline"
+                className="flex-1"
+              >
+                <ClipboardDocumentIcon className="h-4 w-4 mr-2" />
+                Copy to Clipboard
+              </Button>
+              <Button
+                onClick={() => window.print()}
+                variant="outline"
+                className="flex-1"
+              >
+                Print
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
+
+      {/* Example Scenarios */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Example Scenarios</CardTitle>
+          <CardDescription>Common use cases for prorated rent</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="p-3 bg-muted rounded-lg">
+            <p className="font-medium text-sm">Mid-month move-in (November 15-30)</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Employee moves in on the 15th. Calculate rent for 16 days (Nov 15-30).
+            </p>
+          </div>
+          <div className="p-3 bg-muted rounded-lg">
+            <p className="font-medium text-sm">Mid-month move-out (May 1-20)</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Employee moves out on the 20th. Calculate rent for 20 days (May 1-20).
+            </p>
+          </div>
+          <div className="p-3 bg-muted rounded-lg">
+            <p className="font-medium text-sm">Full month (January 1-31)</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Employee occupies the entire month. No proration needed.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
