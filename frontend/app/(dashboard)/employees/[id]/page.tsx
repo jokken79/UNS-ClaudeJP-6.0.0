@@ -2,8 +2,11 @@
 
 import React from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import Link from 'next/link';
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
-import { employeeService } from '@/lib/api';
+import { employeeService, apartmentsV2Service } from '@/lib/api';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   ArrowLeftIcon,
   PencilIcon,
@@ -131,6 +134,18 @@ export default function EmployeeDetailPage() {
     enabled: !!id,
   }) as UseQueryResult<EmployeeDetails, Error>;
 
+  // Fetch assignment history
+  const { data: assignmentHistory = [], isLoading: isLoadingAssignments } = useQuery({
+    queryKey: ['employee-assignments', id],
+    queryFn: async () => {
+      const data = await apartmentsV2Service.listAssignments({
+        employee_id: parseInt(id)
+      });
+      return data.items || [];
+    },
+    enabled: !!id,
+  });
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '-';
     return new Date(dateString).toLocaleDateString('ja-JP');
@@ -180,6 +195,44 @@ export default function EmployeeDetailPage() {
     const today = new Date();
     const diffInDays = Math.ceil((expire.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     return diffInDays <= 90 && diffInDays >= 0;
+  };
+
+  const calculateDuration = (startDate: string, endDate: string | null) => {
+    const start = new Date(startDate);
+    const end = endDate ? new Date(endDate) : new Date();
+
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    const months = Math.floor(diffDays / 30);
+    const days = diffDays % 30;
+
+    if (months === 0) {
+      return `${days}日`;
+    }
+    return `${months}ヶ月 ${days}日`;
+  };
+
+  const getAssignmentStatusBadge = (status: string) => {
+    const statusConfig: { [key: string]: { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' } } = {
+      'active': { label: '入居中', variant: 'default' },
+      'ended': { label: '退去済', variant: 'secondary' },
+      'cancelled': { label: 'キャンセル', variant: 'destructive' },
+      'transferred': { label: '転居', variant: 'outline' },
+    };
+
+    const config = statusConfig[status] || { label: status, variant: 'secondary' };
+    return <Badge variant={config.variant}>{config.label}</Badge>;
+  };
+
+  const getAssignmentStatusColor = (status: string) => {
+    const colors: { [key: string]: string } = {
+      'active': 'border-green-500 bg-green-50 dark:bg-green-950/20',
+      'ended': 'border-gray-400 bg-gray-50 dark:bg-gray-900/20',
+      'cancelled': 'border-red-500 bg-red-50 dark:bg-red-950/20',
+      'transferred': 'border-blue-500 bg-blue-50 dark:bg-blue-950/20',
+    };
+    return colors[status] || colors['ended'];
   };
 
   if (isLoading) {
@@ -748,6 +801,154 @@ export default function EmployeeDetailPage() {
                         住宅手当の支給はありません
                       </p>
                     ) : null}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Assignment History Section */}
+            <div className="bg-card/90 backdrop-blur-sm shadow-lg rounded-2xl border">
+              <div className="px-6 py-4 border-b border-border bg-gradient-to-r from-muted to-card">
+                <h2 className="text-lg font-bold text-foreground flex items-center">
+                  <HomeIcon className="h-6 w-6 mr-2 text-indigo-500" />
+                  住居履歴 (Assignment History)
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">Complete history of apartment assignments</p>
+              </div>
+              <div className="px-6 py-5">
+                {isLoadingAssignments ? (
+                  <div className="flex justify-center items-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                ) : assignmentHistory.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">No assignment history found</p>
+                ) : (
+                  <div className="space-y-4">
+                    {assignmentHistory
+                      .sort((a: any, b: any) => {
+                        // Active first
+                        if (a.status === 'active' && b.status !== 'active') return -1;
+                        if (a.status !== 'active' && b.status === 'active') return 1;
+                        // Then by end date desc
+                        if (a.end_date && b.end_date) {
+                          return new Date(b.end_date).getTime() - new Date(a.end_date).getTime();
+                        }
+                        // Then by start date desc
+                        return new Date(b.start_date).getTime() - new Date(a.start_date).getTime();
+                      })
+                      .map((assignment: any) => {
+                        const isActive = assignment.status === 'active';
+
+                        return (
+                          <div
+                            key={assignment.id}
+                            className={`border-l-4 pl-4 py-3 rounded-r-lg ${getAssignmentStatusColor(assignment.status)}`}
+                          >
+                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                              <div className="space-y-3 flex-1">
+                                {/* Status badge */}
+                                <div className="flex items-center gap-2">
+                                  {getAssignmentStatusBadge(assignment.status)}
+                                  {isActive && (
+                                    <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
+                                      Current
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Apartment name */}
+                                <div>
+                                  <h4 className="font-semibold text-foreground text-lg">
+                                    <Link
+                                      href={`/apartments/${assignment.apartment_id}`}
+                                      className="hover:text-primary transition-colors underline decoration-dotted"
+                                    >
+                                      {(assignment as any).apartment?.name ||
+                                       (assignment as any).apartment_name ||
+                                       `Apartment #${assignment.apartment_id}`}
+                                    </Link>
+                                  </h4>
+                                  {(assignment as any).apartment && (
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                      {(assignment as any).apartment.prefecture} {(assignment as any).apartment.city} {(assignment as any).apartment.address_line1}
+                                    </p>
+                                  )}
+                                </div>
+
+                                {/* Dates */}
+                                <div className="text-sm space-y-1">
+                                  <div className="flex items-center gap-2">
+                                    <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                                    <span className="font-medium">開始:</span>
+                                    <span>{formatDate(assignment.start_date)}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                                    <span className="font-medium">終了:</span>
+                                    {assignment.end_date ? (
+                                      <span>{formatDate(assignment.end_date)}</span>
+                                    ) : (
+                                      <span className="text-green-600 dark:text-green-400 font-semibold">Current</span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <ClockIcon className="h-4 w-4 text-muted-foreground" />
+                                    <span className="font-medium">期間:</span>
+                                    <span>{calculateDuration(assignment.start_date, assignment.end_date)}</span>
+                                  </div>
+                                </div>
+
+                                {/* Rent information */}
+                                <div className="bg-muted/50 dark:bg-muted/20 p-3 rounded-lg space-y-2">
+                                  {(assignment as any).monthly_rent !== undefined && (
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-sm font-medium text-muted-foreground">月額家賃:</span>
+                                      <span className="text-sm font-bold text-foreground">
+                                        {formatCurrency((assignment as any).monthly_rent)}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {(assignment as any).is_prorated && (
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-sm font-medium text-muted-foreground">日割り計算:</span>
+                                      <Badge variant="outline" className="text-xs">Prorated</Badge>
+                                    </div>
+                                  )}
+                                  <div className="flex justify-between items-center pt-2 border-t border-border">
+                                    <span className="text-sm font-medium text-muted-foreground">控除総額:</span>
+                                    <span className="text-sm font-bold text-red-600 dark:text-red-400">
+                                      {formatCurrency(assignment.total_deduction)}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Action buttons */}
+                              <div className="flex flex-col gap-2 sm:flex-shrink-0">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => router.push(`/apartment-assignments/${assignment.id}`)}
+                                  className="w-full sm:w-auto"
+                                >
+                                  <DocumentTextIcon className="h-4 w-4 mr-2" />
+                                  Details
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => router.push(`/apartments/${assignment.apartment_id}`)}
+                                  className="w-full sm:w-auto"
+                                >
+                                  <HomeIcon className="h-4 w-4 mr-2" />
+                                  View Apartment
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    }
                   </div>
                 )}
               </div>
