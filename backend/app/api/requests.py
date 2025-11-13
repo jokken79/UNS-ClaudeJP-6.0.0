@@ -347,6 +347,7 @@ async def save_employee_data(
     - `bank_account` (str, optional): Bank account number
     - `emergency_contact_name` (str, optional): Emergency contact person name
     - `emergency_contact_phone` (str, optional): Emergency contact phone number
+    - `created_by_user` (str, optional): Username/name of person who created/filled this NYUUSHA document
 
     ## Validations
     - Factory must exist in database (checks factory_id)
@@ -372,7 +373,8 @@ async def save_employee_data(
         "bank_name": "Test Bank",
         "bank_account": "1234567890",
         "emergency_contact_name": "Jane Doe",
-        "emergency_contact_phone": "090-9876-5432"
+        "emergency_contact_phone": "090-9876-5432",
+        "created_by_user": "admin_test"
       }
     }
     ```

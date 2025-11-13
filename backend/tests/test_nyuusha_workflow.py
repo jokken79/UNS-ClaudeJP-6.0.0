@@ -156,6 +156,7 @@ def nyuusha_request_with_employee_data(
         "bank_account": "1234567890",
         "emergency_contact_name": "Jane Doe",
         "emergency_contact_phone": "090-9876-5432",
+        "created_by_user": "admin_test",
     }
 
     request = Request(

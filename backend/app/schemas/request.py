@@ -107,4 +107,5 @@ class EmployeeDataInput(BaseModel):
     bank_account: Optional[str] = None
     emergency_contact_name: Optional[str] = None
     emergency_contact_phone: Optional[str] = None
+    created_by_user: Optional[str] = None  # User who created/filled this NYUUSHA document
     notes: Optional[str] = None
