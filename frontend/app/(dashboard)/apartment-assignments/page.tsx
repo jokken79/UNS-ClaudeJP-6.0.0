@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import api from '@/lib/api';
+import api, { apartmentsV2Service } from '@/lib/api';
 import {
   MagnifyingGlassIcon,
   PlusIcon,
@@ -49,13 +49,11 @@ export default function ApartmentAssignmentsPage() {
   const { data: assignments = [], isLoading, error } = useQuery({
     queryKey: ['apartment-assignments', { search, statusFilter, showInactive }],
     queryFn: async () => {
-      const params = new URLSearchParams();
-      if (search) params.append('search', search);
-      if (statusFilter) params.append('status', statusFilter);
-      if (showInactive) params.append('include_inactive', 'true');
-
-      const response = await api.get(`/apartment-assignments/?${params.toString()}`);
-      return response.data as Assignment[];
+      const data = await apartmentsV2Service.listAssignments({
+        search: search || undefined,
+        status: statusFilter || undefined,
+      });
+      return data.items as Assignment[];
     },
   });
 
@@ -63,8 +61,18 @@ export default function ApartmentAssignmentsPage() {
   const { data: stats } = useQuery({
     queryKey: ['apartment-assignments-stats'],
     queryFn: async () => {
-      const response = await api.get('/apartment-assignments/stats');
-      return response.data as AssignmentStats;
+      const allData = await apartmentsV2Service.listAssignments({});
+      return {
+        total_assignments: allData.total,
+        active_assignments: allData.items.filter(a => a.status === 'active').length,
+        ended_assignments: allData.items.filter(a => a.status === 'ended').length,
+        this_month: allData.items.filter(a => {
+          const assignmentDate = new Date(a.start_date);
+          const now = new Date();
+          return assignmentDate.getMonth() === now.getMonth() &&
+                 assignmentDate.getFullYear() === now.getFullYear();
+        }).length
+      } as AssignmentStats;
     },
   });
 
