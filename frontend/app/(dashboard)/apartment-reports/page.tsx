@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import api from '@/lib/api';
+import { apartmentsV2Service } from '@/lib/api';
 import {
   ChartBarIcon,
   CurrencyYenIcon,
@@ -49,8 +49,8 @@ export default function ApartmentReportsPage() {
   const { data: report, isLoading } = useQuery({
     queryKey: ['apartment-reports', selectedPeriod],
     queryFn: async () => {
-      const response = await api.get(`/apartment-reports/?period=${selectedPeriod}`);
-      return response.data as ReportData;
+      const response = await apartmentsV2Service.getOccupancyReport();
+      return response as ReportData;
     },
   });
 
