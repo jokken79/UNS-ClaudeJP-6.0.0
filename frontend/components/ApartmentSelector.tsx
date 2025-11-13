@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { apartmentsV2Service } from '@/lib/api';
 
 interface Apartment {
   id: number;
@@ -31,19 +31,12 @@ export default function ApartmentSelector({ value, onChange, required = false }:
         setLoading(true);
         setError(null);
 
-        const token = localStorage.getItem('access_token');
-        const response = await axios.get<Apartment[]>(
-          'http://localhost:8000/api/apartments-v2/apartments',
-          {
-            headers: { Authorization: `Bearer ${token}` },
-            params: {
-              available_only: true,
-              limit: 500
-            }
-          }
-        );
+        const data = await apartmentsV2Service.listApartments({
+          available_only: true,
+          limit: 500
+        });
 
-        setApartments(response.data || []);
+        setApartments(data.items || []);
       } catch (err: any) {
         console.error('Error fetching apartments:', err);
         setError('アパートの読み込みに失敗しました');

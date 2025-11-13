@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '@/lib/api';
+import api, { apartmentsV2Service } from '@/lib/api';
 import {
   ArrowLeftIcon,
   UserIcon,
@@ -69,13 +69,12 @@ export default function CreateAssignmentPage() {
   // Create assignment mutation
   const createMutation = useMutation({
     mutationFn: async (data: CreateAssignmentForm) => {
-      const response = await api.post('/apartment-assignments/', {
+      return await apartmentsV2Service.createAssignment({
         employee_id: Number(data.employee_id),
         apartment_id: Number(data.apartment_id),
-        assignment_date: data.assignment_date,
+        start_date: data.assignment_date,
         notes: data.notes || null,
       });
-      return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['apartment-assignments'] });

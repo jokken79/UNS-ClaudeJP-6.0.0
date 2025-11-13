@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon, Loader2 } from 'lucide-react';
-import axios from 'axios';
+import { apartmentsV2Service } from '@/lib/api';
 
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -92,7 +92,6 @@ export function AdditionalChargeForm({
     try {
       setSubmitting(true);
 
-      const token = localStorage.getItem('access_token');
       const payload = {
         assignment_id: assignmentId,
         employee_id: employeeId,
@@ -105,13 +104,7 @@ export function AdditionalChargeForm({
         notes: values.notes || null,
       };
 
-      await axios.post(
-        'http://localhost:8000/api/apartments-v2/charges',
-        payload,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      await apartmentsV2Service.createCharge(payload);
 
       toast({
         title: 'Cargo creado',

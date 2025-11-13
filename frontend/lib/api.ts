@@ -410,7 +410,7 @@ export const apartmentsV2Service = {
    * List apartments with filters and pagination
    */
   listApartments: async (params?: ApartmentListParams): Promise<PaginatedResponse<ApartmentWithStats>> => {
-    const response = await api.get<PaginatedResponse<ApartmentWithStats>>('/apartments-v2/apartments', { params });
+    const response = await api.get<PaginatedResponse<ApartmentWithStats>>('/apartments/apartments', { params });
     return response.data;
   },
 
@@ -418,7 +418,7 @@ export const apartmentsV2Service = {
    * Get apartment by ID with stats
    */
   getApartment: async (id: number): Promise<ApartmentWithStats> => {
-    const response = await api.get<ApartmentWithStats>(`/apartments-v2/apartments/${id}`);
+    const response = await api.get<ApartmentWithStats>(`/apartments/apartments/${id}`);
     return response.data;
   },
 
@@ -426,7 +426,7 @@ export const apartmentsV2Service = {
    * Create new apartment
    */
   createApartment: async (data: ApartmentCreate): Promise<ApartmentResponse> => {
-    const response = await api.post<ApartmentResponse>('/apartments-v2/apartments', data);
+    const response = await api.post<ApartmentResponse>('/apartments/apartments', data);
     return response.data;
   },
 
@@ -434,7 +434,7 @@ export const apartmentsV2Service = {
    * Update existing apartment
    */
   updateApartment: async (id: number, data: ApartmentUpdate): Promise<ApartmentResponse> => {
-    const response = await api.put<ApartmentResponse>(`/apartments-v2/apartments/${id}`, data);
+    const response = await api.put<ApartmentResponse>(`/apartments/apartments/${id}`, data);
     return response.data;
   },
 
@@ -442,7 +442,7 @@ export const apartmentsV2Service = {
    * Soft delete apartment
    */
   deleteApartment: async (id: number): Promise<void> => {
-    await api.delete(`/apartments-v2/apartments/${id}`);
+    await api.delete(`/apartments/apartments/${id}`);
   },
 
   // -----------------------------------------------------------------------------
@@ -453,7 +453,7 @@ export const apartmentsV2Service = {
    * List assignments with filters and pagination
    */
   listAssignments: async (params?: AssignmentListParams): Promise<PaginatedResponse<AssignmentListItem>> => {
-    const response = await api.get<PaginatedResponse<AssignmentListItem>>('/apartments-v2/assignments', { params });
+    const response = await api.get<PaginatedResponse<AssignmentListItem>>('/apartments/assignments', { params });
     return response.data;
   },
 
@@ -461,7 +461,7 @@ export const apartmentsV2Service = {
    * Get assignment by ID with full details
    */
   getAssignment: async (id: number): Promise<AssignmentResponse> => {
-    const response = await api.get<AssignmentResponse>(`/apartments-v2/assignments/${id}`);
+    const response = await api.get<AssignmentResponse>(`/apartments/assignments/${id}`);
     return response.data;
   },
 
@@ -469,7 +469,7 @@ export const apartmentsV2Service = {
    * Create new assignment
    */
   createAssignment: async (data: AssignmentCreate): Promise<AssignmentResponse> => {
-    const response = await api.post<AssignmentResponse>('/apartments-v2/assignments', data);
+    const response = await api.post<AssignmentResponse>('/apartments/assignments', data);
     return response.data;
   },
 
@@ -477,7 +477,7 @@ export const apartmentsV2Service = {
    * Update/end assignment
    */
   updateAssignment: async (id: number, data: AssignmentUpdate): Promise<AssignmentResponse> => {
-    const response = await api.put<AssignmentResponse>(`/apartments-v2/assignments/${id}`, data);
+    const response = await api.put<AssignmentResponse>(`/apartments/assignments/${id}`, data);
     return response.data;
   },
 
@@ -498,7 +498,7 @@ export const apartmentsV2Service = {
       }>;
     }
   ): Promise<AssignmentResponse> => {
-    const response = await api.put<AssignmentResponse>(`/apartments-v2/assignments/${id}/end`, data);
+    const response = await api.put<AssignmentResponse>(`/apartments/assignments/${id}/end`, data);
     return response.data;
   },
 
@@ -507,7 +507,7 @@ export const apartmentsV2Service = {
    */
   getActiveAssignmentByEmployee: async (employeeId: number): Promise<AssignmentResponse | null> => {
     const response = await api.get<AssignmentResponse | null>(
-      `/apartments-v2/assignments/employee/${employeeId}/active`
+      `/apartments/assignments/employee/${employeeId}/active`
     );
     return response.data;
   },
@@ -517,7 +517,7 @@ export const apartmentsV2Service = {
    */
   getActiveAssignmentsByApartment: async (apartmentId: number): Promise<AssignmentResponse[]> => {
     const response = await api.get<AssignmentResponse[]>(
-      `/apartments-v2/assignments/apartment/${apartmentId}/active`
+      `/apartments/assignments/apartment/${apartmentId}/active`
     );
     return response.data;
   },
@@ -530,7 +530,7 @@ export const apartmentsV2Service = {
    * Transfer employee between apartments
    */
   transferEmployee: async (data: TransferRequest): Promise<TransferResponse> => {
-    const response = await api.post<TransferResponse>('/apartments-v2/assignments/transfer', data);
+    const response = await api.post<TransferResponse>('/apartments/assignments/transfer', data);
     return response.data;
   },
 
@@ -542,7 +542,7 @@ export const apartmentsV2Service = {
    * List additional charges
    */
   listCharges: async (params?: ChargeListParams): Promise<PaginatedResponse<AdditionalChargeResponse>> => {
-    const response = await api.get<PaginatedResponse<AdditionalChargeResponse>>('/apartments-v2/charges', { params });
+    const response = await api.get<PaginatedResponse<AdditionalChargeResponse>>('/apartments/charges', { params });
     return response.data;
   },
 
@@ -550,7 +550,7 @@ export const apartmentsV2Service = {
    * Get charge by ID
    */
   getCharge: async (id: number): Promise<AdditionalChargeResponse> => {
-    const response = await api.get<AdditionalChargeResponse>(`/apartments-v2/charges/${id}`);
+    const response = await api.get<AdditionalChargeResponse>(`/apartments/charges/${id}`);
     return response.data;
   },
 
@@ -558,7 +558,7 @@ export const apartmentsV2Service = {
    * Create additional charge
    */
   createCharge: async (data: AdditionalChargeCreate): Promise<AdditionalChargeResponse> => {
-    const response = await api.post<AdditionalChargeResponse>('/apartments-v2/charges', data);
+    const response = await api.post<AdditionalChargeResponse>('/apartments/charges', data);
     return response.data;
   },
 
@@ -566,7 +566,7 @@ export const apartmentsV2Service = {
    * Update additional charge
    */
   updateCharge: async (id: number, data: AdditionalChargeUpdate): Promise<AdditionalChargeResponse> => {
-    const response = await api.put<AdditionalChargeResponse>(`/apartments-v2/charges/${id}`, data);
+    const response = await api.put<AdditionalChargeResponse>(`/apartments/charges/${id}`, data);
     return response.data;
   },
 
@@ -574,7 +574,7 @@ export const apartmentsV2Service = {
    * Approve charge (admin only)
    */
   approveCharge: async (id: number): Promise<AdditionalChargeResponse> => {
-    const response = await api.put<AdditionalChargeResponse>(`/apartments-v2/charges/${id}/approve`);
+    const response = await api.put<AdditionalChargeResponse>(`/apartments/charges/${id}/approve`);
     return response.data;
   },
 
@@ -582,7 +582,7 @@ export const apartmentsV2Service = {
    * Delete charge (soft delete)
    */
   deleteCharge: async (id: number): Promise<void> => {
-    await api.delete(`/apartments-v2/charges/${id}`);
+    await api.delete(`/apartments/charges/${id}`);
   },
 
   // -----------------------------------------------------------------------------
@@ -593,7 +593,7 @@ export const apartmentsV2Service = {
    * List rent deductions
    */
   listDeductions: async (params?: DeductionListParams): Promise<PaginatedResponse<DeductionResponse>> => {
-    const response = await api.get<PaginatedResponse<DeductionResponse>>('/apartments-v2/deductions', { params });
+    const response = await api.get<PaginatedResponse<DeductionResponse>>('/apartments/deductions', { params });
     return response.data;
   },
 
@@ -601,7 +601,7 @@ export const apartmentsV2Service = {
    * Get deductions for specific year/month
    */
   getDeductionsByPeriod: async (year: number, month: number): Promise<DeductionResponse[]> => {
-    const response = await api.get<DeductionResponse[]>(`/apartments-v2/deductions/${year}/${month}`);
+    const response = await api.get<DeductionResponse[]>(`/apartments/deductions/${year}/${month}`);
     return response.data;
   },
 
@@ -610,7 +610,7 @@ export const apartmentsV2Service = {
    */
   generateDeductions: async (year: number, month: number): Promise<{ created: number; skipped: number }> => {
     const response = await api.post<{ created: number; skipped: number }>(
-      '/apartments-v2/deductions/generate',
+      '/apartments/deductions/generate',
       { year, month }
     );
     return response.data;
@@ -620,7 +620,7 @@ export const apartmentsV2Service = {
    * Export deductions to CSV
    */
   exportDeductions: async (year: number, month: number): Promise<Blob> => {
-    const response = await api.get(`/apartments-v2/deductions/export/${year}/${month}`, {
+    const response = await api.get(`/apartments/deductions/export/${year}/${month}`, {
       responseType: 'blob',
     });
     return response.data;
@@ -634,7 +634,7 @@ export const apartmentsV2Service = {
    * Calculate prorated rent
    */
   calculateProratedRent: async (data: ProratedCalculationRequest): Promise<ProratedCalculationResponse> => {
-    const response = await api.post<ProratedCalculationResponse>('/apartments-v2/apartments/calculate/prorated', data);
+    const response = await api.post<ProratedCalculationResponse>('/apartments/apartments/calculate/prorated', data);
     return response.data;
   },
 
@@ -647,7 +647,7 @@ export const apartmentsV2Service = {
     total_monthly_cost: number;
     breakdown: Record<string, any>;
   }> => {
-    const response = await api.post('/apartments-v2/calculate/transfer', data);
+    const response = await api.post('/apartments/calculate/transfer', data);
     return response.data;
   },
 
@@ -666,7 +666,7 @@ export const apartmentsV2Service = {
     prefecture?: string,
     building_name?: string
   ): Promise<OccupancyReport> => {
-    const response = await api.get<OccupancyReport>('/apartments-v2/reports/occupancy', {
+    const response = await api.get<OccupancyReport>('/apartments/reports/occupancy', {
       params: {
         prefecture,
         building_name,
@@ -686,7 +686,7 @@ export const apartmentsV2Service = {
     year: number,
     month: number
   ): Promise<ArrearsReport> => {
-    const response = await api.get<ArrearsReport>('/apartments-v2/reports/arrears', {
+    const response = await api.get<ArrearsReport>('/apartments/reports/arrears', {
       params: { year, month },
     });
     return response.data;
@@ -703,7 +703,7 @@ export const apartmentsV2Service = {
     period?: string,
     chargeType?: string
   ): Promise<MaintenanceReport> => {
-    const response = await api.get<MaintenanceReport>('/apartments-v2/reports/maintenance', {
+    const response = await api.get<MaintenanceReport>('/apartments/reports/maintenance', {
       params: {
         period,
         charge_type: chargeType,
@@ -723,7 +723,7 @@ export const apartmentsV2Service = {
     year: number,
     month: number
   ): Promise<CostAnalysisReport> => {
-    const response = await api.get<CostAnalysisReport>('/apartments-v2/reports/costs', {
+    const response = await api.get<CostAnalysisReport>('/apartments/reports/costs', {
       params: { year, month },
     });
     return response.data;
