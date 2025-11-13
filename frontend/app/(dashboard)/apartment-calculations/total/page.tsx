@@ -2,125 +2,121 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
-import api from '@/lib/api';
+import { apartmentsV2Service } from '@/lib/api';
+import type { ProratedCalculationRequest } from '@/types/apartments-v2';
 import {
   ArrowLeftIcon,
-  CurrencyYenIcon,
+  CalculatorIcon,
   CalendarIcon,
-  BuildingOfficeIcon,
+  CurrencyYenIcon,
+  PlusIcon,
+  XMarkIcon,
+  ClipboardDocumentIcon,
   DocumentTextIcon,
-  CheckCircleIcon,
 } from '@heroicons/react/24/outline';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
-interface TotalCalculationForm {
-  apartment_id: number | '';
-  month: string;
-  year: number;
-  base_rent: number | '';
-  additional_charges: number;
-  deductions: number;
-  notes: string;
+interface AdditionalCharge {
+  id: string;
+  type: string;
+  description: string;
+  amount: number;
 }
 
-interface Apartment {
-  id: number;
-  apartment_code: string;
-  address: string;
-  monthly_rent: number;
+interface FormData {
+  monthly_rent: string;
+  management_fee: string;
+  start_date: string;
+  is_prorated: boolean;
+  parking_fee: string;
+  housing_subsidy: string;
 }
 
 interface CalculationResult {
-  apartment: Apartment;
-  month: string;
-  year: number;
   base_rent: number;
-  additional_charges: number;
-  deductions: number;
-  total_amount: number;
-  breakdown: {
-    description: string;
-    amount: number;
-    type: 'charge' | 'deduction';
-  }[];
+  management_fee: number;
+  additional_charges_sum: number;
+  parking_fee: number;
+  housing_subsidy: number;
+  total_deduction: number;
+  is_prorated: boolean;
+  days_in_month?: number;
+  days_occupied?: number;
 }
 
-export default function TotalCalculationPage() {
+const CHARGE_TYPES = [
+  { value: 'cleaning', label: 'Cleaning Fee (清掃費)' },
+  { value: 'repair', label: 'Repair (修理費)' },
+  { value: 'penalty', label: 'Penalty (違約金)' },
+  { value: 'utilities', label: 'Utilities (光熱費)' },
+  { value: 'other', label: 'Other (その他)' },
+];
+
+export default function TotalDeductionCalculatorPage() {
   const router = useRouter();
-  const queryClient = useQueryClient();
-  const currentDate = new Date();
-  const [form, setForm] = useState<TotalCalculationForm>({
-    apartment_id: '',
-    month: String(currentDate.getMonth() + 1).padStart(2, '0'),
-    year: currentDate.getFullYear(),
-    base_rent: '',
-    additional_charges: 0,
-    deductions: 0,
-    notes: '',
+  const [form, setForm] = useState<FormData>({
+    monthly_rent: '50000',
+    management_fee: '3000',
+    start_date: '',
+    is_prorated: false,
+    parking_fee: '0',
+    housing_subsidy: '0',
+  });
+  const [additionalCharges, setAdditionalCharges] = useState<AdditionalCharge[]>([]);
+  const [newCharge, setNewCharge] = useState({
+    type: 'cleaning',
+    description: '',
+    amount: '',
   });
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isCalculating, setIsCalculating] = useState(false);
 
-  // Fetch apartments
-  const { data: apartments = [] } = useQuery({
-    queryKey: ['apartments'],
-    queryFn: async () => {
-      const response = await api.get('/apartments-v2/apartments');
-      return response.data as Apartment[];
-    },
-  });
-
-  // Auto-fill base rent when apartment changes
-  const selectedApartment = apartments.find(a => a.id === form.apartment_id);
-  React.useEffect(() => {
-    if (selectedApartment) {
-      setForm(prev => ({ ...prev, base_rent: selectedApartment.monthly_rent }));
-    }
-  }, [selectedApartment]);
-
-  // Calculate total mutation
-  const calculateMutation = useMutation({
-    mutationFn: async (data: TotalCalculationForm) => {
-      const response = await api.post('/apartment-calculations/total', {
-        apartment_id: Number(data.apartment_id),
-        month: data.month,
-        year: data.year,
-        base_rent: Number(data.base_rent),
-        additional_charges: data.additional_charges,
-        deductions: data.deductions,
-        notes: data.notes || null,
-      });
-      return response.data as CalculationResult;
-    },
-    onSuccess: (data) => {
-      setResult(data);
-    },
-    onError: (error: any) => {
-      if (error.response?.data?.detail) {
-        setErrors({ general: error.response.data.detail });
-      }
-    },
-  });
-
-  const handleChange = (field: keyof TotalCalculationForm, value: string | number) => {
+  const handleChange = (field: keyof FormData, value: string | boolean) => {
     setForm(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleAddCharge = () => {
+    if (!newCharge.description || !newCharge.amount || Number(newCharge.amount) <= 0) {
+      toast.error('Please enter a valid description and amount');
+      return;
+    }
+
+    const charge: AdditionalCharge = {
+      id: Date.now().toString(),
+      type: newCharge.type,
+      description: newCharge.description,
+      amount: Number(newCharge.amount),
+    };
+
+    setAdditionalCharges(prev => [...prev, charge]);
+    setNewCharge({ type: 'cleaning', description: '', amount: '' });
+    toast.success('Charge added!');
+  };
+
+  const handleRemoveCharge = (id: string) => {
+    setAdditionalCharges(prev => prev.filter(c => c.id !== id));
+    toast.success('Charge removed!');
+  };
+
+  const handleCalculate = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
     setResult(null);
 
+    // Validation
     const newErrors: Record<string, string> = {};
-    if (!form.apartment_id) newErrors.apartment_id = 'Debes seleccionar un apartamento';
-    if (!form.month) newErrors.month = 'El mes es requerido';
-    if (!form.year) newErrors.year = 'El año es requerido';
-    if (!form.base_rent || Number(form.base_rent) <= 0) {
-      newErrors.base_rent = 'La renta base debe ser mayor a 0';
+    if (!form.monthly_rent || Number(form.monthly_rent) <= 0) {
+      newErrors.monthly_rent = 'Monthly rent must be greater than 0';
+    }
+    if (form.is_prorated && !form.start_date) {
+      newErrors.start_date = 'Start date is required for prorated calculation';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -128,11 +124,144 @@ export default function TotalCalculationPage() {
       return;
     }
 
-    calculateMutation.mutate(form);
+    setIsCalculating(true);
+
+    try {
+      let baseRent = Number(form.monthly_rent);
+      let daysInMonth: number | undefined;
+      let daysOccupied: number | undefined;
+
+      // If prorated, calculate prorated rent
+      if (form.is_prorated && form.start_date) {
+        const startDate = new Date(form.start_date);
+        const year = startDate.getFullYear();
+        const month = startDate.getMonth() + 1;
+
+        // Calculate end of month
+        const endOfMonth = new Date(year, month, 0);
+        const endDate = endOfMonth.toISOString().split('T')[0];
+
+        const proratedData: ProratedCalculationRequest = {
+          monthly_rent: baseRent,
+          start_date: form.start_date,
+          end_date: endDate,
+          year,
+          month,
+        };
+
+        const proratedResult = await apartmentsV2Service.calculateProratedRent(proratedData);
+        baseRent = proratedResult.prorated_rent;
+        daysInMonth = proratedResult.days_in_month;
+        daysOccupied = proratedResult.days_occupied;
+      }
+
+      // Calculate totals
+      const managementFee = Number(form.management_fee) || 0;
+      const additionalChargesSum = additionalCharges.reduce((sum, charge) => sum + charge.amount, 0);
+      const parkingFee = Number(form.parking_fee) || 0;
+      const housingSubsidy = Number(form.housing_subsidy) || 0;
+
+      const totalDeduction = baseRent + managementFee + additionalChargesSum + parkingFee - housingSubsidy;
+
+      setResult({
+        base_rent: baseRent,
+        management_fee: managementFee,
+        additional_charges_sum: additionalChargesSum,
+        parking_fee: parkingFee,
+        housing_subsidy: housingSubsidy,
+        total_deduction: totalDeduction,
+        is_prorated: form.is_prorated,
+        days_in_month: daysInMonth,
+        days_occupied: daysOccupied,
+      });
+
+      toast.success('Calculation completed!');
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || 'Calculation failed');
+    } finally {
+      setIsCalculating(false);
+    }
+  };
+
+  const handleClear = () => {
+    setForm({
+      monthly_rent: '50000',
+      management_fee: '3000',
+      start_date: '',
+      is_prorated: false,
+      parking_fee: '0',
+      housing_subsidy: '0',
+    });
+    setAdditionalCharges([]);
+    setNewCharge({ type: 'cleaning', description: '', amount: '' });
+    setResult(null);
+    setErrors({});
+  };
+
+  const handleCopyToClipboard = () => {
+    if (!result) return;
+
+    const chargesText = additionalCharges.map(c => `  - ${c.description}: ¥${c.amount.toLocaleString()}`).join('\n');
+
+    const text = `
+Total Monthly Deduction Calculation
+===================================
+Base Rent: ¥${Math.round(result.base_rent).toLocaleString()} ${result.is_prorated ? `(Prorated: ${result.days_occupied}/${result.days_in_month} days)` : '(Full month)'}
+Management Fee: ¥${result.management_fee.toLocaleString()}
+Additional Charges: ¥${result.additional_charges_sum.toLocaleString()}
+${chargesText}
+Parking Fee: ¥${result.parking_fee.toLocaleString()}
+Housing Subsidy: -¥${result.housing_subsidy.toLocaleString()}
+
+TOTAL DEDUCTION: ¥${Math.round(result.total_deduction).toLocaleString()}
+    `.trim();
+
+    navigator.clipboard.writeText(text);
+    toast.success('Copied to clipboard!');
+  };
+
+  const handleLoadExample = (example: string) => {
+    if (example === 'standard') {
+      setForm({
+        monthly_rent: '60000',
+        management_fee: '5000',
+        start_date: '',
+        is_prorated: false,
+        parking_fee: '5000',
+        housing_subsidy: '0',
+      });
+      setAdditionalCharges([]);
+    } else if (example === 'prorated') {
+      const today = new Date();
+      const midMonth = new Date(today.getFullYear(), today.getMonth(), 15);
+      setForm({
+        monthly_rent: '50000',
+        management_fee: '3000',
+        start_date: midMonth.toISOString().split('T')[0],
+        is_prorated: true,
+        parking_fee: '0',
+        housing_subsidy: '10000',
+      });
+      setAdditionalCharges([]);
+    } else if (example === 'with-charges') {
+      setForm({
+        monthly_rent: '70000',
+        management_fee: '4000',
+        start_date: '',
+        is_prorated: false,
+        parking_fee: '8000',
+        housing_subsidy: '5000',
+      });
+      setAdditionalCharges([
+        { id: '1', type: 'cleaning', description: 'Deep cleaning', amount: 20000 },
+        { id: '2', type: 'repair', description: 'Window repair', amount: 5000 },
+      ]);
+    }
+    toast.success('Example loaded!');
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-6 max-w-6xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-4">
         <button
@@ -142,299 +271,357 @@ export default function TotalCalculationPage() {
           <ArrowLeftIcon className="h-5 w-5" />
         </button>
         <div>
-          <h1 className="text-3xl font-bold">Cálculo de Total</h1>
+          <h1 className="text-3xl font-bold">Total Monthly Deduction Calculator</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Calcula el monto total incluyendo cargos y deducciones
+            Calculate total monthly deduction including rent, fees, and charges
           </p>
         </div>
       </div>
 
-      {/* Form */}
-      <div className="bg-card border rounded-lg p-6">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {errors.general && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-              {errors.general}
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Apartment Selection */}
+      {/* Input Form */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Input Details</CardTitle>
+          <CardDescription>Enter rent, fees, and additional charges</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleCalculate} className="space-y-6">
+            {/* Base Rent Section */}
             <div>
-              <label className="block text-sm font-medium mb-2">
-                <BuildingOfficeIcon className="inline h-4 w-4 mr-1" />
-                Apartamento *
-              </label>
-              <select
-                value={form.apartment_id}
-                onChange={(e) => handleChange('apartment_id', e.target.value ? Number(e.target.value) : '')}
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${
-                  errors.apartment_id ? 'border-red-500' : ''
-                }`}
-              >
-                <option value="">Seleccionar apartamento</option>
-                {apartments.map((apartment) => (
-                  <option key={apartment.id} value={apartment.id}>
-                    {apartment.apartment_code} - {apartment.address}
-                  </option>
-                ))}
-              </select>
-              {errors.apartment_id && (
-                <p className="text-sm text-red-500 mt-1">{errors.apartment_id}</p>
-              )}
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <CurrencyYenIcon className="h-5 w-5 text-primary" />
+                Base Rent
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Monthly Rent (¥) *
+                  </label>
+                  <Input
+                    type="number"
+                    value={form.monthly_rent}
+                    onChange={(e) => handleChange('monthly_rent', e.target.value)}
+                    placeholder="Ex: 50000"
+                    min="0"
+                    step="1000"
+                    className={errors.monthly_rent ? 'border-red-500' : ''}
+                  />
+                  {errors.monthly_rent && (
+                    <p className="text-sm text-red-500 mt-1">{errors.monthly_rent}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Management Fee (¥)
+                  </label>
+                  <Input
+                    type="number"
+                    value={form.management_fee}
+                    onChange={(e) => handleChange('management_fee', e.target.value)}
+                    placeholder="Ex: 3000"
+                    min="0"
+                    step="1000"
+                  />
+                </div>
+              </div>
             </div>
 
-            {/* Month & Year */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  <CalendarIcon className="inline h-4 w-4 mr-1" />
-                  Mes *
-                </label>
-                <select
-                  value={form.month}
-                  onChange={(e) => handleChange('month', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${
-                    errors.month ? 'border-red-500' : ''
-                  }`}
-                >
-                  {Array.from({ length: 12 }, (_, i) => (
-                    <option key={i + 1} value={String(i + 1).padStart(2, '0')}>
-                      {i + 1}
-                    </option>
-                  ))}
-                </select>
-                {errors.month && (
-                  <p className="text-sm text-red-500 mt-1">{errors.month}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Año *</label>
+            {/* Prorated Section */}
+            <div className="p-4 bg-muted rounded-lg">
+              <label className="flex items-center gap-2 cursor-pointer">
                 <input
-                  type="number"
-                  value={form.year}
-                  onChange={(e) => handleChange('year', Number(e.target.value))}
-                  min="2020"
-                  max="2030"
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${
-                    errors.year ? 'border-red-500' : ''
-                  }`}
+                  type="checkbox"
+                  checked={form.is_prorated}
+                  onChange={(e) => handleChange('is_prorated', e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300"
                 />
-                {errors.year && (
-                  <p className="text-sm text-red-500 mt-1">{errors.year}</p>
+                <span className="text-sm font-medium">Calculate prorated rent (partial month)</span>
+              </label>
+              {form.is_prorated && (
+                <div className="mt-3">
+                  <label className="block text-sm font-medium mb-2">
+                    <CalendarIcon className="inline h-4 w-4 mr-1" />
+                    Start Date *
+                  </label>
+                  <Input
+                    type="date"
+                    value={form.start_date}
+                    onChange={(e) => handleChange('start_date', e.target.value)}
+                    className={errors.start_date ? 'border-red-500' : ''}
+                  />
+                  {errors.start_date && (
+                    <p className="text-sm text-red-500 mt-1">{errors.start_date}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Rent will be prorated from this date to the end of the month
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Additional Charges Section */}
+            <div>
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <DocumentTextIcon className="h-5 w-5 text-primary" />
+                Additional Charges
+              </h3>
+              <div className="space-y-3">
+                {/* Add Charge Form */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Type</label>
+                    <select
+                      value={newCharge.type}
+                      onChange={(e) => setNewCharge(prev => ({ ...prev, type: e.target.value }))}
+                      className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl h-11 bg-white text-sm font-medium"
+                    >
+                      {CHARGE_TYPES.map(type => (
+                        <option key={type.value} value={type.value}>{type.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium mb-2">Description</label>
+                    <Input
+                      value={newCharge.description}
+                      onChange={(e) => setNewCharge(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="Ex: Deep cleaning service"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Amount (¥)</label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        value={newCharge.amount}
+                        onChange={(e) => setNewCharge(prev => ({ ...prev, amount: e.target.value }))}
+                        placeholder="Ex: 20000"
+                        min="0"
+                        step="1000"
+                      />
+                      <Button
+                        type="button"
+                        onClick={handleAddCharge}
+                        variant="default"
+                        size="icon"
+                      >
+                        <PlusIcon className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Charges List */}
+                {additionalCharges.length > 0 && (
+                  <div className="space-y-2">
+                    {additionalCharges.map(charge => (
+                      <div key={charge.id} className="flex items-center justify-between p-3 bg-white border rounded-lg">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-medium text-muted-foreground uppercase">
+                              {CHARGE_TYPES.find(t => t.value === charge.type)?.label}
+                            </span>
+                          </div>
+                          <p className="text-sm font-medium mt-1">{charge.description}</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-lg font-bold">¥{charge.amount.toLocaleString()}</span>
+                          <button
+                            onClick={() => handleRemoveCharge(charge.id)}
+                            className="p-1 hover:bg-red-50 rounded text-red-600"
+                          >
+                            <XMarkIcon className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
 
-            {/* Base Rent */}
+            {/* Other Fees and Subsidies */}
             <div>
-              <label className="block text-sm font-medium mb-2">
-                <CurrencyYenIcon className="inline h-4 w-4 mr-1" />
-                Renta Base (¥) *
-              </label>
-              <input
-                type="number"
-                value={form.base_rent}
-                onChange={(e) => handleChange('base_rent', e.target.value ? Number(e.target.value) : '')}
-                placeholder="Ej: 50000"
-                min="0"
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${
-                  errors.base_rent ? 'border-red-500' : ''
-                }`}
-              />
-              {errors.base_rent && (
-                <p className="text-sm text-red-500 mt-1">{errors.base_rent}</p>
-              )}
-              {selectedApartment && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Renta mensual registrada: ¥{selectedApartment.monthly_rent.toLocaleString()}
-                </p>
-              )}
+              <h3 className="font-semibold mb-3">Other Fees & Subsidies</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Parking Fee (¥)
+                  </label>
+                  <Input
+                    type="number"
+                    value={form.parking_fee}
+                    onChange={(e) => handleChange('parking_fee', e.target.value)}
+                    placeholder="Ex: 5000"
+                    min="0"
+                    step="1000"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Housing Subsidy (¥) <span className="text-green-600">(reduces total)</span>
+                  </label>
+                  <Input
+                    type="number"
+                    value={form.housing_subsidy}
+                    onChange={(e) => handleChange('housing_subsidy', e.target.value)}
+                    placeholder="Ex: 10000"
+                    min="0"
+                    step="1000"
+                  />
+                </div>
+              </div>
             </div>
 
-            {/* Additional Charges */}
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Cargos Adicionales (¥)
-              </label>
-              <input
-                type="number"
-                value={form.additional_charges}
-                onChange={(e) => handleChange('additional_charges', Number(e.target.value))}
-                placeholder="Ej: 5000"
-                min="0"
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Ej: Servicios, mantenimiento, etc.
-              </p>
+            {/* Actions */}
+            <div className="flex items-center gap-3 pt-4 border-t">
+              <Button
+                type="submit"
+                disabled={isCalculating}
+                size="lg"
+                className="flex-1"
+              >
+                <CalculatorIcon className="h-5 w-5 mr-2" />
+                {isCalculating ? 'Calculating...' : 'Calculate Total'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleClear}
+                size="lg"
+              >
+                Clear
+              </Button>
             </div>
-
-            {/* Deductions */}
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Deducciones (¥)
-              </label>
-              <input
-                type="number"
-                value={form.deductions}
-                onChange={(e) => handleChange('deductions', Number(e.target.value))}
-                placeholder="Ej: 3000"
-                min="0"
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Ej: Descuentos, ajustes, etc.
-              </p>
-            </div>
-          </div>
-
-          {/* Notes */}
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              <DocumentTextIcon className="inline h-4 w-4 mr-1" />
-              Notas
-            </label>
-            <textarea
-              value={form.notes}
-              onChange={(e) => handleChange('notes', e.target.value)}
-              placeholder="Información adicional sobre el cálculo"
-              rows={3}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-3 pt-4 border-t">
-            <button
-              type="submit"
-              disabled={calculateMutation.isPending}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
-            >
-              {calculateMutation.isPending ? 'Calculando...' : 'Calcular Total'}
-            </button>
-          </div>
-        </form>
-      </div>
+          </form>
+        </CardContent>
+      </Card>
 
       {/* Results */}
       {result && (
-        <div className="space-y-4">
-          {/* Result Card */}
-          <div className="bg-card border rounded-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">
-              Resultado del Cálculo - {result.month}/{result.year}
-            </h2>
+        <Card className="border-green-200 bg-green-50/50">
+          <CardHeader>
+            <CardTitle className="text-green-800">Calculation Result</CardTitle>
+            <CardDescription>Detailed breakdown of total monthly deduction</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Main Result */}
+            <div className="bg-white rounded-xl p-6 border-2 border-green-300 shadow-md">
+              <p className="text-sm text-green-700 mb-2">Total Monthly Deduction</p>
+              <p className="text-5xl font-bold text-green-800">
+                ¥{Math.round(result.total_deduction).toLocaleString()}
+              </p>
+            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Apartamento</p>
-                  <p className="font-medium">{result.apartment.apartment_code}</p>
-                  <p className="text-sm text-muted-foreground">{result.apartment.address}</p>
-                </div>
+            {/* Itemized Breakdown */}
+            <div className="bg-white p-6 rounded-lg border space-y-3">
+              <h4 className="font-semibold mb-3">Itemized Breakdown</h4>
 
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Renta Base:</span>
-                    <span className="font-medium">¥{result.base_rent.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Cargos Adicionales:</span>
-                    <span className="font-medium">¥{result.additional_charges.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Deducciones:</span>
-                    <span className="font-medium text-red-600">-¥{result.deductions.toLocaleString()}</span>
-                  </div>
-                  <div className="pt-2 border-t flex justify-between text-lg font-bold">
-                    <span>Total a Pagar:</span>
-                    <span className="text-green-600">¥{result.total_amount.toLocaleString()}</span>
-                  </div>
-                </div>
+              <div className="flex justify-between py-2">
+                <span className="text-muted-foreground">
+                  Base Rent {result.is_prorated && `(${result.days_occupied}/${result.days_in_month} days)`}
+                </span>
+                <span className="font-medium">¥{Math.round(result.base_rent).toLocaleString()}</span>
               </div>
 
-              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                <p className="text-sm text-green-700 mb-2">Monto Final</p>
-                <p className="text-4xl font-bold text-green-800">
-                  ¥{result.total_amount.toLocaleString()}
-                </p>
-                <p className="text-sm text-green-600 mt-2">
-                  Base: ¥{result.base_rent.toLocaleString()} + Adicional: ¥{result.additional_charges.toLocaleString()} - Deducción: ¥{result.deductions.toLocaleString()}
-                </p>
+              <div className="flex justify-between py-2">
+                <span className="text-muted-foreground">Management Fee</span>
+                <span className="font-medium">¥{result.management_fee.toLocaleString()}</span>
+              </div>
+
+              {additionalCharges.length > 0 && (
+                <div className="py-2">
+                  <div className="flex justify-between mb-2">
+                    <span className="text-muted-foreground font-medium">Additional Charges</span>
+                    <span className="font-medium">¥{result.additional_charges_sum.toLocaleString()}</span>
+                  </div>
+                  <div className="ml-4 space-y-1">
+                    {additionalCharges.map(charge => (
+                      <div key={charge.id} className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">• {charge.description}</span>
+                        <span>¥{charge.amount.toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-between py-2">
+                <span className="text-muted-foreground">Parking Fee</span>
+                <span className="font-medium">¥{result.parking_fee.toLocaleString()}</span>
+              </div>
+
+              {result.housing_subsidy > 0 && (
+                <div className="flex justify-between py-2 text-green-600">
+                  <span>Housing Subsidy</span>
+                  <span className="font-medium">-¥{result.housing_subsidy.toLocaleString()}</span>
+                </div>
+              )}
+
+              <div className="flex justify-between py-3 border-t-2 text-lg font-bold">
+                <span>TOTAL</span>
+                <span className="text-green-600">¥{Math.round(result.total_deduction).toLocaleString()}</span>
               </div>
             </div>
 
-            {/* Breakdown */}
-            <div className="mt-6 pt-6 border-t">
-              <h3 className="font-semibold mb-3">Desglose Detallado</h3>
-              <div className="space-y-2 text-sm">
-                {result.breakdown.map((item, index) => (
-                  <div key={index} className="flex justify-between">
-                    <span className="text-muted-foreground">{item.description}</span>
-                    <span className={`font-medium ${item.type === 'deduction' ? 'text-red-600' : ''}`}>
-                      {item.type === 'deduction' ? '-' : ''}¥{item.amount.toLocaleString()}
-                    </span>
-                  </div>
-                ))}
-              </div>
+            {/* Actions */}
+            <div className="flex gap-3 pt-4 border-t">
+              <Button
+                onClick={handleCopyToClipboard}
+                variant="outline"
+                className="flex-1"
+              >
+                <ClipboardDocumentIcon className="h-4 w-4 mr-2" />
+                Copy to Clipboard
+              </Button>
+              <Button
+                onClick={() => window.print()}
+                variant="outline"
+                className="flex-1"
+              >
+                Print
+              </Button>
             </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-3">
-            <button
-              onClick={() => {
-                try {
-                  const calculationRecord = {
-                    id: Date.now(),
-                    timestamp: new Date().toISOString(),
-                    type: 'total',
-                    form: {
-                      apartment_id: form.apartment_id,
-                      month: form.month,
-                      year: form.year,
-                      base_rent: form.base_rent,
-                      additional_charges: form.additional_charges,
-                      deductions: form.deductions,
-                      notes: form.notes,
-                    },
-                    result: {
-                      apartment: result.apartment,
-                      month: result.month,
-                      year: result.year,
-                      base_rent: result.base_rent,
-                      additional_charges: result.additional_charges,
-                      deductions: result.deductions,
-                      total_amount: result.total_amount,
-                      breakdown: result.breakdown,
-                    },
-                  };
-
-                  const saved = JSON.parse(localStorage.getItem('apartment_calculations') || '[]');
-                  saved.push(calculationRecord);
-                  localStorage.setItem('apartment_calculations', JSON.stringify(saved));
-
-                  toast.success('計算結果を保存しました');
-                } catch (error) {
-                  console.error('Error saving calculation:', error);
-                  toast.error('保存に失敗しました');
-                }
-              }}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            >
-              Guardar Cálculo
-            </button>
-            <button
-              onClick={() => router.push('/apartment-calculations')}
-              className="px-4 py-2 border rounded-lg hover:bg-accent transition-colors"
-            >
-              Ver Todos los Cálculos
-            </button>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
+
+      {/* Example Scenarios */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Example Scenarios</CardTitle>
+          <CardDescription>Load preset examples to test the calculator</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <button
+            onClick={() => handleLoadExample('standard')}
+            className="p-4 bg-muted rounded-lg hover:bg-accent transition-colors text-left"
+          >
+            <p className="font-medium text-sm">Standard Full Month</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Full month rent + management + parking
+            </p>
+          </button>
+          <button
+            onClick={() => handleLoadExample('prorated')}
+            className="p-4 bg-muted rounded-lg hover:bg-accent transition-colors text-left"
+          >
+            <p className="font-medium text-sm">Prorated with Subsidy</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Mid-month start + housing subsidy
+            </p>
+          </button>
+          <button
+            onClick={() => handleLoadExample('with-charges')}
+            className="p-4 bg-muted rounded-lg hover:bg-accent transition-colors text-left"
+          >
+            <p className="font-medium text-sm">With Additional Charges</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Full month + cleaning + repairs
+            </p>
+          </button>
+        </CardContent>
+      </Card>
     </div>
   );
 }

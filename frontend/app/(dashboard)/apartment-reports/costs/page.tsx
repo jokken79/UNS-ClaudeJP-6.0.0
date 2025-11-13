@@ -49,8 +49,10 @@ interface CostReport {
 }
 
 export default function CostsReportPage() {
-  const [selectedYear] = useState(new Date().getFullYear());
-  const [selectedMonth] = useState(new Date().getMonth() + 1);
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth() + 1;
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
 
   // Fetch cost report data
   const { data: report, isLoading } = useQuery({
@@ -93,16 +95,31 @@ export default function CostsReportPage() {
       <div className="bg-card border rounded-lg p-4">
         <div className="flex gap-4">
           <div className="flex-1">
-            <label className="block text-sm font-medium mb-2">Período</label>
+            <label className="block text-sm font-medium mb-2">Año</label>
             <select
-              value={selectedPeriod}
-              onChange={(e) => setSelectedPeriod(e.target.value)}
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
             >
-              <option value="1month">Último mes</option>
-              <option value="3months">Últimos 3 meses</option>
-              <option value="6months">Últimos 6 meses</option>
-              <option value="1year">Último año</option>
+              {[currentYear - 2, currentYear - 1, currentYear, currentYear + 1].map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex-1">
+            <label className="block text-sm font-medium mb-2">Mes</label>
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(Number(e.target.value))}
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
+                <option key={month} value={month}>
+                  {new Date(2000, month - 1).toLocaleDateString('es-ES', { month: 'long' })}
+                </option>
+              ))}
             </select>
           </div>
         </div>
