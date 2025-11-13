@@ -317,16 +317,20 @@ if !errorlevel! EQU 0 (
 echo   [OK] Inicializacion de base de datos completada
 echo.
 
-echo   [*] Sincronizando candidatos con empleados/staff/contract_workers...
-echo   i Este paso vincula candidatos con sus registros en las 3 tablas
-docker exec uns-claudejp-backend python scripts/sync_candidate_employee_status.py 2>&1
-if !errorlevel! NEQ 0 (
-    echo   ! Warning: Error en sincronizacion (puede ser normal si no hay datos)
-) else (
-    echo   [OK] Sincronizacion completada
-    echo   i Candidatos actualizados a status 'hired' si tienen empleado asociado
-)
-echo.
+REM ============================================================================
+REM  IMPORTACION DE DATOS REMOVIDA DE REINSTALAR.bat
+REM  Ahora se usa el script separado: IMPORTAR_DATOS.bat
+REM ============================================================================
+REM echo   [*] Sincronizando candidatos con empleados/staff/contract_workers...
+REM echo   i Este paso vincula candidatos con sus registros en las 3 tablas
+REM docker exec uns-claudejp-backend python scripts/sync_candidate_employee_status.py 2>&1
+REM if !errorlevel! NEQ 0 (
+REM     echo   ! Warning: Error en sincronizacion (puede ser normal si no hay datos)
+REM ) else (
+REM     echo   [OK] Sincronizacion completada
+REM     echo   i Candidatos actualizados a status 'hired' si tienen empleado asociado
+REM )
+REM echo.
 
 :: Paso 6: Iniciar servicios finales
 echo ============================================================================
@@ -380,6 +384,23 @@ echo   [*] Ver logs:    scripts\LOGS.bat
 echo   [*] Detener:     scripts\STOP.bat
 echo.
 echo   i Primera carga del frontend puede tardar 1-2 minutos
+echo.
+echo ============================================================================
+echo                    ! IMPORTANTE - PROXIMO PASO !
+echo ============================================================================
+echo.
+echo   Para importar los datos de negocio (empleados, candidatos, fotos),
+echo   ejecuta el siguiente script:
+echo.
+echo   [*] IMPORTAR_DATOS.bat
+echo.
+echo   Este script importara:
+echo     - 1,048 empleados desde Excel (employee_master.xlsm)
+echo     - 1,148 candidatos desde Access (JSON)
+echo     - 1,116 fotos de candidatos
+echo     - Sincronizacion de fotos candidatos ^<-^> empleados
+echo.
+echo ============================================================================
 echo.
 echo ============================================================================
 echo       [PASO FINAL] LIMPIEZA AUTOMATICA DE FOTOS OLE

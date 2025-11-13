@@ -1,30 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(xargs:*)",
-      "Bash(\"D:\\UNS-ClaudeJP-5.4.1\\DB_COLUMNS.txt\")",
-      "Bash(\"D:\\UNS-ClaudeJP-5.4.1\\DB_FOREIGN_KEYS.txt\")",
-      "Bash(\"D:\\UNS-ClaudeJP-5.4.1\\DB_INDEXES.txt\")",
-      "Bash(\"D:\\UNS-ClaudeJP-5.4.1\\DB_USERS.txt\")",
-      "Bash(while read:*)",
-      "Bash(do echo \"=== TABLE: $table ===\" docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c \"\\d $table\")",
-      "Bash(\"D:\\UNS-ClaudeJP-5.4.1\\DB_SCHEMA_DUMP.sql\")",
-      "Bash(REINSTALAR.bat)",
-      "Bash(cmd.exe /c REINSTALAR.bat)",
-      "Bash(cmd.exe /c \"echo S | scripts\\REINSTALAR.bat\")",
-      "Bash(echo:*)",
-      "Bash(D:BACKEND_ANALYSIS_SUMMARY.txt)",
-      "Bash(cat:*)",
-      "Bash(cmd.exe /c REINSTALAR_AUTO.bat)",
-      "Bash(set DOCKER_BUILDKIT=1:*)",
-      "Bash(docker exec:*)",
-      "Bash(docker inspect:*)",
-      "Bash(docker logs:*)",
-      "Bash(docker ps:*)",
-      "Bash(python -m json.tool:*)",
-      "Bash(Get-ChildItem \"D:\\UNS-ClaudeJP-5.4.1\\docker\\observability\\grafana\" -Recurse)",
-      "Bash(Select-Object -First 30)",
-      "Bash(Format-Table Name, FullName -AutoSize)"
+      "Bash(touch:*)"
     ],
     "deny": [],
     "ask": []

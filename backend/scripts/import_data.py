@@ -366,7 +366,9 @@ def import_haken_employees(db: Session):
                         # Auto-crear apartamento si no existe
                         new_apartment = Apartment(
                             apartment_code=apartment_name,
+                            name=apartment_name,  # FIX: usar apartment_code como name
                             address='(Auto-creado desde importación)',
+                            base_rent=45000,  # FIX: campo obligatorio
                             monthly_rent=45000,  # Valor por defecto
                             capacity=4,
                             is_available=True,
