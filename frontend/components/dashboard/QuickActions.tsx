@@ -215,7 +215,7 @@ export function QuickActions({
             >
               {/* Badge */}
               {action.badge && (
-                <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
+                <div className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
                   {action.badge}
                 </div>
               )}

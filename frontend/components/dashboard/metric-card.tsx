@@ -210,8 +210,8 @@ export function MetricCard({
                 className={cn(
                   'flex items-center gap-1 text-xs font-medium rounded-full px-2 py-0.5',
                   trend.isPositive
-                    ? 'text-emerald-700 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-950'
-                    : 'text-red-700 bg-red-50 dark:text-red-400 dark:bg-red-950'
+                    ? 'text-success bg-success/10 dark:text-success dark:bg-success/20'
+                    : 'text-destructive bg-destructive/10 dark:text-destructive dark:bg-destructive/20'
                 )}
               >
                 {trend.isPositive ? (

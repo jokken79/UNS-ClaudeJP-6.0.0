@@ -180,7 +180,7 @@ export function Header() {
                         )} />
                         <span className="flex-1">{item.label}</span>
                         {item.href === '/admin/control-panel' && (
-                          <Shield className="h-4 w-4 text-orange-500" />
+                          <Shield className="h-4 w-4 text-warning" />
                         )}
                       </Link>
                     </DropdownMenuItem>
