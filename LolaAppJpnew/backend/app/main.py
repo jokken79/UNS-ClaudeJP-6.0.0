@@ -13,7 +13,10 @@ from app.core.config import settings
 from app.core.database import engine, Base
 
 # Import routers
-from app.api import auth
+from app.api import (
+    auth, candidates, employees, apartments, yukyu,
+    companies, plants, lines, timercards, payroll, requests
+)
 
 
 @asynccontextmanager
@@ -130,8 +133,21 @@ async def health_check():
 # Include authentication router
 app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
 
-# Additional routers (candidates, employees, factories, apartments, yukyu, timercards, payroll, requests)
-# will be implemented progressively following the 16-week roadmap in JPplanapp.md
+# Include main module routers
+app.include_router(candidates.router, prefix=f"{settings.API_V1_PREFIX}/candidates", tags=["candidates"])
+app.include_router(employees.router, prefix=f"{settings.API_V1_PREFIX}/employees", tags=["employees"])
+app.include_router(apartments.router, prefix=f"{settings.API_V1_PREFIX}/apartments", tags=["apartments"])
+app.include_router(yukyu.router, prefix=f"{settings.API_V1_PREFIX}/yukyu", tags=["yukyu"])
+
+# Include factory hierarchy routers
+app.include_router(companies.router, prefix=f"{settings.API_V1_PREFIX}/companies", tags=["companies"])
+app.include_router(plants.router, prefix=f"{settings.API_V1_PREFIX}/plants", tags=["plants"])
+app.include_router(lines.router, prefix=f"{settings.API_V1_PREFIX}/lines", tags=["lines"])
+
+# Include operational routers
+app.include_router(timercards.router, prefix=f"{settings.API_V1_PREFIX}/timercards", tags=["timercards"])
+app.include_router(payroll.router, prefix=f"{settings.API_V1_PREFIX}/payroll", tags=["payroll"])
+app.include_router(requests.router, prefix=f"{settings.API_V1_PREFIX}/requests", tags=["requests"])
 
 
 if __name__ == "__main__":
