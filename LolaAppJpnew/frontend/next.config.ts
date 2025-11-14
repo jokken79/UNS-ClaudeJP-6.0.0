@@ -40,15 +40,7 @@ const nextConfig: NextConfig = {
 
   // Experimental features
   experimental: {
-    // Next.js 16 features
-    turbo: {
-      rules: {
-        "*.svg": {
-          loaders: ["@svgr/webpack"],
-          as: "*.js",
-        },
-      },
-    },
+    // Next.js 16 features - Turbopack configuration handled by Next.js defaults
   },
 
   // Headers for security
@@ -92,11 +84,6 @@ const nextConfig: NextConfig = {
   // Type checking in production builds
   typescript: {
     ignoreBuildErrors: false,
-  },
-
-  // ESLint during builds
-  eslint: {
-    ignoreDuringBuilds: false,
   },
 };
 
