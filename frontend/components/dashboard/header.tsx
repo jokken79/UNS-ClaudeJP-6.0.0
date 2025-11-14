@@ -269,7 +269,7 @@ export function Header() {
                         <motion.div
                           className={cn(
                             'h-2 w-2 rounded-full',
-                            notification.unread ? 'bg-blue-600' : 'bg-transparent'
+                            notification.unread ? 'bg-primary' : 'bg-transparent'
                           )}
                           animate={
                             !reducedMotion && notification.unread
