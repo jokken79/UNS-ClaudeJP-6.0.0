@@ -47,9 +47,16 @@ async def create_candidate(
     db_candidate = Candidate(**candidate.dict())
     db_candidate.status = CandidateStatus.PENDING
 
-    db.add(db_candidate)
-    db.commit()
-    db.refresh(db_candidate)
+    try:
+        db.add(db_candidate)
+        db.commit()
+        db.refresh(db_candidate)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database error: {str(e)}"
+        )
 
     return db_candidate
 
