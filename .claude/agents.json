@@ -1625,6 +1625,211 @@
         "rotation"
       ],
       "dependencies": []
+    },
+    {
+      "name": "orchestrator-master",
+      "file": ".claude/specialized-agents/orchestrator-master.md",
+      "description": "🎭 Master Orchestrator for UNS-ClaudeJP project - Maintains big picture, creates todo lists, delegates to specialized agents, ensures coherence and quality across all domains.",
+      "category": "specialized-agents",
+      "proactive": true,
+      "triggers": [
+        "orchestrator master",
+        "orchestrator-master",
+        "master orchestrator",
+        "plan project",
+        "coordinar agentes"
+      ],
+      "dependencies": []
+    },
+    {
+      "name": "backend-architect",
+      "file": ".claude/specialized-agents/backend-architect.md",
+      "description": "🏗️ FastAPI/Python Backend Architect - Expert in APIs, SQLAlchemy ORM, services, microservices, and backend architecture for UNS-ClaudeJP (27 routers, 30+ services).",
+      "category": "specialized-agents",
+      "proactive": false,
+      "triggers": [
+        "backend architect",
+        "backend-architect",
+        "fastapi expert",
+        "api design",
+        "backend architecture"
+      ],
+      "dependencies": []
+    },
+    {
+      "name": "frontend-architect",
+      "file": ".claude/specialized-agents/frontend-architect.md",
+      "description": "🎨 Next.js/React Frontend Architect - Expert in Next.js 16, React 19, App Router, components, state management, and frontend architecture (45+ pages, 200+ components).",
+      "category": "specialized-agents",
+      "proactive": false,
+      "triggers": [
+        "frontend architect",
+        "frontend-architect",
+        "nextjs expert",
+        "react expert",
+        "frontend design"
+      ],
+      "dependencies": []
+    },
+    {
+      "name": "database-specialist",
+      "file": ".claude/specialized-agents/database-specialist.md",
+      "description": "💾 PostgreSQL/SQLAlchemy Database Specialist - Expert in schema design, queries, migrations, indexes, performance tuning for 22 tables and 19 migrations.",
+      "category": "specialized-agents",
+      "proactive": false,
+      "triggers": [
+        "database specialist",
+        "database-specialist",
+        "postgres expert",
+        "sqlalchemy expert",
+        "database design"
+      ],
+      "dependencies": []
+    },
+    {
+      "name": "ocr-specialist",
+      "file": ".claude/specialized-agents/ocr-specialist.md",
+      "description": "🔍 OCR Specialist (Hybrid Multi-Provider) - Expert in Azure Computer Vision, EasyOCR, Tesseract cascades for Japanese documents (resume, residence card, driver's license).",
+      "category": "specialized-agents",
+      "proactive": false,
+      "triggers": [
+        "ocr specialist",
+        "ocr-specialist",
+        "ocr japanese",
+        "hybrid ocr",
+        "document processing",
+        "azure ocr"
+      ],
+      "dependencies": []
+    },
+    {
+      "name": "payroll-calculator",
+      "file": ".claude/specialized-agents/payroll-calculator.md",
+      "description": "💰 Payroll Calculator - Expert in Japanese salary calculations, tax withholding, social insurance, overtime, bonuses, and payslip generation.",
+      "category": "specialized-agents",
+      "proactive": false,
+      "triggers": [
+        "payroll calculator",
+        "payroll-calculator",
+        "payroll expert",
+        "salary calculation",
+        "給与計算",
+        "japanese payroll"
+      ],
+      "dependencies": []
+    },
+    {
+      "name": "ui-designer",
+      "file": ".claude/specialized-agents/ui-designer.md",
+      "description": "🎨 UI/Design Specialist - Expert in Shadcn/ui, Tailwind CSS, theme system (12 predefined + custom), Framer Motion, accessibility, and responsive design.",
+      "category": "specialized-agents",
+      "proactive": false,
+      "triggers": [
+        "ui designer",
+        "ui-designer",
+        "design specialist",
+        "tailwind expert",
+        "theme system",
+        "accesibilidad"
+      ],
+      "dependencies": []
+    },
+    {
+      "name": "api-developer",
+      "file": ".claude/specialized-agents/api-developer.md",
+      "description": "🔌 API Developer - Expert in FastAPI endpoint design, validation, documentation, rate limiting, testing, and REST API best practices.",
+      "category": "specialized-agents",
+      "proactive": false,
+      "triggers": [
+        "api developer",
+        "api-developer",
+        "rest api expert",
+        "endpoint design",
+        "api validation",
+        "api testing"
+      ],
+      "dependencies": []
+    },
+    {
+      "name": "bug-hunter",
+      "file": ".claude/specialized-agents/bug-hunter.md",
+      "description": "🐛 Bug Hunter - Expert in debugging, troubleshooting, log analysis, N+1 problems, memory leaks, and systematic debugging methodologies.",
+      "category": "specialized-agents",
+      "proactive": false,
+      "triggers": [
+        "bug hunter",
+        "bug-hunter",
+        "debugging expert",
+        "troubleshooting",
+        "bug fixing",
+        "error analysis"
+      ],
+      "dependencies": []
+    },
+    {
+      "name": "devops-engineer",
+      "file": ".claude/specialized-agents/devops-engineer.md",
+      "description": "🚀 DevOps Engineer - Expert in Docker Compose (12 services), Kubernetes, CI/CD, backup, monitoring, health checks, and horizontal scaling.",
+      "category": "specialized-agents",
+      "proactive": false,
+      "triggers": [
+        "devops engineer",
+        "devops-engineer",
+        "docker expert",
+        "orchestration",
+        "infrastructure",
+        "deployment"
+      ],
+      "dependencies": []
+    },
+    {
+      "name": "testing-qa",
+      "file": ".claude/specialized-agents/testing-qa.md",
+      "description": "✅ Testing & QA Specialist - Expert in Pytest, Vitest, Playwright E2E, integration testing, performance testing, and test coverage.",
+      "category": "specialized-agents",
+      "proactive": false,
+      "triggers": [
+        "testing qa",
+        "testing-qa",
+        "test automation expert",
+        "e2e testing",
+        "unit testing",
+        "qa specialist"
+      ],
+      "dependencies": []
+    },
+    {
+      "name": "security-auditor",
+      "file": ".claude/specialized-agents/security-auditor.md",
+      "description": "🔐 Security Auditor - Expert in JWT authentication, RBAC, OWASP prevention, SQL injection protection, input validation, and security compliance.",
+      "category": "specialized-agents",
+      "proactive": false,
+      "triggers": [
+        "security auditor",
+        "security-auditor",
+        "security expert",
+        "authentication expert",
+        "owasp compliance",
+        "penetration testing"
+      ],
+      "dependencies": []
+    },
+    {
+      "name": "performance-optimizer",
+      "file": ".claude/specialized-agents/performance-optimizer.md",
+      "description": "⚡ Performance Optimizer - Expert in query optimization, Redis caching, code splitting, bundle analysis, load testing, and performance profiling.",
+      "category": "specialized-agents",
+      "proactive": false,
+      "triggers": [
+        "performance optimizer",
+        "performance-optimizer",
+        "performance expert",
+        "optimization",
+        "caching strategy",
+        "load testing",
+        "bundle optimization"
+      ],
+      "dependencies": []
     }
   ],
   "categories": {
@@ -1824,6 +2029,24 @@
       "agents": [
         "template-agent"
       ]
+    },
+    "specialized-agents": {
+      "description": "🌟 15 AGENTES ESPECIALIZADOS ULTRA-PRECISOS PARA UNS-ClaudeJP-5.4.1 - Diseñados específicamente para el proyecto HR/Staffing Japonés",
+      "agents": [
+        "orchestrator-master",
+        "backend-architect",
+        "frontend-architect",
+        "database-specialist",
+        "ocr-specialist",
+        "payroll-calculator",
+        "ui-designer",
+        "api-developer",
+        "bug-hunter",
+        "devops-engineer",
+        "testing-qa",
+        "security-auditor",
+        "performance-optimizer"
+      ]
     }
   },
   "workflows": {
@@ -1914,9 +2137,15 @@
   },
   "metadata": {
     "created": "2024-01-15",
-    "last_updated": "2025-11-12",
-    "total_agents": 109,
+    "last_updated": "2025-11-15",
+    "total_agents": 124,
+    "specialized_agents_count": 15,
     "version_history": [
+      {
+        "version": "3.0.0",
+        "date": "2025-11-15",
+        "changes": "Added 15 specialized ultra-precise agents for UNS-ClaudeJP-5.4.1: Orchestrator-Master, Backend-Architect, Frontend-Architect, Database-Specialist, OCR-Specialist, Payroll-Calculator, UI-Designer, API-Developer, Bug-Hunter, DevOps-Engineer, Testing-QA, Security-Auditor, Performance-Optimizer"
+      },
       {
         "version": "2.1.0",
         "date": "2025-11-12",
