@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Palette, Save, Download, Upload, Eye, AlertCircle, CheckCircle2, X, Trash2 } from "lucide-react";
+import { Palette, Save, Download, Upload, Eye, AlertCircle, CheckCircle2, X, Trash2, ArrowLeft } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -216,13 +216,25 @@ export default function ThemeCustomizerPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <Palette className="h-8 w-8" />
-            Theme Customizer
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Create and customize your own themes with live preview and WCAG validation.
-          </p>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => window.location.href = "/themes"}
+              title="Back to Theme Gallery"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold flex items-center gap-3">
+                <Palette className="h-8 w-8" />
+                Theme Customizer
+              </h1>
+              <p className="text-muted-foreground mt-2">
+                Create and customize your own themes with live preview and WCAG validation.
+              </p>
+            </div>
+          </div>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setShowImportDialog(true)}>
