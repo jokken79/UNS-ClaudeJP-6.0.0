@@ -47,12 +47,19 @@ from app.core.database import SessionLocal
 from app.core.rate_limiter import limiter, RateLimitConfig
 from app.services.ai_gateway import AIGateway, AIGatewayError
 from app.services.ai_usage_service import AIUsageService
+from app.services.ai_budget_service import AIBudgetService, BudgetExceededException
 from app.models.models import User
 from app.schemas.ai_usage import (
     UsageStatsResponse,
     DailyUsageResponse,
     UsageLogsResponse,
     TotalCostResponse,
+)
+from app.schemas.ai_budget import (
+    AIBudgetCreate,
+    AIBudgetUpdate,
+    AIBudgetResponse,
+    BudgetValidationResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -148,6 +155,12 @@ async def get_ai_gateway() -> AIGateway:
 def get_ai_usage_service(db: Session = Depends(SessionLocal)) -> AIUsageService:
     """Get AI usage service with database session"""
     return AIUsageService(db)
+
+
+# Dependency to get AI Budget Service
+def get_ai_budget_service(db: Session = Depends(SessionLocal)) -> AIBudgetService:
+    """Get AI budget service with database session"""
+    return AIBudgetService(db)
 
 
 # Endpoints
@@ -487,6 +500,176 @@ async def health_check(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Health check failed"
+        )
+
+
+# ============================================
+# BUDGET MANAGEMENT ENDPOINTS (FASE 2.3)
+# ============================================
+
+@router.get("/budget", response_model=AIBudgetResponse)
+async def get_budget(
+    service: AIBudgetService = Depends(get_ai_budget_service),
+    current_user: User = Depends(get_current_user),
+) -> AIBudgetResponse:
+    """
+    Get budget status for the current user.
+
+    Returns current spending limits, spent amounts, and remaining budget.
+
+    Returns:
+        AIBudgetResponse with budget information
+
+    Example:
+        GET /api/ai/budget
+    """
+    try:
+        budget_status = service.get_budget_status(current_user.id)
+        return AIBudgetResponse(**budget_status)
+    except Exception as e:
+        logger.error(f"Error fetching budget: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error fetching budget"
+        )
+
+
+@router.post("/budget", response_model=AIBudgetResponse)
+async def create_or_update_budget(
+    request: AIBudgetCreate,
+    service: AIBudgetService = Depends(get_ai_budget_service),
+    current_user: User = Depends(get_current_user),
+) -> AIBudgetResponse:
+    """
+    Create or update budget for the current user.
+
+    Args:
+        request: Budget settings
+        service: Budget service
+        current_user: Current authenticated user
+
+    Returns:
+        AIBudgetResponse with updated budget information
+
+    Example:
+        POST /api/ai/budget
+        {
+            "monthly_budget_usd": "500.00",
+            "daily_budget_usd": "50.00",
+            "alert_threshold": 75,
+            "webhook_url": "https://example.com/alerts"
+        }
+    """
+    try:
+        budget = service.get_or_create_budget(
+            current_user.id,
+            monthly_budget_usd=request.monthly_budget_usd,
+            daily_budget_usd=request.daily_budget_usd,
+        )
+
+        # Update other settings if provided
+        if request.alert_threshold is not None or request.webhook_url is not None:
+            budget = service.update_budget(
+                current_user.id,
+                alert_threshold=request.alert_threshold,
+                webhook_url=request.webhook_url,
+            )
+
+        budget_status = service.get_budget_status(current_user.id)
+        return AIBudgetResponse(**budget_status)
+    except Exception as e:
+        logger.error(f"Error creating/updating budget: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error creating/updating budget"
+        )
+
+
+@router.put("/budget", response_model=AIBudgetResponse)
+async def update_budget(
+    request: AIBudgetUpdate,
+    service: AIBudgetService = Depends(get_ai_budget_service),
+    current_user: User = Depends(get_current_user),
+) -> AIBudgetResponse:
+    """
+    Update budget settings for the current user.
+
+    Args:
+        request: Fields to update
+        service: Budget service
+        current_user: Current authenticated user
+
+    Returns:
+        AIBudgetResponse with updated budget information
+
+    Example:
+        PUT /api/ai/budget
+        {
+            "monthly_budget_usd": "200.00",
+            "is_active": true
+        }
+    """
+    try:
+        budget = service.update_budget(
+            current_user.id,
+            monthly_budget_usd=request.monthly_budget_usd,
+            daily_budget_usd=request.daily_budget_usd,
+            alert_threshold=request.alert_threshold,
+            webhook_url=request.webhook_url,
+            is_active=request.is_active,
+        )
+
+        budget_status = service.get_budget_status(current_user.id)
+        return AIBudgetResponse(**budget_status)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"Error updating budget: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error updating budget"
+        )
+
+
+@router.get("/budget/validate", response_model=BudgetValidationResponse)
+async def validate_budget(
+    cost: float = 0.0,
+    service: AIBudgetService = Depends(get_ai_budget_service),
+    current_user: User = Depends(get_current_user),
+) -> BudgetValidationResponse:
+    """
+    Check if user can afford an API call before making it.
+
+    Args:
+        cost: Estimated cost of the API call in USD
+        service: Budget service
+        current_user: Current authenticated user
+
+    Returns:
+        BudgetValidationResponse indicating if call is allowed
+
+    Example:
+        GET /api/ai/budget/validate?cost=10.50
+    """
+    try:
+        from decimal import Decimal
+        validation = service.validate_spending(current_user.id, Decimal(str(cost)))
+        return BudgetValidationResponse(**validation)
+    except BudgetExceededException as e:
+        return BudgetValidationResponse(
+            allowed=False,
+            reason=str(e),
+            monthly_remaining=0.0,
+            monthly_percentage_used=100.0,
+        )
+    except Exception as e:
+        logger.error(f"Error validating budget: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error validating budget"
         )
 
 
