@@ -124,7 +124,7 @@ export function ImportConfigDialog({ open, onOpenChange, onSuccess }: ImportConf
     }
   }, []);
 
-  // Validate configuration
+  // BUG #7 FIX: Validar configuración más completamente
   const validateConfig = (config: ConfigData): ValidationWarning[] => {
     const warnings: ValidationWarning[] = [];
 
@@ -137,30 +137,92 @@ export function ImportConfigDialog({ open, onOpenChange, onSuccess }: ImportConf
     }
 
     // Validate pages
+    const pageKeys = new Set<string>();
     if (config.pages) {
       config.pages.forEach((page, index) => {
+        // Validación: page_key es requerido
         if (!page.page_key) {
           warnings.push({
             type: 'error',
             message: `Page at index ${index} is missing page_key`,
           });
+          return;
         }
+
+        // Validación: page_key no debe estar vacío
+        if (page.page_key.trim() === '') {
+          warnings.push({
+            type: 'error',
+            message: `Page at index ${index} has empty page_key`,
+          });
+          return;
+        }
+
+        // Validación: no duplicar page_keys
+        if (pageKeys.has(page.page_key)) {
+          warnings.push({
+            type: 'error',
+            message: `Duplicate page_key found: "${page.page_key}"`,
+          });
+          return;
+        }
+        pageKeys.add(page.page_key);
+
+        // Validación: is_enabled debe ser booleano
         if (typeof page.is_enabled !== 'boolean') {
           warnings.push({
             type: 'error',
-            message: `Page ${page.page_key || index} has invalid is_enabled value`,
+            message: `Page "${page.page_key}" has invalid is_enabled value (must be true/false)`,
+          });
+        }
+
+        // Validación: page_name es recomendado
+        if (!page.page_name) {
+          warnings.push({
+            type: 'warning',
+            message: `Page "${page.page_key}" does not have a page_name (recommended)`,
           });
         }
       });
     }
 
     // Validate settings
+    const settingKeys = new Set<string>();
     if (config.settings) {
       config.settings.forEach((setting, index) => {
+        // Validación: key es requerido
         if (!setting.key) {
           warnings.push({
             type: 'error',
             message: `Setting at index ${index} is missing key`,
+          });
+          return;
+        }
+
+        // Validación: key no debe estar vacío
+        if (setting.key.trim() === '') {
+          warnings.push({
+            type: 'error',
+            message: `Setting at index ${index} has empty key`,
+          });
+          return;
+        }
+
+        // Validación: no duplicar keys
+        if (settingKeys.has(setting.key)) {
+          warnings.push({
+            type: 'error',
+            message: `Duplicate setting key found: "${setting.key}"`,
+          });
+          return;
+        }
+        settingKeys.add(setting.key);
+
+        // Validación: value es requerido
+        if (!setting.value) {
+          warnings.push({
+            type: 'warning',
+            message: `Setting "${setting.key}" has no value (may cause issues)`,
           });
         }
       });
@@ -171,6 +233,14 @@ export function ImportConfigDialog({ open, onOpenChange, onSuccess }: ImportConf
       warnings.push({
         type: 'warning',
         message: 'Configuration does not contain export timestamp (may not be a valid export)',
+      });
+    }
+
+    // Validación: exported_by es recomendado
+    if (!config.exported_by) {
+      warnings.push({
+        type: 'warning',
+        message: 'Configuration does not contain export user (recommended for audit trail)',
       });
     }
 
