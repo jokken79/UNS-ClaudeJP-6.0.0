@@ -142,3 +142,11 @@ backup_*/
 *.tar.gz
 access_photo_mappings.json
 BASEDATEJP/*.pdf
+
+# ===============================
+# BASEDATEJP - Archivos Grandes
+# ===============================
+# Contienen datos de Access y JSONs grandes (>100MB)
+BASEDATEJP/*.json
+BASEDATEJP/*.txt
+BASEDATEJP/*.md
