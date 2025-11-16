@@ -9,6 +9,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { timerCardService } from '@/lib/api';
+import { toast } from 'sonner';
+import axios from 'axios';
+
+// Constantes de validación
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB en bytes
+const FACTORY_ID_PATTERN = /^[a-zA-Z0-9\-_]{1,50}$/; // Formato básico de factory_id
 
 interface EmployeeMatchInfo {
   hakenmoto_id: number | null;
@@ -41,7 +47,9 @@ interface TimerCardUploadResponse {
 
 export default function TimerCardUploadPage() {
   const [file, setFile] = useState<File | null>(null);
+  const [fileSizeError, setFileSizeError] = useState<string>('');
   const [factoryId, setFactoryId] = useState<string>('');
+  const [factoryIdError, setFactoryIdError] = useState<string>('');
   const [uploading, setUploading] = useState(false);
   const [ocrData, setOcrData] = useState<TimerCardOCRData[]>([]);
   const [processingErrors, setProcessingErrors] = useState<ProcessingError[]>([]);
@@ -49,14 +57,33 @@ export default function TimerCardUploadPage() {
   const [editData, setEditData] = useState<Partial<TimerCardOCRData>>({});
   const router = useRouter();
 
+  // BUG #3 FIX: Validar tamaño máximo de archivo
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFileSizeError('');
+
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
+
+      // Validar tipo
       if (selectedFile.type !== 'application/pdf') {
-        alert('Solo se aceptan archivos PDF');
+        toast.error('Solo se aceptan archivos PDF');
+        setFile(null);
         return;
       }
+
+      // Validar tamaño máximo (10MB)
+      if (selectedFile.size > MAX_FILE_SIZE) {
+        const fileSizeMB = (selectedFile.size / 1024 / 1024).toFixed(2);
+        const errorMsg = `Archivo demasiado grande. Tu archivo: ${fileSizeMB}MB, máximo permitido: 10MB`;
+        setFileSizeError(errorMsg);
+        toast.error(errorMsg);
+        setFile(null);
+        return;
+      }
+
       setFile(selectedFile);
+      setFileSizeError('');
+      toast.success(`Archivo seleccionado: ${selectedFile.name}`);
     }
   };
 
@@ -65,23 +92,58 @@ export default function TimerCardUploadPage() {
     e.stopPropagation();
   }, []);
 
+  // BUG #3 FIX: También validar en drag & drop
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    setFileSizeError('');
 
     const droppedFiles = e.dataTransfer.files;
     if (droppedFiles && droppedFiles[0]) {
       const selectedFile = droppedFiles[0];
+
+      // Validar tipo
       if (selectedFile.type !== 'application/pdf') {
-        alert('Solo se aceptan archivos PDF');
+        toast.error('Solo se aceptan archivos PDF');
+        setFile(null);
         return;
       }
+
+      // Validar tamaño máximo (10MB)
+      if (selectedFile.size > MAX_FILE_SIZE) {
+        const fileSizeMB = (selectedFile.size / 1024 / 1024).toFixed(2);
+        const errorMsg = `Archivo demasiado grande. Tu archivo: ${fileSizeMB}MB, máximo permitido: 10MB`;
+        setFileSizeError(errorMsg);
+        toast.error(errorMsg);
+        setFile(null);
+        return;
+      }
+
       setFile(selectedFile);
+      setFileSizeError('');
+      toast.success(`Archivo seleccionado: ${selectedFile.name}`);
     }
   }, []);
 
+  // BUG #4 FIX: Validar factory_id cuando cambia
+  const handleFactoryIdChange = (value: string) => {
+    setFactoryId(value);
+    setFactoryIdError('');
+
+    if (value && !FACTORY_ID_PATTERN.test(value)) {
+      setFactoryIdError('Formato de fábrica inválido. Solo letras, números, guiones y guiones bajos.');
+    }
+  };
+
+  // BUG #5 FIX: Error handling mejorado
   const handleUpload = async () => {
     if (!file) return;
+
+    // Validar factory_id si fue proporcionado
+    if (factoryId && !FACTORY_ID_PATTERN.test(factoryId)) {
+      toast.error('Por favor corrige el ID de fábrica antes de continuar');
+      return;
+    }
 
     setUploading(true);
     setProcessingErrors([]);
@@ -99,11 +161,33 @@ export default function TimerCardUploadPage() {
       setProcessingErrors(result.processing_errors || []);
 
       if (result.records_found === 0) {
-        alert('No se encontraron registros en el PDF');
+        toast.warning('No se encontraron registros en el PDF');
+      } else {
+        toast.success(`Se encontraron ${result.records_found} registros en el PDF`);
       }
     } catch (error: any) {
       console.error('Error uploading PDF:', error);
-      alert(`Error: ${error.response?.data?.detail || error.message}`);
+
+      // Mensajes de error específicos
+      let errorMessage = 'Error desconocido al procesar el PDF';
+
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 413) {
+          errorMessage = 'Archivo demasiado grande (máximo 10MB)';
+        } else if (error.response?.status === 400) {
+          errorMessage = error.response.data?.detail || 'Formato de archivo inválido. Solo se aceptan PDFs.';
+        } else if (error.response?.status === 500) {
+          errorMessage = 'Error en el servidor al procesar el PDF. Por favor intenta de nuevo.';
+        } else if (error.response?.data?.detail) {
+          errorMessage = error.response.data.detail;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      toast.error(errorMessage);
     } finally {
       setUploading(false);
     }
@@ -224,6 +308,17 @@ export default function TimerCardUploadPage() {
               className="hidden"
             />
 
+            {/* File Size Error Message */}
+            {fileSizeError && (
+              <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-md">
+                <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-red-900">Error de validación</p>
+                  <p className="text-sm text-red-700 mt-1">{fileSizeError}</p>
+                </div>
+              </div>
+            )}
+
             {/* Factory ID Field */}
             <div>
               <Label htmlFor="factory-id">Fábrica (opcional)</Label>
@@ -231,17 +326,23 @@ export default function TimerCardUploadPage() {
                 id="factory-id"
                 type="text"
                 value={factoryId}
-                onChange={(e) => setFactoryId(e.target.value)}
-                placeholder="ID de fábrica"
-                className="mt-1"
+                onChange={(e) => handleFactoryIdChange(e.target.value)}
+                placeholder="ID de fábrica (ej: Factory-01)"
+                className={`mt-1 ${factoryIdError ? 'border-red-500' : ''}`}
               />
+              {factoryIdError && (
+                <p className="text-sm text-red-600 mt-2 flex items-center gap-1">
+                  <AlertCircle className="h-4 w-4" />
+                  {factoryIdError}
+                </p>
+              )}
             </div>
           </div>
         </CardContent>
         <CardFooter>
           <Button
             onClick={handleUpload}
-            disabled={!file || uploading}
+            disabled={!file || uploading || !!factoryIdError}
             className="w-full"
             size="lg"
           >

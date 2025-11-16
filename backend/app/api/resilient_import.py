@@ -190,9 +190,30 @@ async def import_factories(
 
     tmp_path = None
     try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".json", mode='w') as tmp:
-            content = await file.read()
-            tmp.write(content.decode('utf-8'))
+        # BUG #6 FIX: Soporte para múltiples encodings
+        content = await file.read()
+        content_text = None
+        detected_encoding = None
+
+        # Intentar decodificar con múltiples encodings
+        encodings = ['utf-8', 'utf-8-sig', 'shift_jis', 'cp932', 'iso-2022-jp', 'latin-1']
+        for encoding in encodings:
+            try:
+                content_text = content.decode(encoding)
+                detected_encoding = encoding
+                logger.info(f"JSON decoded successfully with {encoding}", encoding=encoding)
+                break
+            except (UnicodeDecodeError, AttributeError):
+                continue
+
+        if not content_text:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid file encoding. Supported encodings: {', '.join(encodings)}"
+            )
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".json", mode='w', encoding='utf-8') as tmp:
+            tmp.write(content_text)
             tmp_path = tmp.name
 
         orchestrator = ImportOrchestrator(db, operation_id)
@@ -202,7 +223,7 @@ async def import_factories(
             data = json.load(f)
 
         factories_list = data.get('factories', [])
-        logger.info("Factories loaded from JSON", count=len(factories_list))
+        logger.info("Factories loaded from JSON", count=len(factories_list), detected_encoding=detected_encoding)
 
         # Process factories
         for idx, factory_data in enumerate(factories_list):
