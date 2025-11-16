@@ -132,7 +132,7 @@ export const dashboardConfig: DashboardConfig = {
       title: 'Temas',
       href: '/themes',
       icon: Palette,
-      description: 'Galería de temas y personalizador con 12 temas predefinidos.',
+      description: 'Galería de temas y personalizador con 22 temas predefinidos + temas personalizados ilimitados.',
     },
     {
       title: 'Design System',
