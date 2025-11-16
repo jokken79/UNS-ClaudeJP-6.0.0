@@ -15,11 +15,11 @@ Abre PowerShell o CMD y ejecuta:
 ```bash
 # Opción 1: Clonar en una carpeta específica
 cd D:\
-git clone https://github.com/jokken79/UNS-ClaudeJP-5.4.1.git UNS-ClaudeJP-6.0.0
+git clone https://github.com/jokken79/UNS-ClaudeJP-6.0.0.git
 
 # Opción 2: Clonar en la ubicación actual
-git clone https://github.com/jokken79/UNS-ClaudeJP-5.4.1.git
-cd UNS-ClaudeJP-5.4.1
+git clone https://github.com/jokken79/UNS-ClaudeJP-6.0.0.git
+cd UNS-ClaudeJP-6.0.0
 ```
 
 ## ⚙️ Paso 2: Iniciar la Aplicación
@@ -129,7 +129,7 @@ Esta aplicación usa nombres únicos con prefijo `uns-claudejp-600` para evitar 
 ## 🔄 Actualizar a la Última Versión
 
 ```bash
-cd d:\UNS-ClaudeJP-6.0.0\UNS-ClaudeJP-5.4.1
+cd d:\UNS-ClaudeJP-6.0.0
 git pull origin main
 cd scripts
 STOP.bat
@@ -156,8 +156,8 @@ Si algo no funciona:
 **En tu nueva PC solo necesitas:**
 
 ```bash
-git clone https://github.com/jokken79/UNS-ClaudeJP-5.4.1.git
-cd UNS-ClaudeJP-5.4.1\scripts
+git clone https://github.com/jokken79/UNS-ClaudeJP-6.0.0.git
+cd UNS-ClaudeJP-6.0.0\scripts
 START.bat
 ```
 
@@ -167,4 +167,4 @@ START.bat
 
 **Versión:** 6.0.0
 **Última actualización:** 2025-11-16
-**GitHub:** https://github.com/jokken79/UNS-ClaudeJP-5.4.1
+**GitHub:** https://github.com/jokken79/UNS-ClaudeJP-6.0.0
