@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Palette, Plus, Search, Star, Grid3x3, Download, Upload } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
@@ -156,6 +157,7 @@ function ThemeCard({
 }
 
 export default function ThemesPage() {
+  const router = useRouter();
   const { theme, setTheme } = useTheme();
   const [customThemes, setCustomThemes] = useState<CustomTheme[]>(getCustomThemes());
   const [searchQuery, setSearchQuery] = useState("");
@@ -219,7 +221,7 @@ export default function ThemesPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => (window.location.href = "/themes/customizer")}>
+          <Button variant="outline" onClick={() => router.push("/themes/customizer")}>
             <Plus className="h-4 w-4 mr-2" />
             Create Theme
           </Button>

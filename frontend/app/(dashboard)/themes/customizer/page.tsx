@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Palette, Save, Download, Upload, Eye, AlertCircle, CheckCircle2, X, Trash2, ArrowLeft } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
@@ -53,6 +54,7 @@ const COLOR_TOKENS = [
 ];
 
 export default function ThemeCustomizerPage() {
+  const router = useRouter();
   const { theme: currentTheme, setTheme } = useTheme();
   const [themeName, setThemeName] = useState("");
   const [themeColors, setThemeColors] = useState<Record<string, string>>({});
@@ -220,7 +222,7 @@ export default function ThemeCustomizerPage() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => window.location.href = "/themes"}
+              onClick={() => router.push("/themes")}
               title="Back to Theme Gallery"
             >
               <ArrowLeft className="h-5 w-5" />
