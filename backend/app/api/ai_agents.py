@@ -48,6 +48,7 @@ from app.core.rate_limiter import limiter, RateLimitConfig
 from app.services.ai_gateway import AIGateway, AIGatewayError
 from app.services.ai_usage_service import AIUsageService
 from app.services.ai_budget_service import AIBudgetService, BudgetExceededException
+from app.services.cache_service import CacheService
 from app.models.models import User
 from app.schemas.ai_usage import (
     UsageStatsResponse,
@@ -60,6 +61,12 @@ from app.schemas.ai_budget import (
     AIBudgetUpdate,
     AIBudgetResponse,
     BudgetValidationResponse,
+)
+from app.schemas.cache import (
+    CacheStatsResponse,
+    CacheMemoryResponse,
+    CacheHealthResponse,
+    CacheInvalidationResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -161,6 +168,12 @@ def get_ai_usage_service(db: Session = Depends(SessionLocal)) -> AIUsageService:
 def get_ai_budget_service(db: Session = Depends(SessionLocal)) -> AIBudgetService:
     """Get AI budget service with database session"""
     return AIBudgetService(db)
+
+
+# Dependency to get Cache Service
+def get_cache_service() -> CacheService:
+    """Get cache service"""
+    return CacheService()
 
 
 # Endpoints
@@ -815,4 +828,212 @@ async def get_total_cost(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error fetching total cost"
+        )
+
+
+# ============================================
+# CACHE MANAGEMENT ENDPOINTS (FASE 3.1)
+# ============================================
+
+@router.get("/cache/stats", response_model=CacheStatsResponse)
+async def get_cache_stats(
+    service: CacheService = Depends(get_cache_service),
+    current_user: User = Depends(get_current_user),
+) -> CacheStatsResponse:
+    """
+    Get cache statistics.
+
+    Returns information about cached responses, memory usage, and hits.
+
+    Returns:
+        CacheStatsResponse with cache information
+
+    Example:
+        GET /api/ai/cache/stats
+    """
+    try:
+        stats = service.get_stats()
+        return CacheStatsResponse(**stats)
+    except Exception as e:
+        logger.error(f"Error fetching cache stats: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error fetching cache stats"
+        )
+
+
+@router.get("/cache/memory", response_model=CacheMemoryResponse)
+async def get_cache_memory(
+    service: CacheService = Depends(get_cache_service),
+    current_user: User = Depends(get_current_user),
+) -> CacheMemoryResponse:
+    """
+    Get detailed cache memory usage information.
+
+    Returns Redis memory statistics and configuration.
+
+    Returns:
+        CacheMemoryResponse with memory information
+
+    Example:
+        GET /api/ai/cache/memory
+    """
+    try:
+        memory = service.get_memory_usage()
+        return CacheMemoryResponse(**memory)
+    except Exception as e:
+        logger.error(f"Error fetching cache memory: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error fetching cache memory"
+        )
+
+
+@router.get("/cache/health", response_model=CacheHealthResponse)
+async def get_cache_health(
+    service: CacheService = Depends(get_cache_service),
+    current_user: User = Depends(get_current_user),
+) -> CacheHealthResponse:
+    """
+    Check cache health and responsiveness.
+
+    Performs connectivity and performance tests.
+
+    Returns:
+        CacheHealthResponse with health status
+
+    Example:
+        GET /api/ai/cache/health
+    """
+    try:
+        health = service.health_check()
+        return CacheHealthResponse(**health)
+    except Exception as e:
+        logger.error(f"Error checking cache health: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error checking cache health"
+        )
+
+
+@router.delete("/cache", response_model=CacheInvalidationResponse)
+async def flush_cache(
+    service: CacheService = Depends(get_cache_service),
+    current_user: User = Depends(get_current_user),
+) -> CacheInvalidationResponse:
+    """
+    Delete all cached AI responses (DANGEROUS).
+
+    Clears entire AI response cache. This cannot be undone.
+    Use with caution.
+
+    Returns:
+        CacheInvalidationResponse with operation result
+
+    Example:
+        DELETE /api/ai/cache
+    """
+    try:
+        service.flush_all()
+        return CacheInvalidationResponse(
+            success=True,
+            deleted_count=0,  # We don't count in flush_all
+            message="All AI cache entries have been flushed"
+        )
+    except Exception as e:
+        logger.error(f"Error flushing cache: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error flushing cache"
+        )
+
+
+@router.delete("/cache/provider/{provider}", response_model=CacheInvalidationResponse)
+async def invalidate_cache_by_provider(
+    provider: str,
+    service: CacheService = Depends(get_cache_service),
+    current_user: User = Depends(get_current_user),
+) -> CacheInvalidationResponse:
+    """
+    Delete cached responses from a specific provider.
+
+    Clears all cached responses from the specified AI provider
+    (gemini, openai, claude_api, local_cli).
+
+    Args:
+        provider: AI provider name
+
+    Returns:
+        CacheInvalidationResponse with number of deleted entries
+
+    Example:
+        DELETE /api/ai/cache/provider/gemini
+    """
+    try:
+        valid_providers = ["gemini", "openai", "claude_api", "local_cli"]
+        if provider not in valid_providers:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid provider. Must be one of: {', '.join(valid_providers)}"
+            )
+
+        deleted = service.invalidate_by_provider(provider)
+        return CacheInvalidationResponse(
+            success=True,
+            deleted_count=deleted,
+            message=f"Deleted {deleted} cached responses from {provider}"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error invalidating cache by provider: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error invalidating cache"
+        )
+
+
+@router.delete("/cache/model/{provider}/{model}", response_model=CacheInvalidationResponse)
+async def invalidate_cache_by_model(
+    provider: str,
+    model: str,
+    service: CacheService = Depends(get_cache_service),
+    current_user: User = Depends(get_current_user),
+) -> CacheInvalidationResponse:
+    """
+    Delete cached responses for a specific model.
+
+    Clears all cached responses from a specific AI model.
+
+    Args:
+        provider: AI provider name (gemini, openai, claude_api, local_cli)
+        model: Model name (e.g., gpt-4, claude-3-opus)
+
+    Returns:
+        CacheInvalidationResponse with number of deleted entries
+
+    Example:
+        DELETE /api/ai/cache/model/openai/gpt-4
+    """
+    try:
+        valid_providers = ["gemini", "openai", "claude_api", "local_cli"]
+        if provider not in valid_providers:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid provider. Must be one of: {', '.join(valid_providers)}"
+            )
+
+        deleted = service.invalidate_by_model(provider, model)
+        return CacheInvalidationResponse(
+            success=True,
+            deleted_count=deleted,
+            message=f"Deleted {deleted} cached responses from {provider}/{model}"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error invalidating cache by model: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error invalidating cache"
         )

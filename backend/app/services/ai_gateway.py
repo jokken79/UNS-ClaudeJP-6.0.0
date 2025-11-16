@@ -34,6 +34,7 @@ import httpx
 from fastapi import HTTPException, status
 
 from app.core.config import settings
+from app.services.cache_service import CacheService
 
 logger = logging.getLogger(__name__)
 
@@ -88,20 +89,27 @@ class AIGateway:
     MAX_RETRIES = 3
     RETRY_DELAY = 1  # seconds
 
-    def __init__(self, timeout: int = 60):
+    def __init__(self, timeout: int = 60, enable_cache: bool = True, cache_ttl: int = 86400):
         """
         Initialize AI Gateway.
 
         Args:
             timeout: HTTP request timeout in seconds (default: 60)
+            enable_cache: Enable response caching (default: True)
+            cache_ttl: Cache time-to-live in seconds (default: 86400 = 24 hours)
         """
         self.timeout = timeout
+        self.enable_cache = enable_cache
+        self.cache_ttl = cache_ttl
         self.gemini_api_key = os.getenv("GOOGLE_API_KEY", "")
         self.openai_api_key = os.getenv("OPENAI_API_KEY", "")
         self.claude_api_key = os.getenv("ANTHROPIC_API_KEY", "")
         self.client = httpx.AsyncClient(timeout=timeout)
 
-        logger.info("AI Gateway initialized")
+        # Initialize cache service
+        self.cache = CacheService() if enable_cache else None
+
+        logger.info(f"AI Gateway initialized (cache: {'enabled' if enable_cache else 'disabled'})")
 
     async def invoke_gemini(
         self,
@@ -127,6 +135,13 @@ class AIGateway:
         """
         if not self.gemini_api_key:
             raise GeminiError("GOOGLE_API_KEY not configured")
+
+        # Check cache first
+        if self.cache:
+            cached = self.cache.get("gemini", "gemini-2.0-flash", prompt, system_instruction)
+            if cached:
+                logger.info("Cache hit for Gemini request")
+                return cached["response"]
 
         try:
             # Build request payload
@@ -172,6 +187,11 @@ class AIGateway:
 
             text = candidate["content"]["parts"][0]["text"]
             logger.info(f"Gemini invocation successful ({len(text)} chars)")
+
+            # Cache the response
+            if self.cache:
+                self.cache.set("gemini", "gemini-2.0-flash", prompt, text, self.cache_ttl, system_instruction)
+
             return text
 
         except httpx.HTTPError as e:
@@ -207,6 +227,13 @@ class AIGateway:
         """
         if not self.openai_api_key:
             raise OpenAIError("OPENAI_API_KEY not configured")
+
+        # Check cache first
+        if self.cache:
+            cached = self.cache.get("openai", model, prompt, system_message)
+            if cached:
+                logger.info("Cache hit for OpenAI request")
+                return cached["response"]
 
         try:
             messages = []
@@ -244,6 +271,11 @@ class AIGateway:
 
             text = data["choices"][0]["message"]["content"]
             logger.info(f"OpenAI invocation successful ({len(text)} chars)")
+
+            # Cache the response
+            if self.cache:
+                self.cache.set("openai", model, prompt, text, self.cache_ttl, system_message)
+
             return text
 
         except httpx.HTTPError as e:
