@@ -1544,3 +1544,127 @@ class AIUsageLog(Base):
     def __repr__(self):
         return f"<AIUsageLog(id={self.id}, user_id={self.user_id}, provider={self.provider}, tokens={self.total_tokens}, cost=${self.estimated_cost})>"
 
+
+class AIBudget(Base):
+    """
+    AI Gateway Budget - Per-user spending limits and controls
+
+    用途:
+    - Control spending by user and provider
+    - Monthly and daily budget limits
+    - Alert when approaching budget threshold
+    - Prevent calls if budget exceeded
+    - Track budget usage and reset dates
+
+    Fields:
+    - user_id: User this budget applies to (required, unique)
+    - monthly_budget_usd: Maximum spending per month
+    - daily_budget_usd: Optional maximum spending per day
+    - spent_this_month: Accumulated cost this month
+    - spent_today: Accumulated cost today
+    - month_reset_date: When monthly budget resets
+    - day_reset_date: When daily budget resets
+    - alert_threshold: Percentage (e.g., 80%) to trigger alert
+    - webhook_url: Endpoint to POST budget alerts to
+    - is_active: Whether budget enforcement is enabled
+    - created_at, updated_at: Timestamps
+    """
+    __tablename__ = "ai_budgets"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    # References
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True, unique=True)
+
+    # Budget limits (in USD)
+    monthly_budget_usd = Column(Numeric(10, 2), nullable=False)  # e.g., 100.00
+    daily_budget_usd = Column(Numeric(10, 2))  # Optional daily limit
+
+    # Spending tracking
+    spent_this_month = Column(Numeric(10, 4), default=0, nullable=False)
+    spent_today = Column(Numeric(10, 4), default=0, nullable=False)
+
+    # Reset dates
+    month_reset_date = Column(Date, nullable=False, index=True)  # Next monthly reset
+    day_reset_date = Column(Date, nullable=False, index=True)  # Next daily reset
+
+    # Alert settings
+    alert_threshold = Column(Integer, default=80, nullable=False)  # Percentage (0-100)
+    webhook_url = Column(String(500))  # POST alerts to this URL
+
+    # Status
+    is_active = Column(Boolean, default=True, nullable=False, index=True)
+
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), nullable=False)
+
+    # Relationships
+    user = relationship("User", backref="ai_budget")
+
+    # Constraints
+    __table_args__ = (
+        CheckConstraint('monthly_budget_usd > 0', name='check_monthly_budget_positive'),
+        CheckConstraint('daily_budget_usd IS NULL OR daily_budget_usd > 0', name='check_daily_budget_positive'),
+        CheckConstraint('spent_this_month >= 0', name='check_spent_month_positive'),
+        CheckConstraint('spent_today >= 0', name='check_spent_today_positive'),
+        CheckConstraint('alert_threshold >= 0 AND alert_threshold <= 100', name='check_threshold_range'),
+    )
+
+    def __repr__(self):
+        return f"<AIBudget(user_id={self.user_id}, monthly_budget=${self.monthly_budget_usd}, spent_month=${self.spent_this_month})>"
+
+    @property
+    def monthly_remaining(self) -> Decimal:
+        """Calculate remaining monthly budget"""
+        return Decimal(str(self.monthly_budget_usd)) - self.spent_this_month
+
+    @property
+    def daily_remaining(self) -> Decimal:
+        """Calculate remaining daily budget (if daily limit set)"""
+        if not self.daily_budget_usd:
+            return None
+        return Decimal(str(self.daily_budget_usd)) - self.spent_today
+
+    @property
+    def monthly_percentage_used(self) -> float:
+        """Calculate percentage of monthly budget used"""
+        if self.monthly_budget_usd == 0:
+            return 0.0
+        return float((self.spent_this_month / Decimal(str(self.monthly_budget_usd))) * 100)
+
+    @property
+    def daily_percentage_used(self) -> float:
+        """Calculate percentage of daily budget used (if daily limit set)"""
+        if not self.daily_budget_usd or self.daily_budget_usd == 0:
+            return 0.0
+        return float((self.spent_today / Decimal(str(self.daily_budget_usd))) * 100)
+
+    @property
+    def should_alert_monthly(self) -> bool:
+        """Check if monthly alert threshold reached"""
+        return self.monthly_percentage_used >= self.alert_threshold
+
+    @property
+    def should_alert_daily(self) -> bool:
+        """Check if daily alert threshold reached"""
+        if not self.daily_budget_usd:
+            return False
+        return self.daily_percentage_used >= self.alert_threshold
+
+    def can_afford(self, estimated_cost: Decimal) -> bool:
+        """Check if user can afford this API call"""
+        if not self.is_active:
+            return True  # Inactive budgets don't block calls
+
+        # Check monthly limit
+        if self.spent_this_month + estimated_cost > Decimal(str(self.monthly_budget_usd)):
+            return False
+
+        # Check daily limit if set
+        if self.daily_budget_usd:
+            if self.spent_today + estimated_cost > Decimal(str(self.daily_budget_usd)):
+                return False
+
+        return True
+
