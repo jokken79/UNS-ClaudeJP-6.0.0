@@ -68,6 +68,14 @@ from app.schemas.cache import (
     CacheHealthResponse,
     CacheInvalidationResponse,
 )
+from app.services.prompt_optimizer import PromptOptimizer
+from app.schemas.prompt_optimization import (
+    OptimizationRequest,
+    OptimizedPromptResponse,
+    OptimizationRecommendationsResponse,
+    OptimizationEstimateResponse,
+    OptimizationStatsResponse,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -174,6 +182,12 @@ def get_ai_budget_service(db: Session = Depends(SessionLocal)) -> AIBudgetServic
 def get_cache_service() -> CacheService:
     """Get cache service"""
     return CacheService()
+
+
+# Dependency to get Prompt Optimizer
+def get_prompt_optimizer(aggressive: bool = False) -> PromptOptimizer:
+    """Get prompt optimizer service"""
+    return PromptOptimizer(aggressive=aggressive)
 
 
 # Endpoints
@@ -1036,4 +1050,142 @@ async def invalidate_cache_by_model(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error invalidating cache"
+        )
+
+
+# ============================================
+# PROMPT OPTIMIZATION ENDPOINTS (FASE 3.2)
+# ============================================
+
+@router.post("/optimize", response_model=OptimizedPromptResponse)
+async def optimize_prompt(
+    request: OptimizationRequest,
+    optimizer: PromptOptimizer = Depends(get_prompt_optimizer),
+    current_user: User = Depends(get_current_user),
+) -> OptimizedPromptResponse:
+    """
+    Optimize a prompt to reduce token count.
+
+    Applies text normalization, redundancy removal, and condensation strategies.
+
+    Args:
+        request: Optimization request with prompt and system message
+        optimizer: Prompt optimizer service
+        current_user: Current authenticated user
+
+    Returns:
+        OptimizedPromptResponse with optimized text and statistics
+
+    Example:
+        POST /api/ai/optimize
+        {
+            "prompt": "Can you please generate FastAPI endpoint code for me?",
+            "system_message": "You are a helpful code generation assistant.",
+            "aggressive": false
+        }
+    """
+    try:
+        optimized_prompt, optimized_system_message, stats = optimizer.optimize(
+            request.prompt,
+            request.system_message,
+        )
+
+        return OptimizedPromptResponse(
+            optimized_prompt=optimized_prompt,
+            optimized_system_message=optimized_system_message,
+            stats=OptimizationStatsResponse(
+                original_length=stats.original_length,
+                optimized_length=stats.optimized_length,
+                tokens_saved=stats.tokens_saved,
+                reduction_percentage=stats.reduction_percentage,
+                strategies_applied=stats.strategies_applied,
+            ),
+        )
+    except Exception as e:
+        logger.error(f"Error optimizing prompt: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error optimizing prompt"
+        )
+
+
+@router.post("/optimize/recommendations", response_model=OptimizationRecommendationsResponse)
+async def get_optimization_recommendations(
+    request: OptimizationRequest,
+    optimizer: PromptOptimizer = Depends(get_prompt_optimizer),
+    current_user: User = Depends(get_current_user),
+) -> OptimizationRecommendationsResponse:
+    """
+    Get specific recommendations for optimizing a prompt.
+
+    Analyzes prompt and returns targeted improvement suggestions.
+
+    Args:
+        request: Request with prompt to analyze
+        optimizer: Prompt optimizer service
+        current_user: Current authenticated user
+
+    Returns:
+        OptimizationRecommendationsResponse with recommendations
+
+    Example:
+        POST /api/ai/optimize/recommendations
+        {
+            "prompt": "Can you please please generate code?"
+        }
+    """
+    try:
+        recommendations = optimizer.get_optimization_recommendations(request.prompt)
+
+        return OptimizationRecommendationsResponse(
+            prompt=request.prompt,
+            recommendations=recommendations,
+            has_optimization_opportunities=len(recommendations) > 0,
+        )
+    except Exception as e:
+        logger.error(f"Error getting recommendations: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error getting recommendations"
+        )
+
+
+@router.post("/optimize/estimate", response_model=OptimizationEstimateResponse)
+async def estimate_savings(
+    request: OptimizationRequest,
+    optimizer: PromptOptimizer = Depends(get_prompt_optimizer),
+    current_user: User = Depends(get_current_user),
+) -> OptimizationEstimateResponse:
+    """
+    Estimate token savings without actually optimizing.
+
+    Returns predicted improvements for analysis purposes.
+
+    Args:
+        request: Request with prompt to analyze
+        optimizer: Prompt optimizer service
+        current_user: Current authenticated user
+
+    Returns:
+        OptimizationEstimateResponse with estimated savings
+
+    Example:
+        POST /api/ai/optimize/estimate
+        {
+            "prompt": "Your prompt here",
+            "aggressive": false
+        }
+    """
+    try:
+        estimate = optimizer.estimate_savings(
+            request.prompt,
+            request.system_message,
+        )
+
+        return OptimizationEstimateResponse(**estimate)
+    except Exception as e:
+        logger.error(f"Error estimating savings: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error estimating savings"
         )

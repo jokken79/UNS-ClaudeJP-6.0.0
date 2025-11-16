@@ -35,6 +35,7 @@ from fastapi import HTTPException, status
 
 from app.core.config import settings
 from app.services.cache_service import CacheService
+from app.services.prompt_optimizer import PromptOptimizer
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +90,7 @@ class AIGateway:
     MAX_RETRIES = 3
     RETRY_DELAY = 1  # seconds
 
-    def __init__(self, timeout: int = 60, enable_cache: bool = True, cache_ttl: int = 86400):
+    def __init__(self, timeout: int = 60, enable_cache: bool = True, cache_ttl: int = 86400, enable_optimization: bool = True, aggressive_optimization: bool = False):
         """
         Initialize AI Gateway.
 
@@ -97,10 +98,13 @@ class AIGateway:
             timeout: HTTP request timeout in seconds (default: 60)
             enable_cache: Enable response caching (default: True)
             cache_ttl: Cache time-to-live in seconds (default: 86400 = 24 hours)
+            enable_optimization: Enable prompt optimization (default: True)
+            aggressive_optimization: Use aggressive optimization (default: False)
         """
         self.timeout = timeout
         self.enable_cache = enable_cache
         self.cache_ttl = cache_ttl
+        self.enable_optimization = enable_optimization
         self.gemini_api_key = os.getenv("GOOGLE_API_KEY", "")
         self.openai_api_key = os.getenv("OPENAI_API_KEY", "")
         self.claude_api_key = os.getenv("ANTHROPIC_API_KEY", "")
@@ -109,7 +113,13 @@ class AIGateway:
         # Initialize cache service
         self.cache = CacheService() if enable_cache else None
 
-        logger.info(f"AI Gateway initialized (cache: {'enabled' if enable_cache else 'disabled'})")
+        # Initialize prompt optimizer
+        self.optimizer = PromptOptimizer(aggressive=aggressive_optimization) if enable_optimization else None
+
+        logger.info(
+            f"AI Gateway initialized (cache: {'enabled' if enable_cache else 'disabled'}, "
+            f"optimization: {'enabled' if enable_optimization else 'disabled'})"
+        )
 
     async def invoke_gemini(
         self,
@@ -136,9 +146,18 @@ class AIGateway:
         if not self.gemini_api_key:
             raise GeminiError("GOOGLE_API_KEY not configured")
 
-        # Check cache first
+        # Optimize prompt if enabled
+        optimized_prompt = prompt
+        optimized_system_instruction = system_instruction
+        if self.optimizer:
+            optimized_prompt, optimized_system_instruction, stats = self.optimizer.optimize(
+                prompt, system_instruction
+            )
+            logger.info(f"Prompt optimized: saved {stats.tokens_saved} tokens ({stats.reduction_percentage}%)")
+
+        # Check cache first (using optimized prompt)
         if self.cache:
-            cached = self.cache.get("gemini", "gemini-2.0-flash", prompt, system_instruction)
+            cached = self.cache.get("gemini", "gemini-2.0-flash", optimized_prompt, optimized_system_instruction)
             if cached:
                 logger.info("Cache hit for Gemini request")
                 return cached["response"]
@@ -147,15 +166,15 @@ class AIGateway:
             # Build request payload
             contents = []
 
-            if system_instruction:
+            if optimized_system_instruction:
                 contents.append({
                     "role": "user",
-                    "parts": [{"text": system_instruction}]
+                    "parts": [{"text": optimized_system_instruction}]
                 })
 
             contents.append({
                 "role": "user",
-                "parts": [{"text": prompt}]
+                "parts": [{"text": optimized_prompt}]
             })
 
             payload = {
@@ -188,9 +207,9 @@ class AIGateway:
             text = candidate["content"]["parts"][0]["text"]
             logger.info(f"Gemini invocation successful ({len(text)} chars)")
 
-            # Cache the response
+            # Cache the response (using optimized prompt as key)
             if self.cache:
-                self.cache.set("gemini", "gemini-2.0-flash", prompt, text, self.cache_ttl, system_instruction)
+                self.cache.set("gemini", "gemini-2.0-flash", optimized_prompt, text, self.cache_ttl, optimized_system_instruction)
 
             return text
 
