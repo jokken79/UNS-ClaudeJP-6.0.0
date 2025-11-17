@@ -19,7 +19,7 @@ import { AuditLogDetail } from '@/components/admin/audit-log-detail';
 import { AuditLogFilters, type AuditLogFilters as Filters } from '@/components/admin/audit-log-filters';
 import { useToast } from '@/hooks/use-toast';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 interface PaginatedResponse {
   items: AdminAuditLog[];

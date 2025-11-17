@@ -29,6 +29,8 @@ import { cn } from '@/lib/utils';
 import type { AssignmentCreate, ApartmentWithStats } from '@/types/apartments-v2';
 import { RentCalculator } from './RentCalculator';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
+
 const assignmentFormSchema = z.object({
   employee_id: z.number({
     required_error: 'Por favor selecciona un empleado',
@@ -92,7 +94,7 @@ export function AssignmentForm({
         setLoading(true);
         const token = localStorage.getItem('access_token');
         const response = await axios.get<ApartmentWithStats>(
-          `http://localhost:8000/api/apartments-v2/apartments/${apartmentId}`,
+          `${API_BASE_URL}/apartments-v2/apartments/${apartmentId}`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }

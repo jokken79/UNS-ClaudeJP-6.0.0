@@ -20,6 +20,8 @@ import { Badge } from '@/components/ui/badge';
 import type { ApartmentWithStats } from '@/types/apartments-v2';
 import axios from 'axios';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
+
 interface ApartmentSelectorProps {
   value: number | string;
   onChange: (apartmentId: number) => void;
@@ -51,7 +53,7 @@ export function ApartmentSelectorEnhanced({
 
         const token = localStorage.getItem('access_token');
         const response = await axios.get<ApartmentWithStats[]>(
-          'http://localhost:8000/api/apartments-v2/apartments',
+          `${API_BASE_URL}/apartments-v2/apartments`,
           {
             headers: { Authorization: `Bearer ${token}` },
             params: {

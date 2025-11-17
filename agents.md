@@ -268,7 +268,7 @@ curl http://localhost:8000/api/health
 # Expected: {"status": "healthy", "database": "connected"}
 
 # Frontend compile check
-docker exec -it uns-claudejp-frontend npm run type-check
+docker exec -it uns-claudejp-frontend npm run typecheck
 # Expected: "0 errors"
 ```
 
@@ -602,7 +602,7 @@ test_candidates.py::test_create_candidate PASSED
 docker exec -it uns-claudejp-frontend bash
 
 # Type checking (REQUIRED before commit)
-npm run type-check
+npm run typecheck
 
 # Unit tests (Vitest)
 npm test
@@ -668,7 +668,7 @@ docker exec -it uns-claudejp-backend bash -c "cd /app && mypy app/"
 docker exec -it uns-claudejp-backend bash -c "cd /app && pytest tests/ -v"
 
 # 3. Frontend type checking (CRITICAL)
-docker exec -it uns-claudejp-frontend npm run type-check
+docker exec -it uns-claudejp-frontend npm run typecheck
 
 # 4. Frontend tests
 docker exec -it uns-claudejp-frontend npm test
@@ -707,7 +707,7 @@ git pull origin main
 
 # 2. Run all tests (see Testing section above)
 # Backend: pytest backend/tests/ -v ✅
-# Frontend: npm run type-check ✅
+# Frontend: npm run typecheck ✅
 # Frontend: npm test ✅
 # Frontend: npm run test:e2e ✅
 
@@ -747,7 +747,7 @@ Brief description of what this PR does.
 
 ## Testing
 - [ ] Backend tests pass (pytest)
-- [ ] Frontend type-check passes
+- [ ] Frontend typecheck passes
 - [ ] E2E tests pass (Playwright)
 - [ ] No console errors
 - [ ] Tested in Chrome, Firefox
@@ -769,7 +769,7 @@ git pull origin main
 
 # 3. Run full test suite
 pytest backend/tests/ -v --tb=short
-docker exec -it uns-claudejp-frontend npm run type-check && npm test
+docker exec -it uns-claudejp-frontend npm run typecheck && npm test
 
 # 4. Create backup
 docker exec uns-claudejp-db pg_dump -U uns_admin uns_claudejp > backup_pre_deploy_$(date +%Y%m%d).sql
@@ -891,7 +891,7 @@ docker exec -it uns-claudejp-backend bash -c "cd /app && alembic current"
 #### **TypeScript Errors Before Commit**
 ```bash
 # Run type-check
-docker exec -it uns-claudejp-frontend npm run type-check
+docker exec -it uns-claudejp-frontend npm run typecheck
 
 # Fix all errors (required before commit!)
 # Most common:
@@ -997,7 +997,7 @@ python scripts/create_admin_user.py
 docker exec -it uns-claudejp-frontend bash
 
 # Type check
-npm run type-check
+npm run typecheck
 
 # Test
 npm test

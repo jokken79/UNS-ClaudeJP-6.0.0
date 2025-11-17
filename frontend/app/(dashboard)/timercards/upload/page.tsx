@@ -248,7 +248,29 @@ export default function TimerCardUploadPage() {
       router.push('/dashboard/timercards');
     } catch (error: any) {
       console.error('Error saving records:', error);
-      alert(`Error guardando registros: ${error.response?.data?.detail || error.message}`);
+
+      // BUG #5 FIX: Mejorar error handling con mensajes específicos
+      let errorMessage = 'Error desconocido al guardar registros';
+
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 413) {
+          errorMessage = 'Datos demasiado grandes para procesar';
+        } else if (error.response?.status === 400) {
+          errorMessage = error.response.data?.detail || 'Datos inválidos en uno o más registros';
+        } else if (error.response?.status === 401 || error.response?.status === 403) {
+          errorMessage = 'No tienes permisos para guardar registros. Por favor inicia sesión nuevamente.';
+        } else if (error.response?.status === 500) {
+          errorMessage = 'Error del servidor. Por favor contacta al administrador.';
+        } else if (error.response?.data?.detail) {
+          errorMessage = error.response.data.detail;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      toast.error(errorMessage);
     }
   };
 
