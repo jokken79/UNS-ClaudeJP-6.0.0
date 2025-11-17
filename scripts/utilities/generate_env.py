@@ -94,7 +94,7 @@ def validate_frontend(values: Dict[str, str]) -> None:
 def build_root_values(context: Dict[str, str]) -> Dict[str, str]:
     postgres_password = context.setdefault("postgres_password", secrets.token_urlsafe(32))
     secret_key = context.setdefault("secret_key", secrets.token_urlsafe(64))
-    api_url = "http://localhost:8000/api"
+    api_url = "/api"  # Use relative URL for Next.js rewrites to proxy to backend
 
     return {
         "ACCESS_TOKEN_EXPIRE_MINUTES": "480",
@@ -197,7 +197,7 @@ def build_backend_values(context: Dict[str, str]) -> Dict[str, str]:
 
 def build_frontend_values() -> Dict[str, str]:
     return {
-        "NEXT_PUBLIC_API_URL": "http://localhost:8000/api",
+        "NEXT_PUBLIC_API_URL": "/api",  # Use relative URL for Next.js rewrites to proxy to backend
         "NEXT_PUBLIC_APP_NAME": "UNS-ClaudeJP 5.6.0",
         "NEXT_PUBLIC_APP_VERSION": DEFAULT_VERSION,
         "NEXT_PUBLIC_AUTH_TOKEN_MAX_AGE": str(60 * 60 * 8),

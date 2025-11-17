@@ -1,0 +1,14 @@
+# Nginx Reverse Proxy for UNS-ClaudeJP
+FROM nginx:alpine
+
+RUN apk add --no-cache openssl
+
+COPY docker/nginx.conf /etc/nginx/nginx.conf
+COPY docker/conf.d /etc/nginx/conf.d
+
+EXPOSE 80 443
+
+HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
+  CMD wget --quiet --tries=1 --spider http://localhost/nginx-health || exit 1
+
+CMD ["nginx", "-g", "daemon off;"]
