@@ -9,51 +9,59 @@ import { BreadcrumbNav } from '@/components/breadcrumb-nav';
 import { AnimatedLink } from '@/components/animated-link';
 import { VisibilityGuard } from '@/components/visibility-guard';
 import { useLayoutStore } from '@/stores/layout-store';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { contentWidth, paddingMultiplier } = useLayoutStore();
+  const [mounted, setMounted] = useState(false);
 
-  // Determine container class based on contentWidth setting
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  let contentWidth = 'auto';
+  let paddingMultiplier = 1;
+
+  try {
+    if (mounted) {
+      const { contentWidth: cw, paddingMultiplier: pm } = useLayoutStore.getState();
+      contentWidth = cw;
+      paddingMultiplier = pm;
+    }
+  } catch (error) {
+    console.debug('[DashboardLayout] Store access failed:', error);
+  }
+
   const containerClassMap = {
-    auto: 'w-full max-w-7xl',      // Default: max width 1280px
-    full: 'w-full',                 // Full width
-    compact: 'w-full max-w-4xl',   // Compact: max width 896px
+    auto: 'w-full max-w-7xl',
+    full: 'w-full',
+    compact: 'w-full max-w-4xl',
   } as const;
 
   const containerClass = containerClassMap[contentWidth as keyof typeof containerClassMap];
 
-  // Calculate padding based on multiplier
   const paddingStyle = {
     padding: `${1.5 * paddingMultiplier}rem`,
   };
 
   return (
     <NavigationProvider>
-      {/* Top Progress Bar */}
       <SimpleNavigationProgress />
 
       <div className="flex h-screen overflow-hidden bg-background">
-        {/* Sidebar */}
         <Sidebar />
 
-        {/* Main Content Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Header */}
           <Header />
 
-          {/* Page Content with Transitions */}
           <main className="flex-1 overflow-y-auto">
             <VisibilityGuard>
               <div className={`${containerClass} mx-auto space-y-6`} style={paddingStyle}>
-                {/* Breadcrumb Navigation */}
                 <BreadcrumbNav showHome={true} maxItems={3} />
 
-                {/* Page Content with Smooth Transitions */}
                 <PageTransition variant="fade" duration={0.3}>
                   {children}
                 </PageTransition>
@@ -61,7 +69,6 @@ export default function DashboardLayout({
             </VisibilityGuard>
           </main>
 
-          {/* Footer */}
           <footer className="border-t border-border bg-background/95 backdrop-blur-sm px-6 py-4">
             <div className="flex items-center justify-between text-sm text-muted-foreground">
               <p>© 2025 UNS HRApp - Sistema de RRHH para agencias japonesas</p>
