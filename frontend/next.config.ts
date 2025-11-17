@@ -96,10 +96,16 @@ const nextConfig: NextConfig = {
   },
 
   async rewrites() {
+    // In development/Docker, use the Docker service name 'backend'
+    // In production outside Docker, use localhost
+    const apiBackend = process.env.NODE_ENV === 'production'
+      ? process.env.API_BACKEND_URL || 'http://backend:8000'
+      : 'http://backend:8000';
+
     return [
       {
         source: '/api/:path*',
-        destination: 'http://backend:8000/api/:path*',
+        destination: `${apiBackend}/api/:path*`,
       },
     ];
   },
