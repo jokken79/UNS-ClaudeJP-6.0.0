@@ -71,7 +71,8 @@
       "Bash(do echo -n \"$route: \")",
       "Bash(timeout 3 curl:*)",
       "Bash(do printf \"%-40s\" \"/$route:\")",
-      "Bash(timeout 2 curl:*)"
+      "Bash(timeout 2 curl:*)",
+      "Bash(dos2unix:*)"
     ],
     "deny": [],
     "ask": []
