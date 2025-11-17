@@ -69,7 +69,9 @@
       "Bash(find \"D:\\UNS-ClaudeJP-6.0.0\\frontend\\app\\(dashboard)\" -name \"*not-found*\" -o -name \"*page.tsx\")",
       "Bash(for:*)",
       "Bash(do echo -n \"$route: \")",
-      "Bash(timeout 3 curl:*)"
+      "Bash(timeout 3 curl:*)",
+      "Bash(do printf \"%-40s\" \"/$route:\")",
+      "Bash(timeout 2 curl:*)"
     ],
     "deny": [],
     "ask": []
