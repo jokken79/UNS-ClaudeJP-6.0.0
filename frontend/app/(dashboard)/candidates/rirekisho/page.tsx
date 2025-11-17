@@ -38,7 +38,7 @@ const RirekishoPrintView = dynamic(() => import("@/components/RirekishoPrintView
  * 配置想定：/app/(dashboard)/candidates/rirekisho/page.tsx
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "/api";
 
 export default function Page() {
   // --- State Management ---
