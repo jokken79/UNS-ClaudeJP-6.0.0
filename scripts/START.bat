@@ -314,17 +314,17 @@ echo │ 🗄️ [4/5] VERIFICAR MIGRACIONES DE BASE DE DATOS                  �
 echo └────────────────────────────────────────────────────────────────────┘
 echo.
 echo   ▶ Comprobando revisión actual de Alembic...
-echo   ℹ Comando: docker exec uns-claudejp-backend alembic current
-docker exec uns-claudejp-backend alembic current 2>nul | findstr "b6dc75dfbe7c" >nul
+echo   ℹ Comando: docker exec uns-claudejp-600-backend-1 alembic current
+docker exec uns-claudejp-600-backend-1 alembic current 2>nul | findstr "b6dc75dfbe7c" >nul
 if !errorlevel! EQU 0 (
     echo   ✓ Migración más reciente aplicada (b6dc75dfbe7c)
     echo   ██████████ [100%%]
 ) else (
     echo   ⚠ Migración más reciente no detectada
     echo   ▶ Aplicando migraciones pendientes...
-    echo   ℹ Comando: docker exec uns-claudejp-backend alembic upgrade head
+    echo   ℹ Comando: docker exec uns-claudejp-600-backend-1 alembic upgrade head
     echo   ██████░░░░ [60%%]
-    docker exec uns-claudejp-backend alembic upgrade head
+    docker exec uns-claudejp-600-backend-1 alembic upgrade head
     if !errorlevel! EQU 0 (
         echo   ✓ Migraciones aplicadas correctamente
         echo   ██████████ [100%%]
@@ -335,7 +335,7 @@ if !errorlevel! EQU 0 (
 echo.
 echo   ▶ Verificando estructura de tabla candidates (142 columnas esperadas)...
 echo   ℹ Comando: docker exec python script para contar columnas
-docker exec uns-claudejp-backend python -c "from app.core.database import engine; import sqlalchemy as sa; inspector = sa.inspect(engine); cols = [c['name'] for c in inspector.get_columns('candidates')]; print('     📊 Total columnas:', len(cols)); new_cols = ['family_dependent_1', 'height', 'weight', 'clothing_size', 'waist', 'shoe_size', 'vision_right', 'vision_left']; missing = [c for c in new_cols if c not in cols]; status = '✓ 100%% cobertura activa' if not missing and len(cols) >= 142 else f'⚠ Faltan columnas: {missing}'; print('     Status:', status)" 2>nul
+docker exec uns-claudejp-600-backend-1 python -c "from app.core.database import engine; import sqlalchemy as sa; inspector = sa.inspect(engine); cols = [c['name'] for c in inspector.get_columns('candidates')]; print('     📊 Total columnas:', len(cols)); new_cols = ['family_dependent_1', 'height', 'weight', 'clothing_size', 'waist', 'shoe_size', 'vision_right', 'vision_left']; missing = [c for c in new_cols if c not in cols]; status = '✓ 100%% cobertura activa' if not missing and len(cols) >= 142 else f'⚠ Faltan columnas: {missing}'; print('     Status:', status)" 2>nul
 if !errorlevel! NEQ 0 (
     echo   ⚠ No se pudo verificar columnas (backend aún iniciando)
     echo   ℹ Esto es normal si es el primer arranque
@@ -344,7 +344,7 @@ echo.
 
 echo   ▶ Sincronizando candidatos con empleados/staff/contract_workers...
 echo   ℹ Vinculando candidatos con registros en employees/staff/contract_workers
-docker exec uns-claudejp-backend python scripts/sync_candidate_employee_status.py 2>&1
+docker exec uns-claudejp-600-backend-1 python scripts/sync_candidate_employee_status.py 2>&1
 if !errorlevel! NEQ 0 (
     echo   ⚠ Warning: Error en sincronización (puede ser normal si backend está iniciando)
 ) else (
@@ -366,12 +366,12 @@ echo │ 📊 [6/6] VERIFICAR MÓDULO DE APARTAMENTOS V2                      �
 echo └────────────────────────────────────────────────────────────────────┘
 echo.
 echo   ▶ Verificando tablas de apartamentos en base de datos...
-docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "SELECT COUNT(*) FROM apartments;" 2>nul | findstr "449" >nul
+docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "SELECT COUNT(*) FROM apartments;" 2>nul | findstr "449" >nul
 if !errorlevel! EQU 0 (
     echo   ✓ Apartamentos verificados (449 registros)
 ) else (
     echo   ⚠ Verificando estructura de apartamentos...
-    docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "\d apartments" 2>nul | findstr "apartment_id\|base_rent" >nul
+    docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "\d apartments" 2>nul | findstr "apartment_id\|base_rent" >nul
     if !errorlevel! EQU 0 (
         echo   ✓ Estructura de apartamentos V2 presente
     ) else (
@@ -380,7 +380,7 @@ if !errorlevel! EQU 0 (
 )
 
 echo   ▶ Verificando servicios de apartamentos en backend...
-docker exec uns-claudejp-backend python -c "import sys; sys.path.insert(0, '/app'); from app.services.apartment_service import ApartmentService; from app.services.assignment_service import AssignmentService; print('✓ Services OK')" 2>nul
+docker exec uns-claudejp-600-backend-1 python -c "import sys; sys.path.insert(0, '/app'); from app.services.apartment_service import ApartmentService; from app.services.assignment_service import AssignmentService; print('✓ Services OK')" 2>nul
 if !errorlevel! EQU 0 (
     echo   ✓ Services de apartamentos importados correctamente
 ) else (
