@@ -229,13 +229,13 @@ echo   ▶ Esperando que PostgreSQL esté lista (health check - máx 90s)...
 echo   ℹ PostgreSQL necesita inicializar la base de datos
 set "WAIT_COUNT=0"
 :wait_db_loop
-docker inspect --format="{{.State.Health.Status}}" uns-claudejp-db 2>nul | findstr "healthy" >nul
+docker inspect --format="{{.State.Health.Status}}" uns-claudejp-600-db 2>nul | findstr "healthy" >nul
 if !errorlevel! EQU 0 goto :db_ready
 set /a WAIT_COUNT+=1
 echo   ⏳ Esperando... (!WAIT_COUNT!0 segundos)
 if !WAIT_COUNT! GEQ 9 (
     echo   ✗ TIMEOUT: PostgreSQL no respondió en 90 segundos
-    echo   ℹ Verifica los logs: docker logs uns-claudejp-db
+    echo   ℹ Verifica los logs: docker logs uns-claudejp-600-db
     pause
     exit /b 1
 )
@@ -288,8 +288,8 @@ echo ╚════════════════════════
 echo.
 
 echo   ▶ Creando apartamentos desde empleados...
-echo   ℹ Comando: docker exec uns-claudejp-backend python scripts/create_apartments_from_employees.py
-docker exec uns-claudejp-backend python scripts/create_apartments_from_employees.py
+echo   ℹ Comando: docker exec uns-claudejp-600-backend-1 python scripts/create_apartments_from_employees.py
+docker exec uns-claudejp-600-backend-1 python scripts/create_apartments_from_employees.py
 if !errorlevel! NEQ 0 (
     echo   ⚠ No se pudieron crear apartamentos (puede ser normal si no hay empleados aún)
 ) else (
@@ -298,8 +298,8 @@ if !errorlevel! NEQ 0 (
 
 echo.
 echo   ▶ Aplicando migraciones de base de datos (Alembic)...
-echo   ℹ Comando: docker exec uns-claudejp-backend alembic upgrade head
-docker exec uns-claudejp-backend alembic upgrade head
+echo   ℹ Comando: docker exec uns-claudejp-600-backend-1 alembic upgrade head
+docker exec uns-claudejp-600-backend-1 alembic upgrade head
 if !errorlevel! NEQ 0 (
     echo   ✗ ERROR: Falló la aplicación de migraciones
     pause
@@ -311,9 +311,9 @@ echo.
 echo   ▶ Importando candidatos desde Access DB...
 echo   ℹ Este proceso puede tardar 15-30 minutos
 echo   ℹ Se importan履歴書 (rirekisho) con todos los datos
-echo   ℹ Comando: docker exec uns-claudejp-backend python scripts/import_candidates_improved.py
+echo   ℹ Comando: docker exec uns-claudejp-600-backend-1 python scripts/import_candidates_improved.py
 echo.
-docker exec uns-claudejp-backend python scripts/import_candidates_improved.py
+docker exec uns-claudejp-600-backend-1 python scripts/import_candidates_improved.py
 if !errorlevel! EQU 0 (
     echo.
     echo   ✓ Candidatos importados con 100%% de cobertura
@@ -325,8 +325,8 @@ if !errorlevel! EQU 0 (
 
 echo.
 echo   ▶ Sincronizando estados candidato/empleado...
-echo   ℹ Comando: docker exec uns-claudejp-backend python scripts/sync_candidate_employee_status.py
-docker exec uns-claudejp-backend python scripts/sync_candidate_employee_status.py
+echo   ℹ Comando: docker exec uns-claudejp-600-backend-1 python scripts/sync_candidate_employee_status.py
+docker exec uns-claudejp-600-backend-1 python scripts/sync_candidate_employee_status.py
 if !errorlevel! NEQ 0 (
     echo   ⚠ Hubo problemas en la sincronización
 ) else (
@@ -340,9 +340,9 @@ if exist "config\access_photo_mappings.json" (
     set /a "JSON_SIZE_MB=!JSON_SIZE! / 1024 / 1024"
     echo   ℹ Archivo encontrado: config\access_photo_mappings.json (!JSON_SIZE_MB! MB)
     echo   ℹ Copiando al contenedor...
-    docker cp config\access_photo_mappings.json uns-claudejp-backend:/app/config/
+    docker cp config\access_photo_mappings.json uns-claudejp-600-backend-1:/app/config/
     echo   ℹ Importando fotos a base de datos...
-    docker exec uns-claudejp-backend python scripts/import_photos_from_json_simple.py
+    docker exec uns-claudejp-600-backend-1 python scripts/import_photos_from_json_simple.py
     if !errorlevel! EQU 0 (
         echo   ✓ Fotos importadas correctamente (!JSON_SIZE_MB! MB procesados)
     ) else (
@@ -357,7 +357,7 @@ if exist "config\access_photo_mappings.json" (
 
 echo.
 echo   ▶ Contando registros en base de datos...
-docker exec uns-claudejp-backend python -c "from app.core.database import SessionLocal; from app.models.models import Candidate, Employee, Factory; db = SessionLocal(); print('     📊 Candidatos:', db.query(Candidate).count()); print('     📊 Empleados:', db.query(Employee).count()); print('     📊 Fábricas:', db.query(Factory).count()); db.close()"
+docker exec uns-claudejp-600-backend-1 python -c "from app.core.database import SessionLocal; from app.models.models import Candidate, Employee, Factory; db = SessionLocal(); print('     📊 Candidatos:', db.query(Candidate).count()); print('     📊 Empleados:', db.query(Employee).count()); print('     📊 Fábricas:', db.query(Factory).count()); db.close()"
 echo.
 
 :: Paso 7: Validación
@@ -366,9 +366,9 @@ echo ║ [7/7] VALIDACIÓN DEL SISTEMA                                        �
 echo ╚══════════════════════════════════════════════════════════════════════╝
 echo.
 echo   ▶ Ejecutando validaciones de sistema...
-echo   ℹ Comando: docker exec uns-claudejp-backend python scripts/validate_system.py
+echo   ℹ Comando: docker exec uns-claudejp-600-backend-1 python scripts/validate_system.py
 echo.
-docker exec uns-claudejp-backend python scripts/validate_system.py
+docker exec uns-claudejp-600-backend-1 python scripts/validate_system.py
 if !errorlevel! EQU 0 (
     echo.
     echo   ✓ Sistema validado - Todas las verificaciones pasaron

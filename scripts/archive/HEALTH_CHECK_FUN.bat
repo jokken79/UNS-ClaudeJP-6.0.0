@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 chcp 65001 >nul
 setlocal EnableDelayedExpansion
 
@@ -83,7 +83,7 @@ echo.
 
 REM Health check de Database
 echo [4/6] 🗄️  DATABASE (PostgreSQL)
-docker inspect --format="{{.State.Health.Status}}" uns-claudejp-db 2>nul | findstr "healthy" >nul
+docker inspect --format="{{.State.Health.Status}}" uns-claudejp-600-db 2>nul | findstr "healthy" >nul
 if %errorlevel% EQU 0 (
     echo   ✅ PostgreSQL - SALUDABLE
     for /L %%i in (1,1,10) do (
@@ -103,7 +103,7 @@ echo.
 
 REM Health check de Backend
 echo [5/6] ⚙️  BACKEND (FastAPI)
-docker inspect --format="{{.State.Health.Status}}" uns-claudejp-backend 2>nul | findstr "healthy" >nul
+docker inspect --format="{{.State.Health.Status}}" uns-claudejp-600-backend-1 2>nul | findstr "healthy" >nul
 if %errorlevel% EQU 0 (
     echo   ✅ FastAPI - SALUDABLE
     for /L %%i in (1,1,10) do (
@@ -123,7 +123,7 @@ echo.
 
 REM Health check de Frontend
 echo [6/6] 🎨 FRONTEND (Next.js)
-docker inspect --format="{{.State.Health.Status}}" uns-claudejp-frontend 2>nul | findstr "healthy" >nul
+docker inspect --format="{{.State.Health.Status}}" uns-claudejp-600-frontend 2>nul | findstr "healthy" >nul
 if %errorlevel% EQU 0 (
     echo   ✅ Next.js - SALUDABLE
     for /L %%i in (1,1,10) do (
@@ -162,7 +162,7 @@ docker version --format "   • Server: {{.Server.Version}}"
 echo.
 
 echo   🗄️  DATABASE:
-docker logs uns-claudejp-db 2>nul | findstr "ready" | tail -1
+docker logs uns-claudejp-600-db 2>nul | findstr "ready" | tail -1
 echo.
 
 echo   🌐 ACCESO:

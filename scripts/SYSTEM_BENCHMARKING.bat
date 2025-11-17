@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 REM ═══════════════════════════════════════════════════════════════════════════
 REM Script: SYSTEM_BENCHMARKING.bat
 REM Propósito: Ejecutar benchmark completo del sistema
@@ -45,14 +45,14 @@ echo.
 echo ▶ Testing simple SELECT query...
 echo   Query: SELECT 1
 for /l %%i in (1,1,10) do (
-    docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "SELECT 1;" >nul 2>&1
+    docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "SELECT 1;" >nul 2>&1
 )
 echo   ✅ 10 iteraciones completadas
 
 echo.
 echo ▶ Testing candidates table query...
 echo   Query: SELECT COUNT(*) FROM candidates
-docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c \
+docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c \
   "EXPLAIN ANALYZE SELECT COUNT(*) FROM candidates;" | findstr "Planning\|Execution" >nul 2>&1
 if %errorlevel% EQU 0 (
     echo   ✅ Query plan generated
@@ -63,7 +63,7 @@ if %errorlevel% EQU 0 (
 echo.
 echo ▶ Testing complex JOIN query...
 echo   Query: Multiple table JOIN
-docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c \
+docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c \
   "SELECT e.id, c.full_name FROM employees e LEFT JOIN candidates c ON e.rirekisho_id = c.id LIMIT 100;" >nul 2>&1
 echo   ✅ Complex query executed
 
@@ -71,7 +71,7 @@ echo.
 echo ▶ Testing concurrent connections...
 echo   Creating 10 concurrent connections...
 for /l %%i in (1,1,10) do (
-    docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "SELECT 1;" >nul 2>&1 &
+    docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "SELECT 1;" >nul 2>&1 &
 )
 timeout /t 5 /nobreak >nul
 echo   ✅ 10 connections tested
@@ -163,7 +163,7 @@ echo ─────────────────────────
 echo.
 
 echo ▶ Testing Redis connectivity...
-docker exec uns-claudejp-redis redis-cli PING >nul 2>&1
+docker exec uns-claudejp-600-redis redis-cli PING >nul 2>&1
 if %errorlevel% EQU 0 (
     echo ✅ Redis responding
 ) else (
@@ -172,20 +172,20 @@ if %errorlevel% EQU 0 (
 
 echo.
 echo ▶ Testing Redis latency...
-docker exec uns-claudejp-redis redis-cli --latency-history -i 1 -c 5 | findstr "ms" >nul 2>&1
+docker exec uns-claudejp-600-redis redis-cli --latency-history -i 1 -c 5 | findstr "ms" >nul 2>&1
 echo ✅ Latency tested (expected: ^<1ms)
 
 echo.
 echo ▶ Testing cache hit ratio...
 echo   Setting test keys...
 for /l %%i in (1,1,100) do (
-    docker exec uns-claudejp-redis redis-cli SET test:%%i value:%%i EX 3600 >nul 2>&1
+    docker exec uns-claudejp-600-redis redis-cli SET test:%%i value:%%i EX 3600 >nul 2>&1
 )
 echo   ✅ 100 keys cached
 
 echo.
 echo ▶ Testing cache eviction policy...
-docker exec uns-claudejp-redis redis-cli CONFIG GET maxmemory-policy | findstr "allkeys-lru" >nul 2>&1
+docker exec uns-claudejp-600-redis redis-cli CONFIG GET maxmemory-policy | findstr "allkeys-lru" >nul 2>&1
 if %errorlevel% EQU 0 (
     echo ✅ Eviction policy: allkeys-lru
 ) else (
@@ -213,12 +213,12 @@ echo   ✅ Memory baseline captured
 
 echo.
 echo ▶ Disk I/O Performance...
-docker exec uns-claudejp-db iostat -x 1 2 >nul 2>&1
+docker exec uns-claudejp-600-db iostat -x 1 2 >nul 2>&1
 echo   ✅ Disk I/O baseline captured
 
 echo.
 echo ▶ Network Throughput...
-docker exec uns-claudejp-backend iftop -n -t -P -o 10s >nul 2>&1
+docker exec uns-claudejp-600-backend-1 iftop -n -t -P -o 10s >nul 2>&1
 echo   ✅ Network baseline captured
 
 echo.

@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 REM ========================================
 REM Disaster Recovery Testing Script (Windows)
 REM ========================================
@@ -83,7 +83,7 @@ echo.
 
 REM Get baseline
 echo [INFO] Recording baseline data...
-docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "SELECT count(*) FROM candidates;" > temp_before.txt 2>nul
+docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "SELECT count(*) FROM candidates;" > temp_before.txt 2>nul
 
 REM Kill database
 echo [WARN] Killing database container...
@@ -129,7 +129,7 @@ echo [OK] Database is healthy after %ELAPSED% seconds
 set END_TIME=%time%
 
 REM Verify data integrity
-docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "SELECT count(*) FROM candidates;" > temp_after.txt 2>nul
+docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "SELECT count(*) FROM candidates;" > temp_after.txt 2>nul
 fc temp_before.txt temp_after.txt >nul 2>&1
 if not errorlevel 1 (
     echo [OK] Data integrity verified (RPO: 0)

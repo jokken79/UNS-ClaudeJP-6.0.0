@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 REM ============================================================
 REM EXTRACT PHOTOS FROM ACCESS DATABASE (MEJORADO)
 REM ============================================================
@@ -93,7 +93,7 @@ if exist "backend\scripts\access_photo_mappings.json" (
     echo   Ejecuta: python backend\scripts\import_photos_from_json.py
     echo.
     echo O en Docker:
-    echo   docker exec -it uns-claudejp-backend python scripts/import_photos_from_json.py
+    echo   docker exec -it uns-claudejp-600-backend-1 python scripts/import_photos_from_json.py
 ) else (
     echo ADVERTENCIA: No se genero access_photo_mappings.json
     echo Revisa los errores arriba

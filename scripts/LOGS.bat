@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 chcp 65001 >nul
 setlocal EnableDelayedExpansion
 
@@ -126,7 +126,7 @@ if errorlevel 5 (
     echo.
     echo   ██████████ [100%%] INICIANDO LOGS EN TIEMPO REAL...
     echo.
-    docker logs -f uns-claudejp-adminer
+    docker logs -f uns-claudejp-600-adminer
     goto :end
 )
 if errorlevel 4 (
@@ -139,7 +139,7 @@ if errorlevel 4 (
     echo.
     echo   ██████████ [100%%] INICIANDO LOGS EN TIEMPO REAL...
     echo.
-    docker logs -f uns-claudejp-importer
+    docker logs -f uns-claudejp-600-importer
     goto :end
 )
 if errorlevel 3 (
@@ -152,7 +152,7 @@ if errorlevel 3 (
     echo.
     echo   ██████████ [100%%] INICIANDO LOGS EN TIEMPO REAL...
     echo.
-    docker logs -f uns-claudejp-frontend
+    docker logs -f uns-claudejp-600-frontend
     goto :end
 )
 if errorlevel 2 (
@@ -165,7 +165,7 @@ if errorlevel 2 (
     echo.
     echo   ██████████ [100%%] INICIANDO LOGS EN TIEMPO REAL...
     echo.
-    docker logs -f uns-claudejp-backend
+    docker logs -f uns-claudejp-600-backend-1
     goto :end
 )
 if errorlevel 1 (
@@ -178,7 +178,7 @@ if errorlevel 1 (
     echo.
     echo   ██████████ [100%%] INICIANDO LOGS EN TIEMPO REAL...
     echo.
-    docker logs -f uns-claudejp-db
+    docker logs -f uns-claudejp-600-db
     goto :end
 )
 

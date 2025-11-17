@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 REM ═══════════════════════════════════════════════════════════════════════════
 REM Script: IMPLEMENT_QUICK_WINS.bat
 REM Propósito: Automatizar implementación de 3 fixes críticos en 1 hora
@@ -115,7 +115,7 @@ set "PATCH_FILE=%PROJECT_ROOT%\scripts\PATCH_REINSTALAR_BACKUP.txt"
     echo if not exist "%BACKUP_DIR%" mkdir "%BACKUP_DIR%"
     echo.
     echo echo ▶ Creando backup de base de datos...
-    echo docker exec uns-claudejp-db pg_dump -U uns_admin uns_claudejp ^> "%BACKUP_DIR%\backup_before_reinstall_%TIMESTAMP%.sql" 2^>nul
+    echo docker exec uns-claudejp-600-db pg_dump -U uns_admin uns_claudejp ^> "%BACKUP_DIR%\backup_before_reinstall_%TIMESTAMP%.sql" 2^>nul
     echo if !errorlevel! NEQ 0 (
     echo     echo ❌ ERROR: Fallo al crear backup
     echo     echo ⚠️  Abortando reinstalación por seguridad
@@ -222,7 +222,7 @@ set "HEALTHCHECK_PATCH=%PROJECT_ROOT%\scripts\PATCH_FRONTEND_HEALTHCHECK.txt"
     echo if !FRONTEND_RETRIES! GEQ 30 (
     echo     echo ⚠️  TIMEOUT: Frontend no respondió en 300s
     echo     echo ! Esto es NORMAL en primera compilación
-    echo     echo ! Ver logs: docker logs uns-claudejp-frontend --tail 100
+    echo     echo ! Ver logs: docker logs uns-claudejp-600-frontend --tail 100
     echo     pause ^>nul
     echo     goto :eof
     echo ^)

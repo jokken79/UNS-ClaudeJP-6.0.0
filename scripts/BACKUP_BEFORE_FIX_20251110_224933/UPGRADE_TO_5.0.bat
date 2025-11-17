@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 chcp 65001 >nul
 setlocal EnableDelayedExpansion
 
@@ -117,12 +117,12 @@ echo.
 
 echo [8/8] ✅ Verificando configuración de base de datos...
 echo.
-docker logs uns-claudejp-db --tail 5 2>nul | findstr /C:"database system is ready" >nul
+docker logs uns-claudejp-600-db --tail 5 2>nul | findstr /C:"database system is ready" >nul
 if !errorlevel! equ 0 (
     echo ✅ Base de datos PostgreSQL iniciada correctamente
 ) else (
     echo ⚠️  La base de datos puede tardar unos segundos más en iniciar
-    echo    Ejecuta: docker logs uns-claudejp-db
+    echo    Ejecuta: docker logs uns-claudejp-600-db
 )
 echo.
 
@@ -150,7 +150,7 @@ echo    scripts\LOGS.bat
 echo    (y selecciona opción 2 - Frontend)
 echo.
 echo 🔍 Para verificar la versión de Next.js:
-echo    docker exec -it uns-claudejp-frontend npm list next
+echo    docker exec -it uns-claudejp-600-frontend npm list next
 echo.
 
 REM Preguntar si desea ver los logs
@@ -161,7 +161,7 @@ if /i "!SHOW_LOGS!"=="S" (
     echo Mostrando logs del frontend (Ctrl+C para salir)...
     echo.
     timeout /t 2 /nobreak >nul
-    docker logs -f uns-claudejp-frontend
+    docker logs -f uns-claudejp-600-frontend
 )
 
 echo.

@@ -97,7 +97,7 @@ if errorlevel 5 (
     echo ─────────────────────────────────────────────────────────
     echo.
     timeout /t 1 /nobreak >nul
-    docker logs -f uns-claudejp-adminer
+    docker logs -f uns-claudejp-600-adminer
     goto :menu
 )
 if errorlevel 4 (
@@ -105,7 +105,7 @@ if errorlevel 4 (
     echo ─────────────────────────────────────────────────────────
     echo.
     timeout /t 1 /nobreak >nul
-    docker logs -f uns-claudejp-importer
+    docker logs -f uns-claudejp-600-importer
     goto :menu
 )
 if errorlevel 3 (
@@ -113,7 +113,7 @@ if errorlevel 3 (
     echo ─────────────────────────────────────────────────────────
     echo.
     timeout /t 1 /nobreak >nul
-    docker logs -f uns-claudejp-frontend
+    docker logs -f uns-claudejp-600-frontend
     goto :menu
 )
 if errorlevel 2 (
@@ -121,7 +121,7 @@ if errorlevel 2 (
     echo ─────────────────────────────────────────────────────────
     echo.
     timeout /t 1 /nobreak >nul
-    docker logs -f uns-claudejp-backend
+    docker logs -f uns-claudejp-600-backend-1
     goto :menu
 )
 if errorlevel 1 (
@@ -129,7 +129,7 @@ if errorlevel 1 (
     echo ─────────────────────────────────────────────────────────
     echo.
     timeout /t 1 /nobreak >nul
-    docker logs -f uns-claudejp-db
+    docker logs -f uns-claudejp-600-db
     goto :menu
 )
 

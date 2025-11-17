@@ -104,7 +104,7 @@ for /L %%i in (1,1,20) do (
 )
 echo. [PROCESANDO]
 
-docker exec -i uns-claudejp-db psql -U uns_admin -d uns_claudejp < "%~dp0..\backend\backups\production_backup.sql"
+docker exec -i uns-claudejp-600-db psql -U uns_admin -d uns_claudejp < "%~dp0..\backend\backups\production_backup.sql"
 
 if %ERRORLEVEL% EQU 0 (
     echo   ✅ Datos restaurados exitosamente
@@ -113,7 +113,7 @@ if %ERRORLEVEL% EQU 0 (
     echo.
     echo 💡 Intenta:
     echo    1. Verifica que PostgreSQL está corriendo
-    echo    2. Usa: docker logs uns-claudejp-db
+    echo    2. Usa: docker logs uns-claudejp-600-db
     echo    3. Revisa el archivo de backup
     echo.
     pause

@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 REM ═══════════════════════════════════════════════════════════════════════════
 REM Script: DISASTER_RECOVERY_DRILLS.bat
 REM Propósito: Ejecutar drills de Disaster Recovery en ambiente seguro
@@ -76,7 +76,7 @@ echo ─────────────────────────
 echo.
 
 echo ▶ PASO 1: Crear backup de base de datos actual...
-docker exec uns-claudejp-db pg_dump -U uns_admin uns_claudejp > "backup_drill_%TIMESTAMP%.sql" 2>nul
+docker exec uns-claudejp-600-db pg_dump -U uns_admin uns_claudejp > "backup_drill_%TIMESTAMP%.sql" 2>nul
 if %errorlevel% EQU 0 (
     echo ✅ Backup creado exitosamente
 
@@ -99,19 +99,19 @@ if %errorlevel% EQU 0 (
 
 echo.
 echo ▶ PASO 2: Contar registros en tabla crítica...
-for /f "delims=" %%A in ('docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -tc "SELECT COUNT(*) FROM candidates;" 2^>nul') do (
+for /f "delims=" %%A in ('docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -tc "SELECT COUNT(*) FROM candidates;" 2^>nul') do (
     set "ORIG_COUNT=%%A"
 )
 echo   Candidatos originales: !ORIG_COUNT!
 
 echo.
 echo ▶ PASO 3: Simular corrupción de datos (DELETE 10 registros)...
-docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "DELETE FROM candidates WHERE id IN (SELECT id FROM candidates LIMIT 10);" >nul 2>&1
+docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "DELETE FROM candidates WHERE id IN (SELECT id FROM candidates LIMIT 10);" >nul 2>&1
 echo ✅ Datos dañados (simulado)
 
 echo.
 echo ▶ PASO 4: Verificar corrupción...
-for /f "delims=" %%A in ('docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -tc "SELECT COUNT(*) FROM candidates;" 2^>nul') do (
+for /f "delims=" %%A in ('docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -tc "SELECT COUNT(*) FROM candidates;" 2^>nul') do (
     set "CORRUPTED_COUNT=%%A"
 )
 echo   Candidatos después de DELETE: !CORRUPTED_COUNT!
@@ -120,7 +120,7 @@ echo   Diferencia: recordsets removidos
 echo.
 echo ▶ PASO 5: Restaurar desde backup...
 docker compose stop backend >nul 2>&1
-cat "backup_drill_%TIMESTAMP%.sql" | docker exec -i uns-claudejp-db psql -U uns_admin uns_claudejp >nul 2>&1
+cat "backup_drill_%TIMESTAMP%.sql" | docker exec -i uns-claudejp-600-db psql -U uns_admin uns_claudejp >nul 2>&1
 
 if %errorlevel% EQU 0 (
     echo ✅ Restauración completada
@@ -136,7 +136,7 @@ sleep 30
 
 echo.
 echo ▶ PASO 6: Verificar integridad post-restauración...
-for /f "delims=" %%A in ('docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -tc "SELECT COUNT(*) FROM candidates;" 2^>nul') do (
+for /f "delims=" %%A in ('docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -tc "SELECT COUNT(*) FROM candidates;" 2^>nul') do (
     set "RESTORED_COUNT=%%A"
 )
 echo   Candidatos restaurados: !RESTORED_COUNT!
@@ -164,7 +164,7 @@ echo ─────────────────────────
 echo.
 
 echo ▶ PASO 1: Verificar servicios están saludables...
-docker ps | findstr "uns-claudejp-backend" >nul 2>&1
+docker ps | findstr "uns-claudejp-600-backend-1" >nul 2>&1
 if %errorlevel% EQU 0 (
     echo ✅ Backend running
 ) else (
@@ -180,7 +180,7 @@ echo ⏹️  Backend killed
 
 echo.
 echo ▶ PASO 3: Verificar que está DOWN...
-docker ps | findstr "uns-claudejp-backend" >nul 2>&1
+docker ps | findstr "uns-claudejp-600-backend-1" >nul 2>&1
 if %errorlevel% NEQ 0 (
     echo ✅ Confirmado: Backend DOWN
 ) else (
@@ -228,7 +228,7 @@ echo ─────────────────────────
 echo.
 
 echo ▶ PASO 1: Verificar integridad de tabla candidates...
-docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c \
+docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c \
   "SELECT COUNT(*) FROM candidates;" >nul 2>&1
 if %errorlevel% EQU 0 (
     echo ✅ Tabla candidates accesible
@@ -240,7 +240,7 @@ if %errorlevel% EQU 0 (
 
 echo.
 echo ▶ PASO 2: Verificar referential integrity...
-docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c \
+docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c \
   "SELECT COUNT(*) FROM employees WHERE factory_id NOT IN (SELECT id FROM factories WHERE factory_id IS NOT NULL);" >nul 2>&1
 if %errorlevel% EQU 0 (
     echo ✅ Integridad referencial OK
@@ -252,19 +252,19 @@ if %errorlevel% EQU 0 (
 
 echo.
 echo ▶ PASO 3: Verificar índices...
-docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c \
+docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c \
   "REINDEX DATABASE uns_claudejp;" >nul 2>&1
 echo ✅ Reindex completado
 
 echo.
 echo ▶ PASO 4: Verificar secuencias...
-docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c \
+docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c \
   "SELECT setval('candidates_id_seq', (SELECT MAX(id) FROM candidates));" >nul 2>&1
 echo ✅ Secuencias verificadas
 
 echo.
 echo ▶ PASO 5: Ejecutar VACUUM ANALYZE...
-docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c \
+docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c \
   "VACUUM ANALYZE;" >nul 2>&1
 echo ✅ VACUUM ANALYZE completado
 
@@ -295,7 +295,7 @@ if /i not "%CONFIRM2%"=="SI" (
 
 echo.
 echo ▶ PASO 1: Crear backup final...
-docker exec uns-claudejp-db pg_dump -U uns_admin uns_claudejp > "backup_final_drill_%TIMESTAMP%.sql" >nul 2>&1
+docker exec uns-claudejp-600-db pg_dump -U uns_admin uns_claudejp > "backup_final_drill_%TIMESTAMP%.sql" >nul 2>&1
 echo ✅ Backup final creado
 
 echo.
@@ -322,7 +322,7 @@ echo ✅ Servicios iniciados (esperando 60s)
 
 echo.
 echo ▶ PASO 6: Restaurar datos desde backup...
-cat "backup_final_drill_%TIMESTAMP%.sql" | docker exec -i uns-claudejp-db psql -U uns_admin uns_claudejp >nul 2>&1
+cat "backup_final_drill_%TIMESTAMP%.sql" | docker exec -i uns-claudejp-600-db psql -U uns_admin uns_claudejp >nul 2>&1
 echo ✅ Datos restaurados
 
 echo.

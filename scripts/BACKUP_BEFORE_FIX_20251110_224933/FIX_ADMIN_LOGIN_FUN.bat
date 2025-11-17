@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 chcp 65001 >nul
 setlocal EnableDelayedExpansion
 
@@ -31,7 +31,7 @@ echo   ✅ Docker está activo
 echo.
 
 REM Verificar container del backend
-docker ps | findstr "uns-claudejp-backend" >nul 2>&1
+docker ps | findstr "uns-claudejp-600-backend-1" >nul 2>&1
 if %errorlevel% neq 0 (
     echo   ❌ Backend no está corriendo
     echo   💡 Intenta: START_FUN.bat
@@ -54,7 +54,7 @@ for /L %%i in (1,1,10) do (
 echo. [VERIFICANDO]
 
 REM Ejecutar el script de reparación
-docker exec uns-claudejp-backend python scripts/fix_admin_password.py >nul 2>&1
+docker exec uns-claudejp-600-backend-1 python scripts/fix_admin_password.py >nul 2>&1
 if %errorlevel% neq 0 (
     echo   ⚠️  Error ejecutando fix_admin_password.py
     echo   Intentando alternativa...

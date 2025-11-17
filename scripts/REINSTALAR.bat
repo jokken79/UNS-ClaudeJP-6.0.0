@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 setlocal EnableDelayedExpansion
 
 title UNS-ClaudeJP 5.4 - Reinstalacion Completa
@@ -392,7 +392,7 @@ REM  Ahora se usa el script separado: IMPORTAR_DATOS.bat
 REM ============================================================================
 REM echo   [*] Sincronizando candidatos con empleados/staff/contract_workers...
 REM echo   i Este paso vincula candidatos con sus registros en las 3 tablas
-REM docker exec uns-claudejp-backend python scripts/sync_candidate_employee_status.py 2>&1
+REM docker exec uns-claudejp-600-backend-1 python scripts/sync_candidate_employee_status.py 2>&1
 REM if !errorlevel! NEQ 0 (
 REM     echo   ! Warning: Error en sincronizacion (puede ser normal si no hay datos)
 REM ) else (

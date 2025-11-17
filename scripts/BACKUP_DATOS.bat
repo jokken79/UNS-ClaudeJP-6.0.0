@@ -17,7 +17,7 @@ set BACKUP_DATE=%datetime:~0,4%%datetime:~4,2%%datetime:~6,2%_%datetime:~8,2%%da
 
 REM Crear backup SQL
 echo 1️⃣  Exportando base de datos PostgreSQL...
-docker exec uns-claudejp-db pg_dump -U uns_admin uns_claudejp > "%~dp0..\backend\backups\backup_%BACKUP_DATE%.sql"
+docker exec uns-claudejp-600-db pg_dump -U uns_admin uns_claudejp > "%~dp0..\backend\backups\backup_%BACKUP_DATE%.sql"
 
 if %ERRORLEVEL% EQU 0 (
     echo ✅ Backup SQL creado: backend\backups\backup_%BACKUP_DATE%.sql

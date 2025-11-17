@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 REM ==============================================================================
 REM GENERATE_DOCS.bat - Generate project documentation
 REM ==============================================================================
@@ -51,7 +51,7 @@ echo ===========================================================================
 echo.
 
 echo [INFO] Exporting OpenAPI schema from FastAPI...
-docker exec uns-claudejp-backend bash -c "cd /app && python -c 'from app.main import app; import json; print(json.dumps(app.openapi(), indent=2))'" > "..\docs\generated\openapi.json"
+docker exec uns-claudejp-600-backend-1 bash -c "cd /app && python -c 'from app.main import app; import json; print(json.dumps(app.openapi(), indent=2))'" > "..\docs\generated\openapi.json"
 
 if errorlevel 1 (
     echo [WARNING] Failed to export OpenAPI schema
@@ -78,7 +78,7 @@ echo ===========================================================================
 echo.
 
 echo [INFO] Exporting database schema...
-docker exec uns-claudejp-db bash -c "pg_dump -U uns_admin -d uns_claudejp --schema-only" > "..\docs\generated\schema.sql"
+docker exec uns-claudejp-600-db bash -c "pg_dump -U uns_admin -d uns_claudejp --schema-only" > "..\docs\generated\schema.sql"
 
 if errorlevel 1 (
     echo [WARNING] Failed to export database schema
@@ -88,7 +88,7 @@ if errorlevel 1 (
 
 echo.
 echo [INFO] Generating table list...
-docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "\dt" > "..\docs\generated\tables.txt"
+docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "\dt" > "..\docs\generated\tables.txt"
 
 echo [SUCCESS] Table list exported to docs/generated/tables.txt
 echo.
@@ -108,7 +108,7 @@ echo ===========================================================================
 echo.
 
 echo [INFO] Generating backend test coverage...
-docker exec uns-claudejp-backend bash -c "cd /app && pytest backend/tests/ --cov=app --cov-report=html --cov-report=term"
+docker exec uns-claudejp-600-backend-1 bash -c "cd /app && pytest backend/tests/ --cov=app --cov-report=html --cov-report=term"
 
 if errorlevel 1 (
     echo [WARNING] Failed to generate backend coverage report
@@ -119,7 +119,7 @@ if errorlevel 1 (
 echo.
 
 echo [INFO] Generating frontend test coverage...
-docker exec uns-claudejp-frontend bash -c "cd /app && npm run test -- --coverage"
+docker exec uns-claudejp-600-frontend bash -c "cd /app && npm run test -- --coverage"
 
 if errorlevel 1 (
     echo [WARNING] Failed to generate frontend coverage report
@@ -143,7 +143,7 @@ echo ===========================================================================
 echo.
 
 echo [INFO] Running TypeScript type check...
-docker exec uns-claudejp-frontend bash -c "cd /app && npm run typecheck" > "..\docs\generated\typecheck.log" 2>&1
+docker exec uns-claudejp-600-frontend bash -c "cd /app && npm run typecheck" > "..\docs\generated\typecheck.log" 2>&1
 
 if errorlevel 1 (
     echo [WARNING] TypeScript type check found errors
