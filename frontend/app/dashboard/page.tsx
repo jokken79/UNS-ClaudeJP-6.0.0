@@ -12,7 +12,7 @@ import { ErrorState } from '@/components/error-state';
 import { useCombinedLoading, getErrorType } from '@/lib/loading-utils';
 
 export default function DashboardPage() {
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, user, isHydrated } = useAuthStore();
   const [mounted, setMounted] = useState(false);
   const [dashboardData, setDashboardData] = useState<ReturnType<typeof getAllDashboardData> | null>(null);
 
@@ -23,32 +23,32 @@ export default function DashboardPage() {
     setDashboardData(getAllDashboardData());
   }, []);
 
-  // Fetch statistics with React Query - only if authenticated and mounted
+  // Fetch statistics with React Query - only if authenticated, hydrated, and mounted
   const { data: employeesData, isLoading: loadingEmployees, error: errorEmployees, refetch: refetchEmployees } = useQuery({
     queryKey: ['employees'],
     queryFn: () => employeeService.getEmployees(),
-    enabled: isAuthenticated && mounted,
+    enabled: isAuthenticated && isHydrated && mounted,
     retry: 1,
   });
 
   const { data: candidates, isLoading: loadingCandidates, error: errorCandidates, refetch: refetchCandidates } = useQuery({
     queryKey: ['candidates'],
     queryFn: () => candidateService.getCandidates(),
-    enabled: isAuthenticated && mounted,
+    enabled: isAuthenticated && isHydrated && mounted,
     retry: 1,
   });
 
   const { data: factories, isLoading: loadingFactories, error: errorFactories, refetch: refetchFactories } = useQuery({
     queryKey: ['factories'],
     queryFn: () => factoryService.getFactories(),
-    enabled: isAuthenticated && mounted,
+    enabled: isAuthenticated && isHydrated && mounted,
     retry: 1,
   });
 
   const { data: timerCards, isLoading: loadingTimerCards, error: errorTimerCards, refetch: refetchTimerCards } = useQuery({
     queryKey: ['timerCards'],
     queryFn: () => timerCardService.getTimerCards(),
-    enabled: isAuthenticated && mounted,
+    enabled: isAuthenticated && isHydrated && mounted,
     retry: 1,
   });
 
@@ -91,8 +91,8 @@ export default function DashboardPage() {
     setDashboardData(getAllDashboardData());
   };
 
-  // Show loading state while mounting or authenticating
-  if (!mounted) {
+  // Show loading state while mounting or hydrating
+  if (!mounted || !isHydrated) {
     return <PageSkeleton type="dashboard" />;
   }
 
@@ -134,7 +134,7 @@ export default function DashboardPage() {
       {/* Dashboard Header */}
       <DashboardHeader
         title="Dashboard"
-        subtitle={`Bienvenido, ${user?.username || 'Usuario'}`}
+        subtitle={user ? `Bienvenido, ${user.username || 'Usuario'}` : 'Bienvenido'}
         dateRange={{
           start: new Date(new Date().setDate(1)),
           end: new Date(),
