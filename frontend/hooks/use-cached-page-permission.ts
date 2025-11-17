@@ -64,6 +64,7 @@ export function useCachedPagePermission(
   const [cacheHit, setCacheHit] = useState(false);
   const [cacheExpiresIn, setCacheExpiresIn] = useState(0);
   const user = useAuthStore((state) => state.user);
+  const isHydrated = useAuthStore((state) => state.isHydrated);
 
   const cacheKey = user?.role
     ? buildRolePermissionKey(user.role, pageKey)
@@ -74,6 +75,12 @@ export function useCachedPagePermission(
    */
   const checkPermission = useCallback(
     async (forceRefresh = false) => {
+      // Wait for auth hydration before checking permissions
+      if (!isHydrated) {
+        setLoading(true);
+        return;
+      }
+
       if (!user) {
         setHasPermission(false);
         setLoading(false);
@@ -136,7 +143,7 @@ export function useCachedPagePermission(
         setLoading(false);
       }
     },
-    [user, pageKey, cacheKey, ttlMs]
+    [user, pageKey, cacheKey, ttlMs, isHydrated]
   );
 
   /**
@@ -191,6 +198,7 @@ export function useCachedAllPagesPermission(
   const [cacheHit, setCacheHit] = useState(false);
   const [cacheExpiresIn, setCacheExpiresIn] = useState(0);
   const user = useAuthStore((state) => state.user);
+  const isHydrated = useAuthStore((state) => state.isHydrated);
 
   const cacheKey = user?.role ? buildRoleAllPagesKey(user.role) : '';
 
@@ -199,6 +207,12 @@ export function useCachedAllPagesPermission(
    */
   const fetchAllPermissions = useCallback(
     async (forceRefresh = false) => {
+      // Wait for auth hydration before fetching permissions
+      if (!isHydrated) {
+        setLoading(true);
+        return;
+      }
+
       if (!user) {
         setPermissions({});
         setLoading(false);
@@ -262,7 +276,7 @@ export function useCachedAllPagesPermission(
         setLoading(false);
       }
     },
-    [user, cacheKey, ttlMs]
+    [user, cacheKey, ttlMs, isHydrated]
   );
 
   /**
@@ -345,6 +359,7 @@ export function useCachedUserPermissions(
   const [cacheHit, setCacheHit] = useState(false);
   const [cacheExpiresIn, setCacheExpiresIn] = useState(0);
   const currentUser = useAuthStore((state) => state.user);
+  const isHydrated = useAuthStore((state) => state.isHydrated);
 
   const targetUserId = userId ?? currentUser?.id;
   const cacheKey = targetUserId
@@ -356,6 +371,12 @@ export function useCachedUserPermissions(
    */
   const fetchUserPermissions = useCallback(
     async (forceRefresh = false) => {
+      // Wait for auth hydration before fetching permissions
+      if (!isHydrated) {
+        setLoading(true);
+        return;
+      }
+
       if (!targetUserId || !currentUser) {
         setPermissions(null);
         setLoading(false);
@@ -420,7 +441,7 @@ export function useCachedUserPermissions(
         setLoading(false);
       }
     },
-    [targetUserId, currentUser, cacheKey, ttlMs]
+    [targetUserId, currentUser, cacheKey, ttlMs, isHydrated]
   );
 
   /**

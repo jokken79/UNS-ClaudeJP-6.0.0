@@ -79,7 +79,9 @@
       "Bash(cmd //c NGINX_HEALTH_CHECK.bat)",
       "Bash(NGINX_HEALTH_CHECK.bat)",
       "Bash(do echo \"Request $i:\")",
-      "Bash(do curl -s -w \" [HTTP %{http_code}]\\n\" -o /dev/null http://localhost/api/health)"
+      "Bash(do curl -s -w \" [HTTP %{http_code}]\\n\" -o /dev/null http://localhost/api/health)",
+      "Bash(npm run type-check:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []
