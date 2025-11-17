@@ -277,14 +277,14 @@ echo.
 echo   [*] Esperando que PostgreSQL este lista (health check - max 90s)...
 set "WAIT_COUNT=0"
 :wait_db_loop
-for /f "tokens=*" %%A in ('docker inspect --format="{{.State.Health.Status}}" uns-claudejp-db 2^>nul') do set "DB_STATUS=%%A"
+for /f "tokens=*" %%A in ('docker inspect --format="{{.State.Health.Status}}" uns-claudejp-600-db 2^>nul') do set "DB_STATUS=%%A"
 if /i "%DB_STATUS%"=="healthy" goto :db_ready
 set /a WAIT_COUNT+=1
 set /a WAIT_SECONDS=!WAIT_COUNT!*10
 echo   [...] Esperando... !WAIT_SECONDS! segundos
 if !WAIT_COUNT! GEQ 9 (
     echo   [X] TIMEOUT: PostgreSQL no respondio en 90 segundos
-    echo   i Verifica los logs: docker logs uns-claudejp-db
+    echo   i Verifica los logs: docker logs uns-claudejp-600-db
     pause >nul
     goto :eof
 )
@@ -328,10 +328,10 @@ echo   i Esto aplicara TODAS las migraciones incluyendo:
 echo   i   - Tablas base (24 tablas)
 echo   i   - Trigger de sincronizacion de fotos
 echo   i   - Indices de busqueda (12 indices GIN/trigram)
-docker exec uns-claudejp-backend bash -c "cd /app && alembic upgrade head"
+docker exec uns-claudejp-600-backend-1 bash -c "cd /app && alembic upgrade head"
 if !errorlevel! NEQ 0 (
     echo   [X] ERROR: Fallo la ejecucion de migraciones
-    echo   i Verifica los logs: docker logs uns-claudejp-backend
+    echo   i Verifica los logs: docker logs uns-claudejp-600-backend-1
     pause >nul
     goto :eof
 )
@@ -363,7 +363,7 @@ for /f "tokens=*" %%a in ('type "%TEMP%\pwd_hash.txt"') do (
 
 :hash_ready
 REM Insertar usuario con credenciales personalizadas
-docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "INSERT INTO users (username, email, password_hash, role, full_name, is_active, created_at, updated_at) VALUES ('!ADMIN_USERNAME!', '!ADMIN_EMAIL!', '!PWD_HASH!', 'SUPER_ADMIN', 'Administrator', true, now(), now()) ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash, role = EXCLUDED.role, email = EXCLUDED.email, updated_at = now();" >nul 2>&1
+docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "INSERT INTO users (username, email, password_hash, role, full_name, is_active, created_at, updated_at) VALUES ('!ADMIN_USERNAME!', '!ADMIN_EMAIL!', '!PWD_HASH!', 'SUPER_ADMIN', 'Administrator', true, now(), now()) ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash, role = EXCLUDED.role, email = EXCLUDED.email, updated_at = now();" >nul 2>&1
 
 if !errorlevel! NEQ 0 (
     echo   ! Warning: Error creando usuario admin
@@ -377,7 +377,7 @@ del /q "%TEMP%\pwd_hash.txt" >nul 2>&1
 
 echo.
 echo   [*] Verificando tablas en base de datos...
-docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "\dt" 2>&1 | findstr "public" >nul
+docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "\dt" 2>&1 | findstr "public" >nul
 if !errorlevel! EQU 0 (
     echo   [OK] Tablas verificadas en base de datos
 ) else (

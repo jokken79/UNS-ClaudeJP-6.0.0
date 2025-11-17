@@ -69,6 +69,7 @@ async def register(
 
 @router.post("")
 @router.post("/login", response_model=Token)
+@router.post("/login/", response_model=Token)
 @limiter.limit("10/minute")  # Limit to 10 login attempts per minute
 async def login(
     request: Request,

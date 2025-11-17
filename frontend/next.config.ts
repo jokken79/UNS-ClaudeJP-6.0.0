@@ -25,6 +25,7 @@ const connectSrc = new Set<string>(["'self'", apiOrigin]);
 if (process.env.NODE_ENV !== "production") {
   connectSrc.add("http://localhost:3000");
   connectSrc.add("http://localhost:8000");
+  connectSrc.add("http://backend:8000");  // Docker internal hostname
   connectSrc.add("ws://localhost:3000");
   connectSrc.add("ws://localhost:3001");
 }
