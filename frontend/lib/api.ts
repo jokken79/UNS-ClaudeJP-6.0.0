@@ -203,7 +203,7 @@ export const employeeService = {
 // Candidate services
 export const candidateService = {
   getCandidates: async (params?: CandidateListParams): Promise<PaginatedResponse<Candidate>> => {
-    const response = await api.get<PaginatedResponse<Candidate>>('/candidates', { params });
+    const response = await api.get<PaginatedResponse<Candidate>>('/candidates/', { params });
     return response.data;
   },
 
