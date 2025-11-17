@@ -72,7 +72,14 @@
       "Bash(timeout 3 curl:*)",
       "Bash(do printf \"%-40s\" \"/$route:\")",
       "Bash(timeout 2 curl:*)",
-      "Bash(dos2unix:*)"
+      "Bash(dos2unix:*)",
+      "Bash(do curl -s http://localhost/api/health -w \"\\nStatus: %{http_code}\\n\" -o /dev/null)",
+      "Bash(chmod:*)",
+      "Bash(bash:*)",
+      "Bash(cmd //c NGINX_HEALTH_CHECK.bat)",
+      "Bash(NGINX_HEALTH_CHECK.bat)",
+      "Bash(do echo \"Request $i:\")",
+      "Bash(do curl -s -w \" [HTTP %{http_code}]\\n\" -o /dev/null http://localhost/api/health)"
     ],
     "deny": [],
     "ask": []
