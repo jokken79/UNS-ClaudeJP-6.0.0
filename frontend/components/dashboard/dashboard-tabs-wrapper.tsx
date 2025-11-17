@@ -61,14 +61,22 @@ interface DashboardTabsProps {
  * - Keyboard navigation (arrow keys, tab, home/end)
  */
 export function DashboardTabs({
-  employeesData,
-  candidates,
-  factories,
-  timerCards,
-  stats,
-  dashboardData,
-  isLoading,
-  onRefresh,
+  employeesData = null,
+  candidates = null,
+  factories = null,
+  timerCards = null,
+  stats = {
+    totalCandidates: 0,
+    pendingCandidates: 0,
+    totalEmployees: 0,
+    activeEmployees: 0,
+    totalFactories: 0,
+    totalTimerCards: 0,
+    employeesInCorporateHousing: 0,
+  },
+  dashboardData = null,
+  isLoading = false,
+  onRefresh = () => {},
 }: DashboardTabsProps) {
   const { activeTab, setActiveTab } = useDashboardTabsStore()
   const [hydrated, setHydrated] = useState(false)

@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 REM ============================================
 REM Seed Salary System Test Data
 REM ============================================
@@ -43,20 +43,20 @@ if errorlevel 1 (
 )
 
 REM Verificar si el contenedor backend existe
-docker ps -a --format "{{.Names}}" | findstr /C:"uns-claudejp-backend" >nul
+docker ps -a --format "{{.Names}}" | findstr /C:"uns-claudejp-600-backend-1" >nul
 if errorlevel 1 (
-    echo [ERROR] Contenedor 'uns-claudejp-backend' no encontrado.
+    echo [ERROR] Contenedor 'uns-claudejp-600-backend-1' no encontrado.
     echo Por favor ejecute START.bat primero.
     pause >nul
     exit /b 1
 )
 
 REM Verificar si el contenedor esta corriendo
-docker ps --format "{{.Names}}" | findstr /C:"uns-claudejp-backend" >nul
+docker ps --format "{{.Names}}" | findstr /C:"uns-claudejp-600-backend-1" >nul
 if errorlevel 1 (
     echo [ADVERTENCIA] Contenedor backend no esta corriendo.
     echo Iniciando contenedor...
-    docker start uns-claudejp-backend >nul 2>&1
+    docker start uns-claudejp-600-backend-1 >nul 2>&1
     timeout /t 3 /nobreak >nul
 )
 
@@ -74,7 +74,7 @@ echo [INFO] Ejecutando script de seed...
 echo.
 
 REM Ejecutar script de seed
-docker exec uns-claudejp-backend python backend/scripts/seed_salary_data.py
+docker exec uns-claudejp-600-backend-1 python backend/scripts/seed_salary_data.py
 
 if errorlevel 1 (
     echo.
@@ -91,7 +91,7 @@ echo ============================================================
 echo.
 
 REM Ejecutar script de verificacion
-docker exec uns-claudejp-backend python backend/scripts/verify_salary_seed.py
+docker exec uns-claudejp-600-backend-1 python backend/scripts/verify_salary_seed.py
 
 if errorlevel 1 (
     echo.

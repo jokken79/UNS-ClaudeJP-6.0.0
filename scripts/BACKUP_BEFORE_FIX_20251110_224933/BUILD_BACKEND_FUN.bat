@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 chcp 65001 >nul
 setlocal EnableDelayedExpansion
 
@@ -126,7 +126,7 @@ echo      3. Docs API en: http://localhost:8000/api/docs
 echo      4. ReDoc en: http://localhost:8000/api/redoc
 echo.
 echo   🔍 Para ejecutar migraciones:
-echo      docker exec uns-claudejp-backend alembic upgrade head
+echo      docker exec uns-claudejp-600-backend-1 alembic upgrade head
 echo.
 
 echo.

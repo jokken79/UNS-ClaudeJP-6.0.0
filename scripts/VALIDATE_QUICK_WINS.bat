@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 REM ═══════════════════════════════════════════════════════════════════════════
 REM Script: VALIDATE_QUICK_WINS.bat
 REM Propósito: Validar que los 3 Quick Wins fueron implementados correctamente
@@ -117,13 +117,13 @@ if %errorlevel% EQU 0 (
     set /a VALIDATION_PASSED+=1
 
     REM Verificar que DB está healthy
-    docker ps | findstr "uns-claudejp-db" >nul 2>&1
+    docker ps | findstr "uns-claudejp-600-db" >nul 2>&1
     if %errorlevel% EQU 0 (
         echo ✅ PASS: Contenedor DB está activo
         set /a VALIDATION_PASSED+=1
 
         REM Verificar health status
-        for /f "tokens=*" %%A in ('docker ps ^| findstr "uns-claudejp-db"') do (
+        for /f "tokens=*" %%A in ('docker ps ^| findstr "uns-claudejp-600-db"') do (
             echo     Status: %%A
         )
     ) else (

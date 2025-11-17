@@ -49,7 +49,7 @@ echo [2/5] Realizando backup de base de datos PostgreSQL...
 echo.
 
 REM Verificar que PostgreSQL está corriendo
-docker ps | findstr "uns-claudejp-db" >nul 2>&1
+docker ps | findstr "uns-claudejp-600-db" >nul 2>&1
 if %errorlevel% neq 0 (
     echo ❌ ERROR: PostgreSQL no está corriendo
     echo    Ejecutar primero: docker-compose up -d
@@ -58,7 +58,7 @@ if %errorlevel% neq 0 (
 
 REM Backup de PostgreSQL
 echo 📦 Exportando base de datos...
-docker exec uns-claudejp-db pg_dump -U uns_admin uns_claudejp > "%BACKUP_DIR%\%BACKUP_NAME%_database.sql"
+docker exec uns-claudejp-600-db pg_dump -U uns_admin uns_claudejp > "%BACKUP_DIR%\%BACKUP_NAME%_database.sql"
 
 if %errorlevel% equ 0 (
     echo ✅ Backup de base de datos completado
@@ -290,7 +290,7 @@ echo.
 echo Para restaurar desde este backup:
 echo.
 echo   1. Base de datos:
-echo      docker exec -i uns-claudejp-db psql -U uns_admin uns_claudejp ^< %BACKUP_DIR%\%BACKUP_NAME%_database.sql
+echo      docker exec -i uns-claudejp-600-db psql -U uns_admin uns_claudejp ^< %BACKUP_DIR%\%BACKUP_NAME%_database.sql
 echo.
 echo   2. Archivos (si usaste 7z):
 echo      7z x %BACKUP_DIR%\%BACKUP_NAME%_files.7z

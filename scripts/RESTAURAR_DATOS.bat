@@ -33,7 +33,7 @@ echo 🔄 Restaurando base de datos...
 echo.
 
 REM Restaurar el backup
-docker exec -i uns-claudejp-db psql -U uns_admin uns_claudejp < "%~dp0..\backend\backups\production_backup.sql"
+docker exec -i uns-claudejp-600-db psql -U uns_admin uns_claudejp < "%~dp0..\backend\backups\production_backup.sql"
 
 if %ERRORLEVEL% EQU 0 (
     echo.

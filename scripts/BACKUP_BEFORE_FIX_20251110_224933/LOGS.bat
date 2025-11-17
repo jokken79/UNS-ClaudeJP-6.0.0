@@ -72,7 +72,7 @@ if errorlevel 5 (
     echo Mostrando logs de Adminer...
     echo Presiona Ctrl+C para salir
     echo.
-    docker logs -f uns-claudejp-adminer
+    docker logs -f uns-claudejp-600-adminer
     goto :end
 )
 if errorlevel 4 (
@@ -80,7 +80,7 @@ if errorlevel 4 (
     echo Mostrando logs de Importer...
     echo Presiona Ctrl+C para salir
     echo.
-    docker logs -f uns-claudejp-importer
+    docker logs -f uns-claudejp-600-importer
     goto :end
 )
 if errorlevel 3 (
@@ -88,7 +88,7 @@ if errorlevel 3 (
     echo Mostrando logs de Frontend (Next.js)...
     echo Presiona Ctrl+C para salir
     echo.
-    docker logs -f uns-claudejp-frontend
+    docker logs -f uns-claudejp-600-frontend
     goto :end
 )
 if errorlevel 2 (
@@ -96,7 +96,7 @@ if errorlevel 2 (
     echo Mostrando logs de Backend (FastAPI)...
     echo Presiona Ctrl+C para salir
     echo.
-    docker logs -f uns-claudejp-backend
+    docker logs -f uns-claudejp-600-backend-1
     goto :end
 )
 if errorlevel 1 (
@@ -104,7 +104,7 @@ if errorlevel 1 (
     echo Mostrando logs de Database (PostgreSQL)...
     echo Presiona Ctrl+C para salir
     echo.
-    docker logs -f uns-claudejp-db
+    docker logs -f uns-claudejp-600-db
     goto :end
 )
 

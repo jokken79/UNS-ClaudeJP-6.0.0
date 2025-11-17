@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 chcp 65001 >nul
 setlocal EnableDelayedExpansion
 color 0E
@@ -47,7 +47,7 @@ echo │ [2/6] MIGRACIÓN ALEMBIC                                            │
 echo └────────────────────────────────────────────────────────────────────┘
 echo.
 
-docker exec uns-claudejp-backend bash -c "cd /app && alembic current" 2>nul | findstr "add_nyuusha_fields" >nul
+docker exec uns-claudejp-600-backend-1 bash -c "cd /app && alembic current" 2>nul | findstr "add_nyuusha_fields" >nul
 if !errorlevel! EQU 0 (
     echo ✅ Migración add_nyuusha_fields aplicada
     set /a SUCCESS_COUNT+=1
@@ -67,7 +67,7 @@ echo │ [3/6] COLUMNAS EN BASE DE DATOS                                   │
 echo └────────────────────────────────────────────────────────────────────┘
 echo.
 
-docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "\d requests" 2>nul | findstr "candidate_id" >nul
+docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "\d requests" 2>nul | findstr "candidate_id" >nul
 if !errorlevel! EQU 0 (
     echo ✅ Columna candidate_id existe
     set /a SUCCESS_COUNT+=1
@@ -76,7 +76,7 @@ if !errorlevel! EQU 0 (
     set /a ERROR_COUNT+=1
 )
 
-docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "\d requests" 2>nul | findstr "employee_data" >nul
+docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "\d requests" 2>nul | findstr "employee_data" >nul
 if !errorlevel! EQU 0 (
     echo ✅ Columna employee_data existe
     set /a SUCCESS_COUNT+=1
@@ -95,7 +95,7 @@ echo │ [4/6] ÍNDICES DE BASE DE DATOS                                    │
 echo └────────────────────────────────────────────────────────────────────┘
 echo.
 
-docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "\di" 2>nul | findstr "idx_requests_candidate" >nul
+docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "\di" 2>nul | findstr "idx_requests_candidate" >nul
 if !errorlevel! EQU 0 (
     echo ✅ Índice idx_requests_candidate_id existe
     set /a SUCCESS_COUNT+=1

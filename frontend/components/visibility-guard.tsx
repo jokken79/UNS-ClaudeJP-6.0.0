@@ -9,20 +9,20 @@ interface VisibilityGuardProps {
 }
 
 export function VisibilityGuard({ children }: VisibilityGuardProps) {
-  const { user } = useAuthStore();
-  const { underConstructionPages, isPageUnderConstruction } = useSettingsStore();
+  try {
+    const { user } = useAuthStore();
+    const { underConstructionPages, isPageUnderConstruction } = useSettingsStore();
 
-  // Check if user should see construction page
-  // Only ADMIN and KANRINSHA are affected by the toggle
-  const isAffectedRole = user?.role === 'ADMIN' || user?.role === 'KANRINSHA';
+    const isAffectedRole = user?.role === 'ADMIN' || user?.role === 'KANRINSHA';
+    const shouldShowConstruction = isAffectedRole && underConstructionPages.length > 0;
 
-  // Check if current page is marked as under construction
-  // For now, we'll use a simple check - you can expand this logic later
-  const shouldShowConstruction = isAffectedRole && underConstructionPages.length > 0;
+    if (shouldShowConstruction) {
+      return <UnderConstruction />;
+    }
 
-  if (shouldShowConstruction) {
-    return <UnderConstruction />;
+    return <>{children}</>;
+  } catch (error) {
+    console.debug('[VisibilityGuard] Store initialization failed:', error);
+    return <>{children}</>;
   }
-
-  return <>{children}</>;
 }

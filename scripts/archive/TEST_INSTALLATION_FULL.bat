@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 REM ═══════════════════════════════════════════════════════════════════════════
 REM Script: TEST_INSTALLATION_FULL.bat
 REM Propósito: Testing completo de instalación con 50+ validaciones
@@ -71,13 +71,13 @@ echo [SECTION 2/6] SERVICE HEALTH CHECKS
 echo.
 
 echo [4/50] PostgreSQL container running...
-docker ps 2>nul | findstr "uns-claudejp-db" >nul 2>&1
+docker ps 2>nul | findstr "uns-claudejp-600-db" >nul 2>&1
 if !errorlevel! EQU 0 (
     echo     ✅ PASS
     set /a TESTS_PASSED+=1
 
     echo [5/50] PostgreSQL healthy...........
-    docker ps 2>nul | findstr "uns-claudejp-db.*healthy" >nul 2>&1
+    docker ps 2>nul | findstr "uns-claudejp-600-db.*healthy" >nul 2>&1
     if !errorlevel! EQU 0 (
         echo     ✅ PASS
         set /a TESTS_PASSED+=1
@@ -93,7 +93,7 @@ if !errorlevel! EQU 0 (
 )
 
 echo [6/50] Redis container running.......
-docker ps 2>nul | findstr "uns-claudejp-redis" >nul 2>&1
+docker ps 2>nul | findstr "uns-claudejp-600-redis" >nul 2>&1
 if !errorlevel! EQU 0 (
     echo     ✅ PASS
     set /a TESTS_PASSED+=1
@@ -103,7 +103,7 @@ if !errorlevel! EQU 0 (
 )
 
 echo [7/50] Backend container running.....
-docker ps 2>nul | findstr "uns-claudejp-backend" >nul 2>&1
+docker ps 2>nul | findstr "uns-claudejp-600-backend-1" >nul 2>&1
 if !errorlevel! EQU 0 (
     echo     ✅ PASS
     set /a TESTS_PASSED+=1
@@ -113,7 +113,7 @@ if !errorlevel! EQU 0 (
 )
 
 echo [8/50] Frontend container running....
-docker ps 2>nul | findstr "uns-claudejp-frontend" >nul 2>&1
+docker ps 2>nul | findstr "uns-claudejp-600-frontend" >nul 2>&1
 if !errorlevel! EQU 0 (
     echo     ✅ PASS
     set /a TESTS_PASSED+=1
@@ -123,7 +123,7 @@ if !errorlevel! EQU 0 (
 )
 
 echo [9/50] Adminer container running.....
-docker ps 2>nul | findstr "uns-claudejp-adminer" >nul 2>&1
+docker ps 2>nul | findstr "uns-claudejp-600-adminer" >nul 2>&1
 if !errorlevel! EQU 0 (
     echo     ✅ PASS
     set /a TESTS_PASSED+=1
@@ -185,13 +185,13 @@ echo [SECTION 4/6] DATABASE CONTENT VERIFICATION
 echo.
 
 echo [13/50] Database accessible.........
-docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "SELECT 1;" >nul 2>&1
+docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "SELECT 1;" >nul 2>&1
 if !errorlevel! EQU 0 (
     echo     ✅ PASS
     set /a TESTS_PASSED+=1
 
     echo [14/50] Migrations applied.........
-    docker exec uns-claudejp-backend bash -c "cd /app && alembic current" >nul 2>&1
+    docker exec uns-claudejp-600-backend-1 bash -c "cd /app && alembic current" >nul 2>&1
     if !errorlevel! EQU 0 (
         echo     ✅ PASS
         set /a TESTS_PASSED+=1
@@ -201,7 +201,7 @@ if !errorlevel! EQU 0 (
     )
 
     echo [15/50] Users table exists.........
-    docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "SELECT COUNT(*) FROM users;" >nul 2>&1
+    docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "SELECT COUNT(*) FROM users;" >nul 2>&1
     if !errorlevel! EQU 0 (
         echo     ✅ PASS
         set /a TESTS_PASSED+=1
@@ -211,7 +211,7 @@ if !errorlevel! EQU 0 (
     )
 
     echo [16/50] Admin user exists.........
-    docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "SELECT COUNT(*) FROM users WHERE username='admin';" >nul 2>&1
+    docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "SELECT COUNT(*) FROM users WHERE username='admin';" >nul 2>&1
     if !errorlevel! EQU 0 (
         echo     ✅ PASS
         set /a TESTS_PASSED+=1
@@ -221,7 +221,7 @@ if !errorlevel! EQU 0 (
     )
 
     echo [17/50] Candidates imported......
-    docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "SELECT COUNT(*) FROM candidates;" >nul 2>&1
+    docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "SELECT COUNT(*) FROM candidates;" >nul 2>&1
     if !errorlevel! EQU 0 (
         echo     ✅ PASS
         set /a TESTS_PASSED+=1
@@ -231,7 +231,7 @@ if !errorlevel! EQU 0 (
     )
 
     echo [18/50] Employees imported.......
-    docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "SELECT COUNT(*) FROM employees;" >nul 2>&1
+    docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "SELECT COUNT(*) FROM employees;" >nul 2>&1
     if !errorlevel! EQU 0 (
         echo     ✅ PASS
         set /a TESTS_PASSED+=1
@@ -241,7 +241,7 @@ if !errorlevel! EQU 0 (
     )
 
     echo [19/50] 13 tables created........
-    docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "\dt" 2>nul | findstr /C:"public " >nul 2>&1
+    docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "\dt" 2>nul | findstr /C:"public " >nul 2>&1
     if !errorlevel! EQU 0 (
         echo     ✅ PASS
         set /a TESTS_PASSED+=1

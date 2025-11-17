@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 chcp 65001 >nul
 setlocal EnableDelayedExpansion
 
@@ -45,7 +45,7 @@ echo [3/3] Cargando fotos a PostgreSQL...
 echo       Esto puede tomar varios minutos (procesando 1100+ fotos)...
 echo.
 
-docker exec uns-claudejp-backend python /app/scripts/load_photos_from_json.py
+docker exec uns-claudejp-600-backend-1 python /app/scripts/load_photos_from_json.py
 
 if errorlevel 1 (
     echo.

@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 REM ═══════════════════════════════════════════════════════════════════════════
 REM Script: DEPLOY_P3_AUTOMATION.bat
 REM Propósito: Implementar Automatización Completa (6 horas total)
@@ -113,10 +113,10 @@ mkdir "%PROJECT_ROOT%\.github\workflows" 2>nul
     echo       - uses: actions/checkout@v3
     echo       - name: Build backend image
     echo         run: ^|
-    echo           docker build -f docker/Dockerfile.backend -t uns-claudejp-backend:{{ TIMESTAMP }} .
+    echo           docker build -f docker/Dockerfile.backend -t uns-claudejp-600-backend-1:{{ TIMESTAMP }} .
     echo       - name: Build frontend image
     echo         run: ^|
-    echo           docker build -f docker/Dockerfile.frontend -t uns-claudejp-frontend:{{ TIMESTAMP }} .
+    echo           docker build -f docker/Dockerfile.frontend -t uns-claudejp-600-frontend:{{ TIMESTAMP }} .
     echo.
     echo   deploy:
     echo     runs-on: ubuntu-latest
@@ -178,7 +178,7 @@ set "BACKUP_SCRIPT=%PROJECT_ROOT%\scripts\AUTOMATED_BACKUP.bat"
     echo set "TIMESTAMP=!DATE:~-4!!DATE:~-10,2!!DATE:~-7,2!_!TIME:~0,2!!TIME:~3,2!"
     echo.
     echo REM Crear backup del database
-    echo docker exec uns-claudejp-db pg_dump -U uns_admin uns_claudejp ^> "!BACKUP_DIR!\backup_!TIMESTAMP!.sql" 2^>nul
+    echo docker exec uns-claudejp-600-db pg_dump -U uns_admin uns_claudejp ^> "!BACKUP_DIR!\backup_!TIMESTAMP!.sql" 2^>nul
     echo if !errorlevel! EQU 0 (
     echo     echo ✅ Backup creado: backup_!TIMESTAMP!.sql
     echo ) else (
@@ -223,7 +223,7 @@ echo      dir backend\backups\
 echo.
 echo   3. Probar restauración:
 echo      docker compose stop backend
-echo      cat backend\backups\backup_[timestamp].sql ^| docker exec -i uns-claudejp-db psql -U uns_admin uns_claudejp
+echo      cat backend\backups\backup_[timestamp].sql ^| docker exec -i uns-claudejp-600-db psql -U uns_admin uns_claudejp
 echo      docker compose up -d backend
 echo.
 
@@ -308,7 +308,7 @@ set "HEALTH_CHECK=%PROJECT_ROOT%\scripts\ADVANCED_HEALTH_CHECK.bat"
     echo.
     echo REM 1. Database health
     echo echo [1/5] Database Health Check...
-    echo docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "SELECT 1;" ^>nul 2^>^&1
+    echo docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "SELECT 1;" ^>nul 2^>^&1
     echo if !errorlevel! EQU 0 (
     echo     echo     ✅ PASS: Database responding
     echo ) else (
@@ -335,7 +335,7 @@ set "HEALTH_CHECK=%PROJECT_ROOT%\scripts\ADVANCED_HEALTH_CHECK.bat"
     echo.
     echo REM 4. Database query performance
     echo echo [4/5] Database Performance Check...
-    echo docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "EXPLAIN ANALYZE SELECT COUNT(*) FROM candidates;" ^>nul 2^>^&1
+    echo docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "EXPLAIN ANALYZE SELECT COUNT(*) FROM candidates;" ^>nul 2^>^&1
     echo if !errorlevel! EQU 0 (
     echo     echo     ✅ PASS: Query performance acceptable
     echo ) else (
@@ -344,7 +344,7 @@ set "HEALTH_CHECK=%PROJECT_ROOT%\scripts\ADVANCED_HEALTH_CHECK.bat"
     echo.
     echo REM 5. Redis health
     echo echo [5/5] Redis Health Check...
-    echo docker exec uns-claudejp-redis redis-cli ping ^>nul 2^>^&1
+    echo docker exec uns-claudejp-600-redis redis-cli ping ^>nul 2^>^&1
     echo if !errorlevel! EQU 0 (
     echo     echo     ✅ PASS: Redis responding
     echo ) else (
@@ -400,7 +400,7 @@ set "PERF_GUIDE=%PROJECT_ROOT%\docs\PERFORMANCE_OPTIMIZATION_GUIDE.md"
     echo.
     echo ### Index Creation
     echo ``bash
-    echo docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "
+    echo docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "
     echo   CREATE INDEX idx_candidates_status ON candidates(status);
     echo   CREATE INDEX idx_employees_factory ON employees(factory_id);
     echo   CREATE INDEX idx_timer_cards_employee ON timer_cards(employee_id, date);
@@ -460,7 +460,7 @@ echo.
 
 echo ⚠️  INSTRUCCIONES MANUALES:
 echo   1. Crear índices en database:
-    echo      docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp
+    echo      docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp
 echo      CREATE INDEX idx_candidates_status ON candidates(status);
 echo.
 echo   2. Habilitar query statistics:

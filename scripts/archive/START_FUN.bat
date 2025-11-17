@@ -205,7 +205,7 @@ echo.
 
 echo [PASO 3.5/4] 🔗 Sincronizando candidatos con empleados/staff/contract_workers...
 echo   ℹ Vinculando candidatos con registros en employees/staff/contract_workers
-docker exec uns-claudejp-backend python scripts/sync_candidate_employee_status.py 2>&1
+docker exec uns-claudejp-600-backend-1 python scripts/sync_candidate_employee_status.py 2>&1
 if !errorlevel! neq 0 (
     echo   ⚠ Warning: Error en sincronización (puede ser normal si backend está iniciando)
 ) else (

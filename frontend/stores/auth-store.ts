@@ -36,9 +36,11 @@ interface AuthState {
   token: string | null;
   user: User | null;
   isAuthenticated: boolean;
+  isHydrated: boolean;
   login: (token: string, user: User) => void;
   logout: () => void;
   setUser: (user: User) => void;
+  setHydrated: (hydrated: boolean) => void;
   rehydrate: () => void;
 }
 
@@ -60,6 +62,7 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       user: null,
       isAuthenticated: false,
+      isHydrated: false,
 
       login: (token, user) => {
         set({ token, user, isAuthenticated: true });
@@ -78,6 +81,8 @@ export const useAuthStore = create<AuthState>()(
 
       setUser: (user) => set({ user }),
 
+      setHydrated: (hydrated) => set({ isHydrated: hydrated }),
+
       rehydrate: () => {
         const state = get();
         if (state.token) {
@@ -92,15 +97,28 @@ export const useAuthStore = create<AuthState>()(
         token: state.token,
         user: state.user,
       }),
+      onRehydrateStorage: () => (state) => {
+        // Mark as hydrated after rehydration completes
+        if (state) {
+          state.setHydrated(true);
+        }
+      },
     }
   )
 );
 
+// Client-side initialization
 if (typeof window !== 'undefined') {
-  setTimeout(() => {
-    const state = useAuthStore.getState();
-    if (state.token && !state.isAuthenticated) {
-      useAuthStore.setState({ isAuthenticated: true });
-    }
-  }, 100);
+  // Ensure hydration happens on mount
+  const state = useAuthStore.getState();
+
+  // If token exists but not authenticated, set it
+  if (state.token && !state.isAuthenticated) {
+    useAuthStore.setState({ isAuthenticated: true });
+  }
+
+  // Set hydrated flag if not already set by onRehydrateStorage
+  if (!state.isHydrated) {
+    useAuthStore.setState({ isHydrated: true });
+  }
 }

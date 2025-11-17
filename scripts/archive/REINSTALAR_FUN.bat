@@ -294,7 +294,7 @@ set "DB_READY=0"
 set "WAIT_COUNT=0"
 
 :wait_db_loop
-docker inspect --format="{{.State.Health.Status}}" uns-claudejp-db 2>nul | findstr "healthy" >nul
+docker inspect --format="{{.State.Health.Status}}" uns-claudejp-600-db 2>nul | findstr "healthy" >nul
 if !errorlevel! EQU 0 (
     set "DB_READY=1"
     goto :db_ready
@@ -354,7 +354,7 @@ REM ===== PASO 6 =====
 echo [⚙️  PASO 6/7] Importando datos desde fuentes...
 echo   📥 Procesando importación de datos (15-30 minutos)...
 echo.
-docker exec uns-claudejp-backend python scripts/import_data.py
+docker exec uns-claudejp-600-backend-1 python scripts/import_data.py
 if !errorlevel! EQU 0 (
     echo.
     echo   ✅ Importación completada exitosamente
@@ -367,7 +367,7 @@ if !errorlevel! EQU 0 (
 echo.
 
 echo   📊 Verificando datos importados...
-docker exec uns-claudejp-backend python -c "from app.core.database import SessionLocal; from app.models.models import Candidate, Employee, ContractWorker, Staff, Factory; db = SessionLocal(); c=db.query(Candidate).count(); e=db.query(Employee).count(); cw=db.query(ContractWorker).count(); s=db.query(Staff).count(); f=db.query(Factory).count(); db.close(); print(f'  • Candidatos: {c}'); print(f'  • Empleados: {e}'); print(f'  • Contratistas: {cw}'); print(f'  • Staff: {s}'); print(f'  • Fábricas: {f}')"
+docker exec uns-claudejp-600-backend-1 python -c "from app.core.database import SessionLocal; from app.models.models import Candidate, Employee, ContractWorker, Staff, Factory; db = SessionLocal(); c=db.query(Candidate).count(); e=db.query(Employee).count(); cw=db.query(ContractWorker).count(); s=db.query(Staff).count(); f=db.query(Factory).count(); db.close(); print(f'  • Candidatos: {c}'); print(f'  • Empleados: {e}'); print(f'  • Contratistas: {cw}'); print(f'  • Staff: {s}'); print(f'  • Fábricas: {f}')"
 echo.
 timeout /t 1 /nobreak >nul
 

@@ -30,9 +30,16 @@ export function usePagePermission(pageKey: string) {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const user = useAuthStore((state) => state.user);
+  const isHydrated = useAuthStore((state) => state.isHydrated);
 
   useEffect(() => {
     const checkPermission = async () => {
+      // Wait for auth hydration before checking permissions
+      if (!isHydrated) {
+        setLoading(true);
+        return;
+      }
+
       if (!user) {
         setHasPermission(false);
         setLoading(false);
@@ -59,7 +66,7 @@ export function usePagePermission(pageKey: string) {
     };
 
     checkPermission();
-  }, [user, pageKey]);
+  }, [user, pageKey, isHydrated]);
 
   return { hasPermission, loading };
 }
