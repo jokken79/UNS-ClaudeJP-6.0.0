@@ -66,7 +66,10 @@
       "Bash(docker restart:*)",
       "Bash(ls -la \"D:\\UNS-ClaudeJP-6.0.0\\frontend\\app\\(dashboard)\"\" | grep \"^d \")",
       "Bash(ls:*)",
-      "Bash(find \"D:\\UNS-ClaudeJP-6.0.0\\frontend\\app\\(dashboard)\" -name \"*not-found*\" -o -name \"*page.tsx\")"
+      "Bash(find \"D:\\UNS-ClaudeJP-6.0.0\\frontend\\app\\(dashboard)\" -name \"*not-found*\" -o -name \"*page.tsx\")",
+      "Bash(for:*)",
+      "Bash(do echo -n \"$route: \")",
+      "Bash(timeout 3 curl:*)"
     ],
     "deny": [],
     "ask": []
