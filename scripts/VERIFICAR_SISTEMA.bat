@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 chcp 65001 >nul
 setlocal EnableDelayedExpansion
 
@@ -44,7 +44,7 @@ if !errorlevel! EQU 0 (
 echo.
 
 echo   ▶ Verificando health de PostgreSQL...
-docker inspect --format="{{.State.Health.Status}}" uns-claudejp-db 2>nul | findstr "healthy" >nul
+docker inspect --format="{{.State.Health.Status}}" uns-claudejp-600-db 2>nul | findstr "healthy" >nul
 if !errorlevel! EQU 0 (
     echo   ✅ PostgreSQL está saludable
     set /a SUCCESS_COUNT+=1
@@ -55,7 +55,7 @@ if !errorlevel! EQU 0 (
 echo.
 
 echo   ▶ Verificando health de Backend...
-docker inspect --format="{{.State.Health.Status}}" uns-claudejp-backend 2>nul | findstr "healthy" >nul
+docker inspect --format="{{.State.Health.Status}}" uns-claudejp-600-backend-1 2>nul | findstr "healthy" >nul
 if !errorlevel! EQU 0 (
     echo   ✅ Backend está saludable
     set /a SUCCESS_COUNT+=1
@@ -75,10 +75,10 @@ echo └────────────────────────
 echo.
 
 echo   ▶ Verificando estado de migraciones...
-docker exec uns-claudejp-backend bash -c "cd /app && alembic current" >nul 2>&1
+docker exec uns-claudejp-600-backend-1 bash -c "cd /app && alembic current" >nul 2>&1
 if !errorlevel! EQU 0 (
     echo   ✅ Alembic está funcional
-    docker exec uns-claudejp-backend bash -c "cd /app && alembic current"
+    docker exec uns-claudejp-600-backend-1 bash -c "cd /app && alembic current"
     set /a SUCCESS_COUNT+=1
 ) else (
     echo   ❌ Error ejecutando Alembic
@@ -87,7 +87,7 @@ if !errorlevel! EQU 0 (
 echo.
 
 echo   ▶ Verificando migraciones pendientes...
-docker exec uns-claudejp-backend bash -c "cd /app && alembic heads" >nul 2>&1
+docker exec uns-claudejp-600-backend-1 bash -c "cd /app && alembic heads" >nul 2>&1
 if !errorlevel! EQU 0 (
     echo   ✅ No hay migraciones pendientes
     set /a SUCCESS_COUNT+=1
@@ -107,7 +107,7 @@ echo └────────────────────────
 echo.
 
 echo   ▶ Verificando trigger de sincronización de fotos...
-docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "\df sync_candidate_photo_to_employees" 2>nul | findstr "sync_candidate_photo_to_employees" >nul
+docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "\df sync_candidate_photo_to_employees" 2>nul | findstr "sync_candidate_photo_to_employees" >nul
 if !errorlevel! EQU 0 (
     echo   ✅ Trigger de sincronización existe
     set /a SUCCESS_COUNT+=1
@@ -119,7 +119,7 @@ if !errorlevel! EQU 0 (
 echo.
 
 echo   ▶ Verificando índices de búsqueda...
-docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "\di" 2>nul | findstr "idx_candidate_name_kanji_trgm" >nul
+docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "\di" 2>nul | findstr "idx_candidate_name_kanji_trgm" >nul
 if !errorlevel! EQU 0 (
     echo   ✅ Índices de búsqueda existen
     set /a SUCCESS_COUNT+=1
@@ -131,7 +131,7 @@ if !errorlevel! EQU 0 (
 echo.
 
 echo   ▶ Contando tablas en base de datos...
-for /f %%i in ('docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = ''public'';" 2^>nul') do set TABLE_COUNT=%%i
+for /f %%i in ('docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = ''public'';" 2^>nul') do set TABLE_COUNT=%%i
 if defined TABLE_COUNT (
     if !TABLE_COUNT! GEQ 13 (
         echo   ✅ Base de datos tiene !TABLE_COUNT! tablas (esperado: 13+)
@@ -147,7 +147,7 @@ if defined TABLE_COUNT (
 echo.
 
 echo   ▶ Verificando usuario admin...
-docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -t -c "SELECT username FROM users WHERE username='admin' LIMIT 1;" 2>nul | findstr "admin" >nul
+docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -t -c "SELECT username FROM users WHERE username='admin' LIMIT 1;" 2>nul | findstr "admin" >nul
 if !errorlevel! EQU 0 (
     echo   ✅ Usuario admin existe
     set /a SUCCESS_COUNT+=1
@@ -212,7 +212,7 @@ echo └────────────────────────
 echo.
 
 echo   ▶ Verificando mediapipe instalado...
-docker exec uns-claudejp-backend python -c "import mediapipe; print('✓ mediapipe', mediapipe.__version__)" 2>nul
+docker exec uns-claudejp-600-backend-1 python -c "import mediapipe; print('✓ mediapipe', mediapipe.__version__)" 2>nul
 if !errorlevel! EQU 0 (
     echo   ✅ mediapipe instalado
     set /a SUCCESS_COUNT+=1
@@ -224,7 +224,7 @@ if !errorlevel! EQU 0 (
 echo.
 
 echo   ▶ Verificando easyocr instalado...
-docker exec uns-claudejp-backend python -c "import easyocr; print('✓ easyocr instalado')" 2>nul
+docker exec uns-claudejp-600-backend-1 python -c "import easyocr; print('✓ easyocr instalado')" 2>nul
 if !errorlevel! EQU 0 (
     echo   ✅ easyocr instalado
     set /a SUCCESS_COUNT+=1
@@ -236,10 +236,10 @@ if !errorlevel! EQU 0 (
 echo.
 
 echo   ▶ Verificando tesseract instalado...
-docker exec uns-claudejp-backend tesseract --version 2>nul | findstr "tesseract" >nul
+docker exec uns-claudejp-600-backend-1 tesseract --version 2>nul | findstr "tesseract" >nul
 if !errorlevel! EQU 0 (
     echo   ✅ tesseract instalado
-    docker exec uns-claudejp-backend tesseract --version 2>nul | findstr "tesseract"
+    docker exec uns-claudejp-600-backend-1 tesseract --version 2>nul | findstr "tesseract"
     set /a SUCCESS_COUNT+=1
 ) else (
     echo   ❌ tesseract NO instalado

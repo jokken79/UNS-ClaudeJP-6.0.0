@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 setlocal enabledelayedexpansion
 
 REM ============================================================
@@ -120,18 +120,18 @@ REM ============================================================
 REM Check 7: Database Connection
 REM ============================================================
 echo [7/10] Checking Database...
-docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "\dt" >nul 2>&1
+docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "\dt" >nul 2>&1
 if !errorlevel! equ 0 (
     echo      [✓] Database is accessible
 
     REM Count candidates
-    for /f "tokens=*" %%A in ('docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -t -c "SELECT COUNT(*) FROM candidates;"') do set "candidate_count=%%A"
+    for /f "tokens=*" %%A in ('docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -t -c "SELECT COUNT(*) FROM candidates;"') do set "candidate_count=%%A"
 
     echo      [✓] Total candidates in database: !candidate_count!
 
     if "!candidate_count!" == "0" (
         echo      [!] Warning: No candidates imported yet
-        echo         This is normal if still importing - check logs with: docker logs uns-claudejp-importer
+        echo         This is normal if still importing - check logs with: docker logs uns-claudejp-600-importer
     )
     set /a count+=1
 ) else (
@@ -156,13 +156,13 @@ REM ============================================================
 REM Check 9: Import Script Status
 REM ============================================================
 echo [9/10] Checking import script logs...
-docker logs uns-claudejp-importer 2>nul | findstr "Importación completada" >nul
+docker logs uns-claudejp-600-importer 2>nul | findstr "Importación completada" >nul
 if !errorlevel! equ 0 (
     echo      [✓] Data import appears to have completed
     set /a count+=1
 ) else (
     echo      [!] Checking if import is still in progress...
-    docker logs uns-claudejp-importer 2>nul | findstr "Procesados" >nul
+    docker logs uns-claudejp-600-importer 2>nul | findstr "Procesados" >nul
     if !errorlevel! equ 0 (
         echo      [~] Import in progress - please wait
     ) else (
@@ -175,9 +175,9 @@ REM ============================================================
 REM Check 10: Factory Data
 REM ============================================================
 echo [10/10] Checking Factory data...
-docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -t -c "SELECT COUNT(*) FROM factories;" >nul 2>&1
+docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -t -c "SELECT COUNT(*) FROM factories;" >nul 2>&1
 if !errorlevel! equ 0 (
-    for /f "tokens=*" %%A in ('docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -t -c "SELECT COUNT(*) FROM factories;"') do set "factory_count=%%A"
+    for /f "tokens=*" %%A in ('docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -t -c "SELECT COUNT(*) FROM factories;"') do set "factory_count=%%A"
 
     if "!factory_count!" == "0" (
         echo      [!] No factories imported yet
@@ -229,8 +229,8 @@ set /p show_logs="Show Docker logs? (y/n): "
 if "!show_logs!"=="y" (
     echo.
     echo Importer logs (data import):
-    docker logs uns-claudejp-importer
+    docker logs uns-claudejp-600-importer
     echo.
     echo Backend logs (API):
-    docker logs uns-claudejp-backend | tail -20
+    docker logs uns-claudejp-600-backend-1 | tail -20
 )

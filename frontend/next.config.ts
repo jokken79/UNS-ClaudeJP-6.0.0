@@ -25,6 +25,7 @@ const connectSrc = new Set<string>(["'self'", apiOrigin]);
 if (process.env.NODE_ENV !== "production") {
   connectSrc.add("http://localhost:3000");
   connectSrc.add("http://localhost:8000");
+  connectSrc.add("http://backend:8000");  // Docker internal hostname
   connectSrc.add("ws://localhost:3000");
   connectSrc.add("ws://localhost:3001");
 }
@@ -42,7 +43,7 @@ const contentSecurityPolicy = [
   `script-src ${scriptSrc}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
-  "font-src 'self' data:",
+  "font-src 'self' data: https:",
   `connect-src ${Array.from(connectSrc).join(' ')}`,
 ].join('; ');
 
@@ -95,10 +96,16 @@ const nextConfig: NextConfig = {
   },
 
   async rewrites() {
+    // In development/Docker, use the Docker service name 'backend'
+    // In production outside Docker, use localhost
+    const apiBackend = process.env.NODE_ENV === 'production'
+      ? process.env.API_BACKEND_URL || 'http://backend:8000'
+      : 'http://backend:8000';
+
     return [
       {
         source: '/api/:path*',
-        destination: 'http://backend:8000/api/:path*',
+        destination: `${apiBackend}/api/:path*`,
       },
     ];
   },

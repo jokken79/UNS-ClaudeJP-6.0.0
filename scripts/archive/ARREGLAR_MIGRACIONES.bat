@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 chcp 65001 >nul
 setlocal EnableDelayedExpansion
 
@@ -116,7 +116,7 @@ echo ╚════════════════════════
 echo.
 
 echo   ▶ Verificando tablas en base de datos...
-docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "\dt" 2>&1 | findstr "public"
+docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "\dt" 2>&1 | findstr "public"
 
 echo.
 echo   ▶ Verificando backend...

@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 chcp 65001 >nul
 setlocal EnableDelayedExpansion
 
@@ -38,7 +38,7 @@ echo   ✅ Docker está activo
 echo.
 
 REM Verificar container DB
-docker ps | findstr "uns-claudejp-db" >nul 2>&1
+docker ps | findstr "uns-claudejp-600-db" >nul 2>&1
 if %errorlevel% neq 0 (
     echo   ❌ PostgreSQL no está corriendo
     echo   💡 Intenta: START_FUN.bat
@@ -56,7 +56,7 @@ for /L %%i in (1,1,10) do (
 )
 echo. [ESCANEANDO]
 
-docker exec -it uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "SELECT 'Candidatos' as tabla, COUNT(*) as registros FROM candidates UNION ALL SELECT 'Empleados', COUNT(*) FROM employees UNION ALL SELECT 'Fábricas', COUNT(*) FROM factories UNION ALL SELECT 'Asistencia', COUNT(*) FROM timer_cards UNION ALL SELECT 'Nóminas', COUNT(*) FROM salary_calculations" 2>nul | findstr /v "^$" >nul
+docker exec -it uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "SELECT 'Candidatos' as tabla, COUNT(*) as registros FROM candidates UNION ALL SELECT 'Empleados', COUNT(*) FROM employees UNION ALL SELECT 'Fábricas', COUNT(*) FROM factories UNION ALL SELECT 'Asistencia', COUNT(*) FROM timer_cards UNION ALL SELECT 'Nóminas', COUNT(*) FROM salary_calculations" 2>nul | findstr /v "^$" >nul
 
 echo   ✅ Tablas principales verificadas
 echo.
@@ -69,7 +69,7 @@ for /L %%i in (1,1,10) do (
 )
 echo. [VALIDANDO]
 
-docker exec -it uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "SELECT constraint_name FROM information_schema.table_constraints WHERE constraint_type = 'FOREIGN KEY'" 2>nul | findstr /v "^$" >nul
+docker exec -it uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "SELECT constraint_name FROM information_schema.table_constraints WHERE constraint_type = 'FOREIGN KEY'" 2>nul | findstr /v "^$" >nul
 
 echo   ✅ Foreign keys validadas
 echo.
@@ -82,7 +82,7 @@ for /L %%i in (1,1,10) do (
 )
 echo. [ANALIZANDO]
 
-docker exec -it uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "SELECT schemaname, tablename, indexname FROM pg_indexes WHERE schemaname = 'public' ORDER BY tablename" 2>nul | findstr /v "^$" >nul
+docker exec -it uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "SELECT schemaname, tablename, indexname FROM pg_indexes WHERE schemaname = 'public' ORDER BY tablename" 2>nul | findstr /v "^$" >nul
 
 echo   ✅ Índices verificados
 echo.
@@ -95,7 +95,7 @@ for /L %%i in (1,1,15) do (
 )
 echo. [OPTIMIZANDO]
 
-docker exec -it uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "VACUUM ANALYZE" 2>nul
+docker exec -it uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "VACUUM ANALYZE" 2>nul
 
 echo   ✅ Base de datos optimizada
 echo.
@@ -108,7 +108,7 @@ for /L %%i in (1,1,10) do (
 )
 echo. [CALCULANDO]
 
-docker exec -it uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "SELECT pg_size_pretty(pg_database_size('uns_claudejp')) as tamano_total" 2>nul | findstr /v "^$" >nul
+docker exec -it uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "SELECT pg_size_pretty(pg_database_size('uns_claudejp')) as tamano_total" 2>nul | findstr /v "^$" >nul
 
 echo   ✅ Espacio calculado
 echo.

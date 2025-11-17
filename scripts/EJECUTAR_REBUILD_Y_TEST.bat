@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 chcp 65001 >nul
 setlocal EnableDelayedExpansion
 color 0B
@@ -106,12 +106,12 @@ echo └────────────────────────
 echo.
 
 echo   ▶ Verificando estado de migración Alembic...
-docker exec uns-claudejp-backend bash -c "cd /app && alembic current" >nul 2>&1
+docker exec uns-claudejp-600-backend-1 bash -c "cd /app && alembic current" >nul 2>&1
 if !errorlevel! EQU 0 (
     echo   ✅ Alembic está funcional
     echo.
     echo   📊 Migración actual:
-    docker exec uns-claudejp-backend bash -c "cd /app && alembic current"
+    docker exec uns-claudejp-600-backend-1 bash -c "cd /app && alembic current"
     echo.
 ) else (
     echo   ⚠ Error verificando Alembic
@@ -120,15 +120,15 @@ if !errorlevel! EQU 0 (
 
 echo.
 echo   ▶ Verificando estructura de tabla requests...
-docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "\d requests" 2>nul | findstr "candidate_id" >nul
+docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "\d requests" 2>nul | findstr "candidate_id" >nul
 if !errorlevel! EQU 0 (
     echo   ✅ Columna candidate_id existe
 ) else (
     echo   ❌ Columna candidate_id NO existe
-    echo   ℹ Ejecuta manualmente: docker exec uns-claudejp-backend bash -c "cd /app && alembic upgrade head"
+    echo   ℹ Ejecuta manualmente: docker exec uns-claudejp-600-backend-1 bash -c "cd /app && alembic upgrade head"
 )
 
-docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "\d requests" 2>nul | findstr "employee_data" >nul
+docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "\d requests" 2>nul | findstr "employee_data" >nul
 if !errorlevel! EQU 0 (
     echo   ✅ Columna employee_data existe
 ) else (
@@ -137,7 +137,7 @@ if !errorlevel! EQU 0 (
 
 echo.
 echo   ▶ Verificando índice...
-docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "\di" 2>nul | findstr "idx_requests_candidate" >nul
+docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "\di" 2>nul | findstr "idx_requests_candidate" >nul
 if !errorlevel! EQU 0 (
     echo   ✅ Índice idx_requests_candidate_id existe
 ) else (
@@ -234,9 +234,9 @@ echo    - docs\IMPLEMENTATION_SUMMARY_NYUUSHA_RENRAKUHYO.md
 echo    - docs\NEXT_STEPS_NYUUSHA_WORKFLOW.md
 echo.
 echo 🔍 SI HAY PROBLEMAS:
-echo    - Ver logs: docker logs uns-claudejp-backend --tail 100
-echo    - Ver logs: docker logs uns-claudejp-frontend --tail 100
-echo    - Verificar DB: docker exec -it uns-claudejp-db psql -U uns_admin -d uns_claudejp
+echo    - Ver logs: docker logs uns-claudejp-600-backend-1 --tail 100
+echo    - Ver logs: docker logs uns-claudejp-600-frontend --tail 100
+echo    - Verificar DB: docker exec -it uns-claudejp-600-db psql -U uns_admin -d uns_claudejp
 echo.
 echo ════════════════════════════════════════════════════════════════════
 echo.

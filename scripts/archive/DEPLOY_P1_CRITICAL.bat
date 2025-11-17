@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 REM ═══════════════════════════════════════════════════════════════════════════
 REM Script: DEPLOY_P1_CRITICAL.bat
 REM Propósito: Implementar 4 fixes CRÍTICOS de Priority 1 (5 horas total)
@@ -203,7 +203,7 @@ set "CRED_MGMT=%PROJECT_ROOT%\scripts\MANAGE_CREDENTIALS.bat"
     echo echo   5. Nueva contraseña: [GENERAR CONTRASEÑA SEGURA]
     echo echo.
     echo echo Método 2: Script de cambio directo (ALTERNATIVO)
-    echo echo   docker exec uns-claudejp-backend python -c ^"
+    echo echo   docker exec uns-claudejp-600-backend-1 python -c ^"
     echo echo     from app.core.security import get_password_hash
     echo echo     from app.models.models import User
     echo echo     from app.core.database import SessionLocal

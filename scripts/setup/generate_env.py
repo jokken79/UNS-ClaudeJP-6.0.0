@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 from typing import Dict
 
-ROOT = Path(__file__).parent
+ROOT = Path(__file__).parent.parent.parent  # Go up to project root
 DEFAULT_VERSION = "5.6.0"
 
 
@@ -94,7 +94,9 @@ def validate_frontend(values: Dict[str, str]) -> None:
 def build_root_values(context: Dict[str, str]) -> Dict[str, str]:
     postgres_password = context.setdefault("postgres_password", secrets.token_urlsafe(32))
     secret_key = context.setdefault("secret_key", secrets.token_urlsafe(64))
-    api_url = "http://localhost:8000/api"
+    # Use absolute URL via nginx for browser API requests (not relative /api)
+    # Next.js rewrites don't work for client-side axios calls from browser
+    api_url = "http://localhost/api"
 
     return {
         "ACCESS_TOKEN_EXPIRE_MINUTES": "480",
@@ -155,7 +157,7 @@ def build_backend_values(context: Dict[str, str]) -> Dict[str, str]:
     return {
         "ACCESS_TOKEN_EXPIRE_MINUTES": "480",
         "ALGORITHM": "HS256",
-        "APP_NAME": "UNS-ClaudeJP 5.0",
+        "APP_NAME": "UNS-ClaudeJP 5.6.0",
         "APP_VERSION": DEFAULT_VERSION,
         "AZURE_COMPUTER_VISION_API_VERSION": "2023-02-01-preview",
         "AZURE_COMPUTER_VISION_ENDPOINT": "",
@@ -195,8 +197,8 @@ def build_backend_values(context: Dict[str, str]) -> Dict[str, str]:
 
 def build_frontend_values() -> Dict[str, str]:
     return {
-        "NEXT_PUBLIC_API_URL": "http://localhost:8000/api",
-        "NEXT_PUBLIC_APP_NAME": "UNS-ClaudeJP 5.0",
+        "NEXT_PUBLIC_API_URL": "/api",  # Use relative URL for Next.js rewrites to proxy to backend
+        "NEXT_PUBLIC_APP_NAME": "UNS-ClaudeJP 5.6.0",
         "NEXT_PUBLIC_APP_VERSION": DEFAULT_VERSION,
         "NEXT_PUBLIC_AUTH_TOKEN_MAX_AGE": str(60 * 60 * 8),
         "NEXT_PUBLIC_GRAFANA_URL": "http://localhost:3001",

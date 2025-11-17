@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 REM ==============================================================================
 REM RUN_TESTS.bat - Run all tests (backend + frontend)
 REM ==============================================================================
@@ -30,7 +30,7 @@ if errorlevel 1 (
 )
 
 REM Check if services are running
-docker ps | findstr "uns-claudejp-backend" >nul 2>&1
+docker ps | findstr "uns-claudejp-600-backend-1" >nul 2>&1
 if errorlevel 1 (
     echo [ERROR] Backend service is not running.
     echo Please run START.bat first to start all services.
@@ -51,7 +51,7 @@ echo                        Backend Tests (pytest)
 echo ================================================================================
 echo.
 
-docker exec uns-claudejp-backend bash -c "cd /app && pytest backend/tests/ -v --tb=short"
+docker exec uns-claudejp-600-backend-1 bash -c "cd /app && pytest backend/tests/ -v --tb=short"
 if errorlevel 1 (
     echo.
     echo [WARNING] Some backend tests failed!
@@ -77,7 +77,7 @@ echo                        Frontend Unit Tests (Vitest)
 echo ================================================================================
 echo.
 
-docker exec uns-claudejp-frontend bash -c "cd /app && npm test"
+docker exec uns-claudejp-600-frontend bash -c "cd /app && npm test"
 if errorlevel 1 (
     echo.
     echo [WARNING] Some frontend unit tests failed!
@@ -105,7 +105,7 @@ echo.
 echo [INFO] Make sure frontend is running at http://localhost:3000
 echo.
 
-docker exec uns-claudejp-frontend bash -c "cd /app && npm run test:e2e"
+docker exec uns-claudejp-600-frontend bash -c "cd /app && npm run test:e2e"
 if errorlevel 1 (
     echo.
     echo [WARNING] Some E2E tests failed!

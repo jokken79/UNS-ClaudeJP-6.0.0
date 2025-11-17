@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 chcp 65001 >nul
 setlocal EnableDelayedExpansion
 
@@ -23,7 +23,7 @@ cd /d "%~dp0\.."
 echo [1/10] VALIDACIÓN DE SERVICIOS DOCKER
 echo.
 
-docker ps --format "{{.Names}}" | findstr "uns-claudejp-db" >nul
+docker ps --format "{{.Names}}" | findstr "uns-claudejp-600-db" >nul
 if !errorlevel! EQU 0 (
     echo   ✓ PostgreSQL corriendo
 ) else (
@@ -31,7 +31,7 @@ if !errorlevel! EQU 0 (
     set /a ERROR_COUNT+=1
 )
 
-docker ps --format "{{.Names}}" | findstr "uns-claudejp-backend" >nul
+docker ps --format "{{.Names}}" | findstr "uns-claudejp-600-backend-1" >nul
 if !errorlevel! EQU 0 (
     echo   ✓ Backend corriendo
 ) else (
@@ -39,7 +39,7 @@ if !errorlevel! EQU 0 (
     set /a ERROR_COUNT+=1
 )
 
-docker ps --format "{{.Names}}" | findstr "uns-claudejp-frontend" >nul
+docker ps --format "{{.Names}}" | findstr "uns-claudejp-600-frontend" >nul
 if !errorlevel! EQU 0 (
     echo   ✓ Frontend corriendo
 ) else (
@@ -47,7 +47,7 @@ if !errorlevel! EQU 0 (
     set /a ERROR_COUNT+=1
 )
 
-docker ps --format "{{.Names}}" | findstr "uns-claudejp-redis" >nul
+docker ps --format "{{.Names}}" | findstr "uns-claudejp-600-redis" >nul
 if !errorlevel! EQU 0 (
     echo   ✓ Redis corriendo
 ) else (
@@ -64,16 +64,16 @@ echo.
 echo [2/10] VALIDACIÓN DE BASE DE DATOS
 echo.
 
-docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "SELECT 1" >nul 2>&1
+docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "SELECT 1" >nul 2>&1
 if !errorlevel! EQU 0 (
     echo   ✓ Conexión a base de datos OK
 
     :: Contar tablas
-    for /f "tokens=*" %%i in ('docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public';" 2^>nul') do set "TABLE_COUNT=%%i"
+    for /f "tokens=*" %%i in ('docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public';" 2^>nul') do set "TABLE_COUNT=%%i"
     echo   ✓ Tablas encontradas: !TABLE_COUNT!
 
     :: Verificar tablas críticas
-    docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "\dt candidates" 2>nul | findstr "candidates" >nul
+    docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "\dt candidates" 2>nul | findstr "candidates" >nul
     if !errorlevel! EQU 0 (
         echo   ✓ Tabla candidates existe
     ) else (
@@ -81,7 +81,7 @@ if !errorlevel! EQU 0 (
         set /a ERROR_COUNT+=1
     )
 
-    docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "\dt employees" 2>nul | findstr "employees" >nul
+    docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "\dt employees" 2>nul | findstr "employees" >nul
     if !errorlevel! EQU 0 (
         echo   ✓ Tabla employees existe
     ) else (
@@ -89,7 +89,7 @@ if !errorlevel! EQU 0 (
         set /a ERROR_COUNT+=1
     )
 
-    docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "\dt apartments" 2>nul | findstr "apartments" >nul
+    docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "\dt apartments" 2>nul | findstr "apartments" >nul
     if !errorlevel! EQU 0 (
         echo   ✓ Tabla apartments existe (V2)
     ) else (
@@ -111,7 +111,7 @@ echo [3/10] VALIDACIÓN DE APARTAMENTOS V2
 echo.
 
 :: Verificar tablas V2
-docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "\dt apartment_assignments" 2>nul | findstr "apartment_assignments" >nul
+docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "\dt apartment_assignments" 2>nul | findstr "apartment_assignments" >nul
 if !errorlevel! EQU 0 (
     echo   ✓ Tabla apartment_assignments existe
 ) else (
@@ -119,7 +119,7 @@ if !errorlevel! EQU 0 (
     set /a WARNING_COUNT+=1
 )
 
-docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "\dt additional_charges" 2>nul | findstr "additional_charges" >nul
+docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "\dt additional_charges" 2>nul | findstr "additional_charges" >nul
 if !errorlevel! EQU 0 (
     echo   ✓ Tabla additional_charges existe
 ) else (
@@ -127,7 +127,7 @@ if !errorlevel! EQU 0 (
     set /a WARNING_COUNT+=1
 )
 
-docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "\dt rent_deductions" 2>nul | findstr "rent_deductions" >nul
+docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "\dt rent_deductions" 2>nul | findstr "rent_deductions" >nul
 if !errorlevel! EQU 0 (
     echo   ✓ Tabla rent_deductions existe
 ) else (
@@ -136,7 +136,7 @@ if !errorlevel! EQU 0 (
 )
 
 :: Contar apartamentos
-for /f "tokens=*" %%i in ('docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -t -c "SELECT COUNT(*) FROM apartments WHERE deleted_at IS NULL;" 2^>nul') do set "APT_COUNT=%%i"
+for /f "tokens=*" %%i in ('docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -t -c "SELECT COUNT(*) FROM apartments WHERE deleted_at IS NULL;" 2^>nul') do set "APT_COUNT=%%i"
 echo   ℹ Apartamentos activos: !APT_COUNT!
 
 echo.
@@ -199,7 +199,7 @@ echo.
 echo [6/10] VALIDACIÓN DE MIGRACIONES
 echo.
 
-docker exec uns-claudejp-backend alembic current 2>nul | findstr "head\|b6dc75dfbe7c" >nul
+docker exec uns-claudejp-600-backend-1 alembic current 2>nul | findstr "head\|b6dc75dfbe7c" >nul
 if !errorlevel! EQU 0 (
     echo   ✓ Migraciones aplicadas correctamente
 ) else (
@@ -230,13 +230,13 @@ echo.
 echo [8/10] VALIDACIÓN DE DATOS
 echo.
 
-for /f "tokens=*" %%i in ('docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -t -c "SELECT COUNT(*) FROM candidates WHERE deleted_at IS NULL;" 2^>nul') do set "CAND_COUNT=%%i"
+for /f "tokens=*" %%i in ('docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -t -c "SELECT COUNT(*) FROM candidates WHERE deleted_at IS NULL;" 2^>nul') do set "CAND_COUNT=%%i"
 echo   ℹ Candidatos: !CAND_COUNT!
 
-for /f "tokens=*" %%i in ('docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -t -c "SELECT COUNT(*) FROM employees WHERE deleted_at IS NULL;" 2^>nul') do set "EMP_COUNT=%%i"
+for /f "tokens=*" %%i in ('docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -t -c "SELECT COUNT(*) FROM employees WHERE deleted_at IS NULL;" 2^>nul') do set "EMP_COUNT=%%i"
 echo   ℹ Empleados: !EMP_COUNT!
 
-for /f "tokens=*" %%i in ('docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -t -c "SELECT COUNT(*) FROM factories WHERE deleted_at IS NULL;" 2^>nul') do set "FAC_COUNT=%%i"
+for /f "tokens=*" %%i in ('docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -t -c "SELECT COUNT(*) FROM factories WHERE deleted_at IS NULL;" 2^>nul') do set "FAC_COUNT=%%i"
 echo   ℹ Fábricas: !FAC_COUNT!
 
 echo.
@@ -248,10 +248,10 @@ echo.
 echo [9/10] VALIDACIÓN DE FOTOS
 echo.
 
-for /f "tokens=*" %%i in ('docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -t -c "SELECT COUNT(*) FROM candidates WHERE photo_data_url IS NOT NULL;" 2^>nul') do set "CAND_PHOTOS=%%i"
+for /f "tokens=*" %%i in ('docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -t -c "SELECT COUNT(*) FROM candidates WHERE photo_data_url IS NOT NULL;" 2^>nul') do set "CAND_PHOTOS=%%i"
 echo   ℹ Candidatos con foto: !CAND_PHOTOS!
 
-for /f "tokens=*" %%i in ('docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -t -c "SELECT COUNT(*) FROM employees WHERE photo_data_url IS NOT NULL;" 2^>nul') do set "EMP_PHOTOS=%%i"
+for /f "tokens=*" %%i in ('docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -t -c "SELECT COUNT(*) FROM employees WHERE photo_data_url IS NOT NULL;" 2^>nul') do set "EMP_PHOTOS=%%i"
 echo   ℹ Empleados con foto: !EMP_PHOTOS!
 
 echo.

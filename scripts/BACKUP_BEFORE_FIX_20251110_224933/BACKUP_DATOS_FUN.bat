@@ -36,7 +36,7 @@ for /L %%i in (1,1,20) do (
 )
 echo.
 
-docker exec uns-claudejp-db pg_dump -U uns_admin uns_claudejp > "%~dp0..\backend\backups\backup_%BACKUP_DATE%.sql"
+docker exec uns-claudejp-600-db pg_dump -U uns_admin uns_claudejp > "%~dp0..\backend\backups\backup_%BACKUP_DATE%.sql"
 
 if %ERRORLEVEL% EQU 0 (
     echo   ✅ Backup SQL creado exitosamente

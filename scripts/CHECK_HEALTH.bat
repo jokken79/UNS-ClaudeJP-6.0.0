@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 REM ==============================================================================
 REM CHECK_HEALTH.bat - Comprehensive System Health Check
 REM ==============================================================================
@@ -67,7 +67,7 @@ echo ===========================================================================
 echo.
 
 REM Backend
-docker ps | findstr "uns-claudejp-backend" | findstr "Up" >nul 2>&1
+docker ps | findstr "uns-claudejp-600-backend-1" | findstr "Up" >nul 2>&1
 if errorlevel 1 (
     echo [FAIL] Backend container is not running
     set /a FAILED+=1
@@ -77,7 +77,7 @@ if errorlevel 1 (
 )
 
 REM Frontend
-docker ps | findstr "uns-claudejp-frontend" | findstr "Up" >nul 2>&1
+docker ps | findstr "uns-claudejp-600-frontend" | findstr "Up" >nul 2>&1
 if errorlevel 1 (
     echo [FAIL] Frontend container is not running
     set /a FAILED+=1
@@ -87,7 +87,7 @@ if errorlevel 1 (
 )
 
 REM Database
-docker ps | findstr "uns-claudejp-db" | findstr "Up" >nul 2>&1
+docker ps | findstr "uns-claudejp-600-db" | findstr "Up" >nul 2>&1
 if errorlevel 1 (
     echo [FAIL] Database container is not running
     set /a FAILED+=1
@@ -97,7 +97,7 @@ if errorlevel 1 (
 )
 
 REM Redis
-docker ps | findstr "uns-claudejp-redis" | findstr "Up" >nul 2>&1
+docker ps | findstr "uns-claudejp-600-redis" | findstr "Up" >nul 2>&1
 if errorlevel 1 (
     echo [FAIL] Redis container is not running
     set /a FAILED+=1
@@ -115,7 +115,7 @@ echo                        Database Health
 echo ================================================================================
 echo.
 
-docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "SELECT 1" >nul 2>&1
+docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "SELECT 1" >nul 2>&1
 if errorlevel 1 (
     echo [FAIL] Database connection failed
     set /a FAILED+=1
@@ -125,7 +125,7 @@ if errorlevel 1 (
 )
 
 REM Count tables
-for /f "tokens=*" %%i in ('docker exec uns-claudejp-db psql -U uns_admin -d uns_claudejp -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = ''public'';"') do set TABLE_COUNT=%%i
+for /f "tokens=*" %%i in ('docker exec uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = ''public'';"') do set TABLE_COUNT=%%i
 echo [INFO] Database has %TABLE_COUNT% tables
 echo.
 
@@ -135,7 +135,7 @@ echo                        Redis Health
 echo ================================================================================
 echo.
 
-docker exec uns-claudejp-redis redis-cli ping >nul 2>&1
+docker exec uns-claudejp-600-redis redis-cli ping >nul 2>&1
 if errorlevel 1 (
     echo [FAIL] Redis connection failed
     set /a FAILED+=1
