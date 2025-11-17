@@ -94,7 +94,9 @@ def validate_frontend(values: Dict[str, str]) -> None:
 def build_root_values(context: Dict[str, str]) -> Dict[str, str]:
     postgres_password = context.setdefault("postgres_password", secrets.token_urlsafe(32))
     secret_key = context.setdefault("secret_key", secrets.token_urlsafe(64))
-    api_url = "/api"  # Use relative URL for Next.js rewrites to proxy to backend
+    # Use absolute URL via nginx for browser API requests (not relative /api)
+    # Next.js rewrites don't work for client-side axios calls from browser
+    api_url = "http://localhost/api"
 
     return {
         "ACCESS_TOKEN_EXPIRE_MINUTES": "480",
