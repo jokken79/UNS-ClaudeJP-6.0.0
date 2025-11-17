@@ -261,15 +261,15 @@ echo ║ [4/5] VERIFICAR MIGRACIONES DE BASE DE DATOS                        ║
 echo ╚══════════════════════════════════════════════════════════════════════╝
 echo.
 echo   ▶ Comprobando revisión actual de Alembic...
-echo   ℹ Comando: docker exec uns-claudejp-backend alembic current
-docker exec uns-claudejp-backend alembic current 2>nul | findstr "b6dc75dfbe7c" >nul
+echo   ℹ Comando: docker exec uns-claudejp-600-backend-1 alembic current
+docker exec uns-claudejp-600-backend-1 alembic current 2>nul | findstr "b6dc75dfbe7c" >nul
 if !errorlevel! EQU 0 (
     echo   ✓ Migración más reciente aplicada (b6dc75dfbe7c)
 ) else (
     echo   ⚠ Migración más reciente no detectada
     echo   ▶ Aplicando migraciones pendientes...
-    echo   ℹ Comando: docker exec uns-claudejp-backend alembic upgrade head
-    docker exec uns-claudejp-backend alembic upgrade head
+    echo   ℹ Comando: docker exec uns-claudejp-600-backend-1 alembic upgrade head
+    docker exec uns-claudejp-600-backend-1 alembic upgrade head
     if !errorlevel! EQU 0 (
         echo   ✓ Migraciones aplicadas correctamente
     ) else (
@@ -279,7 +279,7 @@ if !errorlevel! EQU 0 (
 echo.
 echo   ▶ Verificando estructura de tabla candidates (142 columnas esperadas)...
 echo   ℹ Comando: docker exec python script para contar columnas
-docker exec uns-claudejp-backend python -c "from app.core.database import engine; import sqlalchemy as sa; inspector = sa.inspect(engine); cols = [c['name'] for c in inspector.get_columns('candidates')]; print('     📊 Total columnas:', len(cols)); new_cols = ['family_dependent_1', 'height', 'weight', 'clothing_size', 'waist', 'shoe_size', 'vision_right', 'vision_left']; missing = [c for c in new_cols if c not in cols]; status = '✓ 100%% cobertura activa' if not missing and len(cols) >= 142 else f'⚠ Faltan columnas: {missing}'; print('     Status:', status)" 2>nul
+docker exec uns-claudejp-600-backend-1 python -c "from app.core.database import engine; import sqlalchemy as sa; inspector = sa.inspect(engine); cols = [c['name'] for c in inspector.get_columns('candidates')]; print('     📊 Total columnas:', len(cols)); new_cols = ['family_dependent_1', 'height', 'weight', 'clothing_size', 'waist', 'shoe_size', 'vision_right', 'vision_left']; missing = [c for c in new_cols if c not in cols]; status = '✓ 100%% cobertura activa' if not missing and len(cols) >= 142 else f'⚠ Faltan columnas: {missing}'; print('     Status:', status)" 2>nul
 if !errorlevel! NEQ 0 (
     echo   ⚠ No se pudo verificar columnas (backend aún iniciando)
     echo   ℹ Esto es normal si es el primer arranque

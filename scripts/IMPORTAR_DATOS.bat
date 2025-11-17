@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 setlocal EnableDelayedExpansion
 
 title UNS-ClaudeJP 5.4 - Importacion de Datos
@@ -98,7 +98,7 @@ if !errorlevel! NEQ 0 (
     goto :eof
 )
 
-:: Detectar nombre del contenedor backend (puede ser uns-claudejp-backend o uns-claudejp-541-backend-1)
+:: Detectar nombre del contenedor backend (puede ser uns-claudejp-600-backend-1 o uns-claudejp-541-backend-1)
 for /f "tokens=*" %%a in ('docker ps --filter "name=backend" --format "{{.Names}}" 2^>nul ^| findstr /i "backend"') do (
     set "BACKEND_CONTAINER=%%a"
     goto :backend_found
@@ -124,7 +124,7 @@ if !errorlevel! NEQ 0 (
     goto :eof
 )
 
-:: Detectar nombre del contenedor db (puede ser uns-claudejp-db o uns-claudejp-db-1)
+:: Detectar nombre del contenedor db (puede ser uns-claudejp-600-db o uns-claudejp-600-db-1)
 set "DB_CONTAINER="
 for /f "tokens=*" %%a in ('docker ps --filter "name=db" --format "{{.Names}}" 2^>nul ^| findstr /i "db"') do (
     set "DB_CONTAINER=%%a"

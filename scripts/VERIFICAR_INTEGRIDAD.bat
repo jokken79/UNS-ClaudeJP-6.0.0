@@ -31,7 +31,7 @@ echo.
 
 REM Verificar que el backend esté corriendo
 echo [2/2] Verificando que el contenedor backend esté corriendo...
-docker ps --filter "name=uns-claudejp-backend" --format "{{.Names}}" | findstr "uns-claudejp-backend" >nul 2>&1
+docker ps --filter "name=uns-claudejp-600-backend-1" --format "{{.Names}}" | findstr "uns-claudejp-600-backend-1" >nul 2>&1
 if %errorlevel% neq 0 (
     echo.
     echo [ERROR] El contenedor backend no está corriendo.
@@ -51,7 +51,7 @@ echo ========================================================
 echo.
 
 REM Ejecutar el script de verificación
-docker exec -it uns-claudejp-backend python /app/scripts/verify_system_integrity.py
+docker exec -it uns-claudejp-600-backend-1 python /app/scripts/verify_system_integrity.py
 
 set VERIFY_EXIT_CODE=%errorlevel%
 
@@ -89,7 +89,7 @@ if %VERIFY_EXIT_CODE% EQU 0 (
     echo [ACCION RECOMENDADA]
     echo.
     echo Si hay problemas con las migraciones:
-    echo   docker exec uns-claudejp-backend alembic upgrade head
+    echo   docker exec uns-claudejp-600-backend-1 alembic upgrade head
     echo.
     echo Si necesitas reinstalar completamente:
     echo   scripts\REINSTALAR.bat

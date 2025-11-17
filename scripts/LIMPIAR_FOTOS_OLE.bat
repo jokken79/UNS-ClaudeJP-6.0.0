@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 chcp 65001 >nul
 setlocal EnableDelayedExpansion
 
@@ -16,7 +16,7 @@ echo.
 
 :: Verificar que backend esté corriendo
 echo [PASO 1/4] Verificando backend...
-docker ps | findstr "uns-claudejp-backend" >nul 2>&1
+docker ps | findstr "uns-claudejp-600-backend-1" >nul 2>&1
 if !errorlevel! NEQ 0 (
     echo [ERROR] Backend no está corriendo
     echo [SOLUCION] Ejecuta: scripts\START.bat
@@ -29,7 +29,7 @@ echo.
 :: Limpiar fotos de candidatos
 echo [PASO 2/4] Limpiando fotos de candidatos...
 echo [INFO] Esto puede tardar 2-3 minutos para 1,116 fotos
-docker exec uns-claudejp-backend bash -c "cd /app && python scripts/fix_photo_data.py"
+docker exec uns-claudejp-600-backend-1 bash -c "cd /app && python scripts/fix_photo_data.py"
 if !errorlevel! NEQ 0 (
     echo [ERROR] Falló limpieza de candidatos
     pause >nul
@@ -41,7 +41,7 @@ echo.
 :: Limpiar fotos de empleados
 echo [PASO 3/4] Limpiando fotos de empleados...
 echo [INFO] Esto puede tardar 2-3 minutos para 815 fotos
-docker exec uns-claudejp-backend bash -c "cd /app && python scripts/fix_employee_photos.py"
+docker exec uns-claudejp-600-backend-1 bash -c "cd /app && python scripts/fix_employee_photos.py"
 if !errorlevel! NEQ 0 (
     echo [ERROR] Falló limpieza de empleados
     pause >nul
@@ -54,10 +54,10 @@ echo.
 echo [PASO 4/4] Verificando resultados...
 echo.
 echo Candidatos con fotos:
-docker exec -it uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "SELECT COUNT(*) as con_fotos FROM candidates WHERE photo_data_url IS NOT NULL AND deleted_at IS NULL;" 2>nul
+docker exec -it uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "SELECT COUNT(*) as con_fotos FROM candidates WHERE photo_data_url IS NOT NULL AND deleted_at IS NULL;" 2>nul
 echo.
 echo Empleados con fotos:
-docker exec -it uns-claudejp-db psql -U uns_admin -d uns_claudejp -c "SELECT COUNT(*) as con_fotos FROM employees WHERE photo_data_url IS NOT NULL AND deleted_at IS NULL;" 2>nul
+docker exec -it uns-claudejp-600-db psql -U uns_admin -d uns_claudejp -c "SELECT COUNT(*) as con_fotos FROM employees WHERE photo_data_url IS NOT NULL AND deleted_at IS NULL;" 2>nul
 echo.
 
 echo ╔══════════════════════════════════════════════════════════════════════╗

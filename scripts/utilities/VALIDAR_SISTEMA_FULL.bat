@@ -237,7 +237,7 @@ if exist "%~dp0\..\backend\backups\production_backup.sql" (
     if /i "!RESTORE!"=="S" (
         echo.
         echo      [>] Restaurando datos desde backup
-        docker exec -i uns-claudejp-db psql -U uns_admin -d uns_claudejp < "%~dp0\..\backend\backups\production_backup.sql" >nul 2>&1
+        docker exec -i uns-claudejp-600-db psql -U uns_admin -d uns_claudejp < "%~dp0\..\backend\backups\production_backup.sql" >nul 2>&1
         if !errorlevel! EQU 0 (
             echo      [OK] Datos restaurados exitosamente.
         ) else (

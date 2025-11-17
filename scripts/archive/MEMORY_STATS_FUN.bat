@@ -46,27 +46,27 @@ echo.
 
 echo [1] 🗄️  DATABASE (PostgreSQL)
 echo   ⏳ Obteniendo estadísticas...
-docker stats uns-claudejp-db --no-stream --format "table {{.CPUPerc}}\t{{.MemUsage}}" 2>nul | tail -1
+docker stats uns-claudejp-600-db --no-stream --format "table {{.CPUPerc}}\t{{.MemUsage}}" 2>nul | tail -1
 echo.
 
 echo [2] ⚙️  BACKEND (FastAPI)
 echo   ⏳ Obteniendo estadísticas...
-docker stats uns-claudejp-backend --no-stream --format "table {{.CPUPerc}}\t{{.MemUsage}}" 2>nul | tail -1
+docker stats uns-claudejp-600-backend-1 --no-stream --format "table {{.CPUPerc}}\t{{.MemUsage}}" 2>nul | tail -1
 echo.
 
 echo [3] 🎨 FRONTEND (Next.js)
 echo   ⏳ Obteniendo estadísticas...
-docker stats uns-claudejp-frontend --no-stream --format "table {{.CPUPerc}}\t{{.MemUsage}}" 2>nul | tail -1
+docker stats uns-claudejp-600-frontend --no-stream --format "table {{.CPUPerc}}\t{{.MemUsage}}" 2>nul | tail -1
 echo.
 
 echo [4] 📦 IMPORTER
 echo   ⏳ Obteniendo estadísticas...
-docker stats uns-claudejp-importer --no-stream --format "table {{.CPUPerc}}\t{{.MemUsage}}" 2>nul | tail -1
+docker stats uns-claudejp-600-importer --no-stream --format "table {{.CPUPerc}}\t{{.MemUsage}}" 2>nul | tail -1
 echo.
 
 echo [5] 💾 ADMINER (Database UI)
 echo   ⏳ Obteniendo estadísticas...
-docker stats uns-claudejp-adminer --no-stream --format "table {{.CPUPerc}}\t{{.MemUsage}}" 2>nul | tail -1
+docker stats uns-claudejp-600-adminer --no-stream --format "table {{.CPUPerc}}\t{{.MemUsage}}" 2>nul | tail -1
 echo.
 
 echo ╔════════════════════════════════════════════════════════════╗
