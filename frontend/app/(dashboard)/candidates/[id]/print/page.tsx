@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import RirekishoPrintView from "@/components/RirekishoPrintView";
 import { toast } from "react-hot-toast";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "/api";
 
 export default function PrintCandidatePage() {
   const router = useRouter();
