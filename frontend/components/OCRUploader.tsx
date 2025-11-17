@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { toast } from 'react-hot-toast';
 import { DocumentTextIcon, ArrowUpTrayIcon, XCircleIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 interface OCRUploaderProps {
   onOCRComplete: (ocrData: any) => void;

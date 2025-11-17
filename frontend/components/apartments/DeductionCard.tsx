@@ -15,6 +15,8 @@ import { useToast } from '@/components/ui/use-toast';
 import type { DeductionResponse, DeductionStatus } from '@/types/apartments-v2';
 import axios from 'axios';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
+
 interface DeductionCardProps {
   deduction: DeductionResponse;
   onUpdate?: () => void;
@@ -51,7 +53,7 @@ export function DeductionCard({
 
       const token = localStorage.getItem('access_token');
       await axios.patch(
-        `http://localhost:8000/api/apartments-v2/deductions/${deduction.id}`,
+        `${API_BASE_URL}/apartments-v2/deductions/${deduction.id}`,
         { status: 'paid' },
         {
           headers: { Authorization: `Bearer ${token}` },

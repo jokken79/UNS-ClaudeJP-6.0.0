@@ -17,6 +17,7 @@ import {
   Calendar,
   BarChart3,
   Settings,
+  Palette,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -126,6 +127,12 @@ export const dashboardConfig: DashboardConfig = {
       href: '/requests',
       icon: FileCheck,
       description: 'Seguimiento de aprobaciones internas y requerimientos.',
+    },
+    {
+      title: 'Temas',
+      href: '/themes',
+      icon: Palette,
+      description: 'Galería de temas y personalizador con 22 temas predefinidos + temas personalizados ilimitados.',
     },
     {
       title: 'Design System',

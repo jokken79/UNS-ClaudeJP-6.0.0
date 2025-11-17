@@ -676,7 +676,7 @@ docker exec -it uns-claudejp-frontend bash
 npm install <package-name>
 
 # Type checking completo
-npm run type-check
+npm run typecheck
 
 # Linting y auto-fix
 npm run lint
@@ -917,7 +917,7 @@ docker compose exec frontend rm -rf .next
 docker compose exec frontend npm run build
 
 # Verificar TypeScript
-docker compose exec frontend npm run type-check
+docker compose exec frontend npm run typecheck
 
 # Verificar dependencias
 docker compose exec frontend npm install
