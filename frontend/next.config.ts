@@ -43,7 +43,7 @@ const contentSecurityPolicy = [
   `script-src ${scriptSrc}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
-  "font-src 'self' data:",
+  "font-src 'self' data: https:",
   `connect-src ${Array.from(connectSrc).join(' ')}`,
 ].join('; ');
 
