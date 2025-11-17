@@ -1,8 +1,6 @@
 #!/bin/sh
 # PostgreSQL Backup Script
 
-set -e
-
 BACKUP_DIR="/backups"
 DB_HOST="${POSTGRES_HOST:-db}"
 DB_PORT="${POSTGRES_PORT:-5432}"
@@ -27,7 +25,12 @@ backup_database() {
     -d "$DB_NAME" \
     | gzip > "$BACKUP_FILE"
 
-  echo "[$(date '+%Y-%m-%d %H:%M:%S')] Backup completed: $BACKUP_FILE"
+  if [ $? -eq 0 ]; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Backup completed: $BACKUP_FILE"
+  else
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: Backup failed"
+    return 1
+  fi
 }
 
 # Function to cleanup old backups
@@ -37,23 +40,6 @@ cleanup_old_backups() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] Cleanup completed"
 }
 
-# Create crontab entry for scheduled backups
-setup_cron() {
-  echo "[$(date '+%Y-%m-%d %H:%M:%S')] Setting up cron job for daily backup at $BACKUP_TIME..."
-
-  # Parse backup time (format: HH:MM)
-  HOUR=$(echo "$BACKUP_TIME" | cut -d: -f1)
-  MINUTE=$(echo "$BACKUP_TIME" | cut -d: -f2)
-
-  # Create crontab entry
-  CRON_JOB="$MINUTE $HOUR * * * /app/backup.sh >> $BACKUP_DIR/backup.log 2>&1"
-
-  # Install cron job
-  echo "$CRON_JOB" | crontab -
-
-  echo "[$(date '+%Y-%m-%d %H:%M:%S')] Cron job installed: $CRON_JOB"
-}
-
 # Run backup on startup if enabled
 if [ "$RUN_ON_STARTUP" = "true" ]; then
   backup_database
@@ -61,8 +47,21 @@ if [ "$RUN_ON_STARTUP" = "true" ]; then
 fi
 
 # Setup cron for scheduled backups
-setup_cron
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Setting up cron job for daily backup at $BACKUP_TIME..."
+HOUR=$(echo "$BACKUP_TIME" | cut -d: -f1)
+MINUTE=$(echo "$BACKUP_TIME" | cut -d: -f2)
+CRON_JOB="$MINUTE $HOUR * * * /app/backup.sh >> $BACKUP_DIR/backup.log 2>&1"
+echo "$CRON_JOB" | crontab - 2>/dev/null || true
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Cron job configured: $CRON_JOB"
 
-# Start cron daemon in foreground
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting cron daemon..."
-exec crond -f -l 2
+# Start cron daemon and keep service alive
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting backup scheduler..."
+crond -f -l 0 2>&1 &
+CROND_PID=$!
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Cron daemon running (PID: $CROND_PID)"
+
+# Keep container alive
+while true; do
+  sleep 3600
+  cleanup_old_backups
+done
