@@ -1,9 +1,10 @@
 'use client';
 
-import { Search, Bell, LogOut, User, Settings, Menu, LayoutDashboard, Users, Building2, Clock, DollarSign, FileText, Sun, Moon, Shield } from 'lucide-react';
+import { Search, Bell, LogOut, User, Settings, Menu, LayoutDashboard, Users, Building2, Clock, DollarSign, FileText, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { LayoutControls } from '@/components/dashboard/layout-controls';
+import { ThemeSwitcherImproved } from '@/components/ui/theme-switcher-improved';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,7 +23,6 @@ import { authService } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { motion, AnimatePresence } from 'framer-motion';
 import { staggerFast, fadeInDown, shouldReduceMotion } from '@/lib/animations';
-import { useTheme } from 'next-themes';
 import { usePagePermission } from '@/hooks/use-page-permission';
 import { SystemStatusIndicator } from '@/components/dashboard/system-status-indicator';
 
@@ -32,7 +32,6 @@ export function Header() {
   const [searchQuery, setSearchQuery] = useState('');
   const user = useAuthStore((state) => state.user);
   const reducedMotion = shouldReduceMotion();
-  const { theme, setTheme } = useTheme();
 
   // Check if user is admin (temporary check - will be expanded for role-based system)
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN' || user?.username === 'admin';
@@ -213,20 +212,8 @@ export function Header() {
 
         {/* Acciones del Header */}
         <div className="flex items-center gap-2">
-          {/* Theme Toggle Button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 hover:bg-accent hover:text-accent-foreground"
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            title={`Cambiar a modo ${theme === 'dark' ? 'claro' : 'oscuro'}`}
-          >
-            {theme === 'dark' ? (
-              <Sun className="h-5 w-5" />
-            ) : (
-              <Moon className="h-5 w-5" />
-            )}
-          </Button>
+          {/* Improved Theme Switcher */}
+          <ThemeSwitcherImproved />
 
           {/* Controles de Layout */}
           <LayoutControls />
