@@ -466,7 +466,7 @@ async def save_rirekisho_form(
     return form_entry
 
 
-@router.get("/", response_model=PaginatedResponse)
+@router.get("/", response_model=PaginatedResponse[CandidateResponse])
 async def list_candidates(
     skip: int = 0,
     limit: int = 50,
