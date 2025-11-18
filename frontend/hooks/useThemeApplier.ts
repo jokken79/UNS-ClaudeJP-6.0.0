@@ -58,7 +58,7 @@ export function useThemeApplier() {
 
     if (!themeColors) {
       const customThemes = getCustomThemes();
-      const customTheme = customThemes.find(t => t.name === currentThemeName);
+      const customTheme = customThemes.find(t => t.id === currentThemeName || t.name === currentThemeName);
       themeColors = customTheme?.colors;
     }
 

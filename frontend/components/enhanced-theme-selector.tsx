@@ -117,7 +117,7 @@ interface ThemeCardProps {
 }
 
 function ThemeCard({ theme, isActive, isFavorite, onSelect, onToggleFavorite, onPreviewStart, onPreviewEnd }: ThemeCardProps) {
-  const metadata = themeMetadata[theme.name] || {
+  const metadata = themeMetadata[theme.id] || {
     emoji: "🎨",
     label: theme.name,
     description: "Custom theme",
@@ -277,9 +277,9 @@ export function EnhancedThemeSelector() {
   // Filter themes
   const filteredThemes = allThemes.filter((t) => {
     const matchesSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      themeMetadata[t.name]?.label?.toLowerCase().includes(searchQuery.toLowerCase());
+      themeMetadata[t.id]?.label?.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const category = getCategoryForTheme(t.name);
+    const category = getCategoryForTheme(t.id);
     const matchesCategory = selectedCategory === "all" || category === selectedCategory;
 
     return matchesSearch && matchesCategory;
@@ -287,8 +287,8 @@ export function EnhancedThemeSelector() {
 
   // Sort: favorites first, then alphabetically
   const sortedThemes = [...filteredThemes].sort((a, b) => {
-    const aIsFav = favorites.includes(a.name);
-    const bIsFav = favorites.includes(b.name);
+    const aIsFav = favorites.includes(a.id);
+    const bIsFav = favorites.includes(b.id);
 
     if (aIsFav && !bIsFav) return -1;
     if (!aIsFav && bIsFav) return 1;
@@ -381,15 +381,15 @@ export function EnhancedThemeSelector() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-4">
               {sortedThemes.map((themeOption) => (
                 <ThemeCard
-                  key={themeOption.name}
+                  key={themeOption.id}
                   theme={themeOption}
-                  isActive={theme === themeOption.name}
-                  isFavorite={favorites.includes(themeOption.name)}
+                  isActive={theme === themeOption.id}
+                  isFavorite={favorites.includes(themeOption.id)}
                   onSelect={() => {
-                    setTheme(themeOption.name);
+                    setTheme(themeOption.id);
                     cancelPreview();
                   }}
-                  onToggleFavorite={() => toggleFavorite(themeOption.name)}
+                  onToggleFavorite={() => toggleFavorite(themeOption.id)}
                   onPreviewStart={() => startPreview(themeOption, 500)}
                   onPreviewEnd={cancelPreview}
                 />

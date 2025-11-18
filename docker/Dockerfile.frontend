@@ -18,9 +18,14 @@ RUN npm install --legacy-peer-deps
 FROM base AS development
 WORKDIR /app
 
-# Copy node_modules from deps
+# Copy node_modules from deps stage
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+
+# Copy package files for reference
+COPY package.json package-lock.json* ./
+
+# Note: Application code will be mounted via volume in docker-compose.yml
+# This allows hot-reload during development
 
 ENV NODE_ENV development
 ENV NEXT_TELEMETRY_DISABLED 1

@@ -81,9 +81,9 @@ api.interceptors.request.use(
     const token = getAuthToken();
 
     // Only add token if not already provided in the request config
-    if (token && !config.headers?.authorization) {
+    if (token && !config.headers?.Authorization && !config.headers?.authorization) {
       config.headers = config.headers ?? {};
-      config.headers.authorization = `Bearer ${token}`;
+      config.headers.Authorization = `Bearer ${token}`;
     }
 
     // Ajustar baseURL para SSR si se define un endpoint interno (Docker, etc.)

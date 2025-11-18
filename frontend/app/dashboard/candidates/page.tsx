@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
+import { useAuthStore } from '@/stores/auth-store';
 import {
   UserPlusIcon,
   MagnifyingGlassIcon,
@@ -24,14 +25,21 @@ type CandidatesResponse = PaginatedResponse<Candidate>;
 
 export default function CandidatesPage() {
   const router = useRouter();
+  const { isAuthenticated, isHydrated } = useAuthStore();
+  const [mounted, setMounted] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortOrder, setSortOrder] = useState('newest');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const { data, isLoading, error, refetch } = useQuery<CandidatesResponse>({
     queryKey: ['candidates', currentPage, statusFilter, searchTerm, sortOrder, pageSize],
+    enabled: isAuthenticated && isHydrated && mounted,
     queryFn: async () => {
       const params: {
         page: number;
@@ -63,21 +71,44 @@ export default function CandidatesPage() {
         }
       }
 
-      const result = await candidateService.getCandidates(params);
-
-      // Debug: Check photo_data_url presence (removed for production)
-
-      return result;
+      return await candidateService.getCandidates(params);
     },
     retry: 1,
   });
 
   // Smart delayed loading to prevent flashing
-  const showLoading = useDelayedLoading(isLoading, 200);
+  const showLoading = useDelayedLoading(isLoading || !isHydrated || !mounted, 200);
 
   const candidates = data?.items || [];
   const total = data?.total || 0;
   const totalPages = Math.ceil(total / pageSize);
+
+  // Show loading while auth is hydrating
+  if (!mounted || !isHydrated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 p-4 sm:p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[...Array(12)].map((_, i) => (
+              <div key={i} className="bg-card rounded-xl shadow-sm border">
+                <SkeletonListItem
+                  variant="shimmer"
+                  withAvatar={true}
+                  className="p-6"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect if not authenticated after hydration
+  if (isHydrated && !isAuthenticated) {
+    router.push('/login');
+    return null;
+  }
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -287,14 +318,7 @@ export default function CandidatesPage() {
         {/* Candidates Grid */}
         {!showLoading && !error && candidates.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {candidates.map((candidate) => {
-              // Debug: Log photo status for each candidate
-              const hasPhoto = !!(candidate.photo_data_url && candidate.photo_data_url.trim() !== '');
-              if (hasPhoto) {
-                console.log(`Candidate ${candidate.id} has photo (length: ${candidate.photo_data_url?.length})`);
-              }
-
-              return (
+            {candidates.map((candidate) => (
               <div key={candidate.id} className="bg-card rounded-xl shadow-sm border hover:shadow-md transition-shadow">
                 <div className="p-6">
                   {/* Candidate Header */}
@@ -306,7 +330,6 @@ export default function CandidatesPage() {
                           alt="候補者写真"
                           className="w-full h-full object-cover"
                           onError={(e) => {
-                            console.error('Image load error for candidate:', candidate.id, 'photo_data_url length:', candidate.photo_data_url?.length);
                             // Hide broken image and show fallback
                             e.currentTarget.style.display = 'none';
                             const parent = e.currentTarget.parentElement;
@@ -315,9 +338,6 @@ export default function CandidatesPage() {
                               icon.innerHTML = '<svg class="h-8 w-8 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z" /></svg>';
                               parent.appendChild(icon.firstChild!);
                             }
-                          }}
-                          onLoad={() => {
-                            console.log('Image loaded successfully for candidate:', candidate.id);
                           }}
                         />
                       ) : (
@@ -417,8 +437,7 @@ export default function CandidatesPage() {
                   </div>
                 </div>
               </div>
-              )
-            })}
+            ))}
           </div>
         )}
 

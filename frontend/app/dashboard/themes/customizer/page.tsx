@@ -127,7 +127,7 @@ export default function ThemeCustomizerPage() {
     setTimeout(() => setSaveSuccess(false), 3000);
 
     // Apply the new theme
-    setTheme(newTheme.name);
+    setTheme(newTheme.id);
   };
 
   const handleExportJSON = () => {

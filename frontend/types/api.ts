@@ -102,13 +102,16 @@ export interface Candidate {
   rirekisho_id?: string;
   full_name_roman: string;
   full_name_kanji?: string;
+  full_name_kana?: string;
   date_of_birth?: string;
+  age?: number;
   gender?: string;
   nationality?: string;
   phone?: string;
   email?: string;
   address?: string;
-  status: CandidateStatus;
+  photo_data_url?: string;
+  status: CandidateStatus | string;
   created_at: string;
   updated_at?: string;
   [key: string]: any;

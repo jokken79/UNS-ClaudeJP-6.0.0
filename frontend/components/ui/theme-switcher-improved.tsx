@@ -116,7 +116,7 @@ function CompactThemeCard({
   onPreviewStart,
   onPreviewEnd,
 }: CompactThemeCardProps) {
-  const metadata = themeMetadata[theme.name] || {
+  const metadata = themeMetadata[theme.id] || {
     emoji: "🎨",
     label: theme.name,
     description: "Custom",
@@ -230,7 +230,7 @@ function FavoriteButton({
   onPreviewStart: () => void;
   onPreviewEnd: () => void;
 }) {
-  const metadata = themeMetadata[theme.name] || {
+  const metadata = themeMetadata[theme.id] || {
     emoji: "🎨",
     label: theme.name,
   };
@@ -310,11 +310,11 @@ export function ThemeSwitcherImproved() {
   const filteredThemes = allThemes.filter((t) => {
     const matchesSearch =
       t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      themeMetadata[t.name]?.label
+      themeMetadata[t.id]?.label
         ?.toLowerCase()
         .includes(searchQuery.toLowerCase());
 
-    const category = getCategoryForTheme(t.name);
+    const category = getCategoryForTheme(t.id);
     const matchesCategory =
       selectedCategory === "all" || category === selectedCategory;
 
@@ -323,13 +323,13 @@ export function ThemeSwitcherImproved() {
 
   // Get favorite themes (limit to 5 for quick access)
   const favoriteThemes = allThemes
-    .filter((t) => favorites.includes(t.name))
+    .filter((t) => favorites.includes(t.id))
     .slice(0, 5);
 
   // Sort: favorites first, then alphabetically
   const sortedThemes = [...filteredThemes].sort((a, b) => {
-    const aIsFav = favorites.includes(a.name);
-    const bIsFav = favorites.includes(b.name);
+    const aIsFav = favorites.includes(a.id);
+    const bIsFav = favorites.includes(b.id);
 
     if (aIsFav && !bIsFav) return -1;
     if (!aIsFav && bIsFav) return 1;
@@ -397,10 +397,10 @@ export function ThemeSwitcherImproved() {
                 <div className="flex flex-wrap gap-1.5">
                   {favoriteThemes.map((favoriteTheme) => (
                     <FavoriteButton
-                      key={favoriteTheme.name}
+                      key={favoriteTheme.id}
                       theme={favoriteTheme}
-                      isActive={theme === favoriteTheme.name}
-                      onSelect={() => applyTheme(favoriteTheme.name)}
+                      isActive={theme === favoriteTheme.id}
+                      onSelect={() => applyTheme(favoriteTheme.id)}
                       onPreviewStart={() => startPreview(favoriteTheme, 500)}
                       onPreviewEnd={cancelPreview}
                     />
@@ -475,12 +475,12 @@ export function ThemeSwitcherImproved() {
               <div className="grid grid-cols-3 gap-2">
                 {sortedThemes.map((themeOption) => (
                   <CompactThemeCard
-                    key={themeOption.name}
+                    key={themeOption.id}
                     theme={themeOption}
-                    isActive={theme === themeOption.name}
-                    isFavorite={favorites.includes(themeOption.name)}
-                    onSelect={() => applyTheme(themeOption.name)}
-                    onToggleFavorite={(e) => toggleFavorite(themeOption.name, e)}
+                    isActive={theme === themeOption.id}
+                    isFavorite={favorites.includes(themeOption.id)}
+                    onSelect={() => applyTheme(themeOption.id)}
+                    onToggleFavorite={(e) => toggleFavorite(themeOption.id, e)}
                     onPreviewStart={() => startPreview(themeOption, 500)}
                     onPreviewEnd={cancelPreview}
                   />

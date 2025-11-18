@@ -34,10 +34,11 @@ def main():
         ("python scripts/create_admin_user.py", "Creating admin user"),
     ]
 
-    # Non-critical operations (data import REMOVED - use IMPORTAR_DATOS.bat instead)
+    # Non-critical operations (data import DISABLED - use only real data from base-datos)
     non_critical_ops = [
         # ("python scripts/import_data.py 2>/dev/null || true", "Importing demo data"),
         # ("python scripts/sync_candidate_employee_status.py 2>/dev/null || true", "Syncing candidates"),
+        # ("python scripts/verify_data.py 2>/dev/null || true", "Verifying imported data"),
     ]
 
     # Run critical operations
