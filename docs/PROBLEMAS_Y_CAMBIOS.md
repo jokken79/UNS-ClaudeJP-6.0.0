@@ -1,5 +1,113 @@
 # Problemas y Cambios - UNS-ClaudeJP 6.0.0
 
+## 📅 2025-11-18 (PM) - Importación de Datos Faltantes
+
+### 🔴 PROBLEMA ENCONTRADO
+
+#### 8. **Base de datos vacía después de la instalación**
+- **Síntoma:** Páginas de candidatos y empleados muestran listas vacías
+- **Causa:** El servicio `importer` solo crea el usuario admin pero NO importa candidatos ni empleados
+- **Impacto:** Aplicación funcional pero sin datos para mostrar
+
+### ✅ SOLUCIÓN APLICADA
+
+**Comando ejecutado:**
+```bash
+docker compose exec backend python scripts/import_all_from_databasejp.py
+```
+
+**Resultados de importación:**
+- ✅ **1,156 Candidatos** (履歴書/Rirekisho) importados
+- ✅ **945 Empleados** (派遣社員) importados
+- ✅ **16 Staff** (スタッフ) importados
+- ✅ **11 Factories** (Fábricas) importados
+
+**Verificación:**
+```sql
+SELECT COUNT(*) FROM candidates;  -- 1156 ✅
+SELECT COUNT(*) FROM employees;   -- 945 ✅
+SELECT COUNT(*) FROM staff;        -- 16 ✅
+SELECT COUNT(*) FROM factories;    -- 11 ✅
+```
+
+**Próxima vez:**
+Para que los datos se importen automáticamente en la instalación, añadir al servicio `importer` en docker-compose.yml:
+```yaml
+importer:
+  ...
+  command: >
+    sh -c "python scripts/simple_importer.py &&
+           python scripts/import_all_from_databasejp.py"
+```
+
+---
+
+## 📅 2025-11-18 (FINAL) - Importación de Fotos y Contract Workers
+
+### 🔴 PROBLEMAS ENCONTRADOS
+
+#### 9. **Fotos de candidatos no importadas**
+- **Síntoma:** Candidatos sin foto_data_url
+- **Causa:** JSON con fotos disponibles pero script de import no las procesaba
+- **Solución:** Crear nuevo script `import_photos_from_all_candidates.py`
+
+#### 10. **Contract Workers (請負) no se importaban**
+- **Error:** `'yukyu_total' is an invalid keyword argument for ContractWorker`
+- **Causa:** Script intentaba pasar campos inexistentes en modelo ContractWorker
+- **Solución:** Remover yukyu_total, yukyu_used, yukyu_remaining de ContractWorker (línea 783-785 en import_data.py)
+
+### ✅ SOLUCIONES APLICADAS
+
+**1. Importación de fotos (1,068 fotos):**
+```bash
+# Crear script: backend/scripts/import_photos_from_all_candidates.py
+docker compose exec backend python scripts/import_photos_from_all_candidates.py
+```
+Resultados: 1,068 fotos importadas (92.4% de éxito)
+
+**2. Arreglo de Contract Workers:**
+Editado: `backend/scripts/import_data.py` línea 783-785
+```diff
+- yukyu_total=0,
+- yukyu_used=0,
+- yukyu_remaining=0
+```
+
+**3. Re-importación de Contract Workers:**
+```bash
+docker compose exec backend python scripts/import_data.py import_ukeoi
+```
+Resultados: 133 Contract Workers importados (todos en 高雄工業 岡山工場)
+
+### 📊 ESTADO FINAL COMPLETO
+
+| Entidad | Cantidad | Estado | Detalles |
+|---------|----------|--------|----------|
+| **Candidatos** (履歴書) | 1,156 | ✅ | Importados |
+| **Fotos** | 1,068 | ✅ | 92.4% con foto |
+| **Fecha Admisión** (受付日) | 1,138 | ✅ | Importadas |
+| **Empleados Dispatch** (派遣社員) | 945 | ✅ | Importados |
+| **Contract Workers** (請負) | 133 | ✅ | **TODOS en 高雄工業 岡山工場** |
+| **Staff** (スタッフ) | 16 | ✅ | Importados |
+| **Factories** (Fábricas) | 11 | ✅ | Importadas |
+| **TOTAL EMPLEADOS** | 1,094 | ✅ | Completo |
+
+**Verificación Final:**
+```sql
+-- Candidatos con fotos
+SELECT COUNT(*) FROM candidates WHERE photo_data_url IS NOT NULL;  -- 1,068 ✅
+
+-- Contract Workers en Okayama
+SELECT COUNT(*) FROM contract_workers
+WHERE company_name = '高雄工業株式会社' AND plant_name = '岡山工場';  -- 133 ✅
+
+-- Total de empleados
+SELECT COUNT(*) FROM employees UNION SELECT COUNT(*) FROM contract_workers;
+-- 945 + 133 = 1,078 ✅
+```
+
+---
+
 ## 📅 2025-11-18 - Sesión de Correcciones Críticas
 
 ### 🔴 PROBLEMAS ENCONTRADOS

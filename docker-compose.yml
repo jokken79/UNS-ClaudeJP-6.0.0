@@ -116,7 +116,11 @@ services:
     networks:
       - uns-claudejp-600-network
     command: >
-      sh -c "python scripts/simple_importer.py"
+      sh -c "python scripts/simple_importer.py &&
+             echo '========================================' &&
+             echo 'Importing data from BASEDATEJP...' &&
+             echo '========================================' &&
+             python scripts/import_all_from_databasejp.py"
     logging: *logging-default
 
   backend:

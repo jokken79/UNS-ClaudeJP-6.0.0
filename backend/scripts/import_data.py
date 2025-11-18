@@ -782,12 +782,7 @@ def import_ukeoi_employees(db: Session):
 
                     # Status
                     is_active=is_active,
-                    termination_date=termination_date,
-
-                    # Yukyu defaults
-                    yukyu_total=0,
-                    yukyu_used=0,
-                    yukyu_remaining=0
+                    termination_date=termination_date
                 )
 
                 db.add(contract_worker)
