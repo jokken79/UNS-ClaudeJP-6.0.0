@@ -23,19 +23,27 @@ export function useThemeApplier() {
     if (typeof window === 'undefined') return;
 
     // Get current theme name (use resolvedTheme as fallback)
-    const currentThemeName = theme || resolvedTheme;
+    let currentThemeName = theme || resolvedTheme;
     if (!currentThemeName) return;
+
+    // Sanitize theme name: convert names with spaces to IDs (e.g., "Forest Green" → "forest-green")
+    const allThemes = [...themes, ...getCustomThemes()];
+    const themeByName = allThemes.find(t => t.name === currentThemeName);
+    if (themeByName && currentThemeName.includes(' ')) {
+      // If the theme name has spaces and we found it, use the ID instead
+      currentThemeName = themeByName.id;
+    }
 
     // For basic light/dark themes, let Tailwind CSS handle it
     if (currentThemeName === 'light' || currentThemeName === 'dark') {
       const root = document.documentElement;
-      
+
       // Remove any custom theme colors to let Tailwind defaults work
       const defaultLightTheme = themes.find(t => t.id === 'default-light');
       const defaultDarkTheme = themes.find(t => t.id === 'default-dark');
-      
+
       const themeColors = currentThemeName === 'dark' ? defaultDarkTheme?.colors : defaultLightTheme?.colors;
-      
+
       if (themeColors) {
         Object.entries(themeColors).forEach(([key, value]) => {
           const cssVar = key.startsWith('--') ? key : `--${key}`;

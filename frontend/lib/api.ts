@@ -358,8 +358,8 @@ export const salaryService = {
 
 // Request services
 export const requestService = {
-  getRequests: async <T = Request[]>(params?: RequestListParams): Promise<T> => {
-    const response = await api.get<T>('/requests/', { params });
+  getRequests: async (params?: RequestListParams): Promise<PaginatedResponse<Request>> => {
+    const response = await api.get<PaginatedResponse<Request>>('/requests/', { params });
     return response.data;
   },
 

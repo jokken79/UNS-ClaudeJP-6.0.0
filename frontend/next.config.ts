@@ -73,7 +73,7 @@ const nextConfig: NextConfig = {
   // Skip static generation for dynamic routes
   // This prevents prerendering errors with client-side state management
   skipTrailingSlashRedirect: true,
-  skipMiddlewareUrlNormalize: false,
+  skipProxyUrlNormalize: false,
 
   images: {
     formats: ['image/avif', 'image/webp'],

@@ -194,6 +194,35 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" suppressHydrationWarning>
+      <head>
+        {/* Sanitize theme from localStorage before next-themes loads */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                const storedTheme = localStorage.getItem('uns-theme');
+                if (storedTheme && storedTheme.includes(' ')) {
+                  // Convert theme names with spaces to IDs
+                  const themeMap = {
+                    'Forest Green': 'forest-green',
+                    'Default Light': 'default-light',
+                    'Default Dark': 'default-dark',
+                    'Ocean Blue': 'ocean-blue',
+                    'Mint Green': 'mint-green',
+                    'Royal Purple': 'royal-purple',
+                    'Vibrant Coral': 'vibrant-coral',
+                    'UNS Kikaku': 'uns-kikaku',
+                  };
+                  const validThemeId = themeMap[storedTheme] || 'default-light';
+                  localStorage.setItem('uns-theme', validThemeId);
+                }
+              } catch (e) {
+                // Silently fail if localStorage is not available
+              }
+            `,
+          }}
+        />
+      </head>
       <body className={`${fontVariables} font-sans antialiased`} suppressHydrationWarning>
         <ErrorBoundaryWrapper>
           <Providers>

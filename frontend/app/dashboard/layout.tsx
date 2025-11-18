@@ -74,21 +74,21 @@ export default function DashboardLayout({
               <p>© 2025 UNS HRApp - Sistema de RRHH para agencias japonesas</p>
               <div className="flex items-center gap-4">
                 <AnimatedLink
-                  href="/privacy"
+                  href="/dashboard/privacy"
                   className="hover:text-foreground dark:hover:text-foreground/90 transition-colors"
                   prefetchOnHover={true}
                 >
                   Privacidad
                 </AnimatedLink>
                 <AnimatedLink
-                  href="/terms"
+                  href="/dashboard/terms"
                   className="hover:text-foreground dark:hover:text-foreground/90 transition-colors"
                   prefetchOnHover={true}
                 >
                   Términos
                 </AnimatedLink>
                 <AnimatedLink
-                  href="/support"
+                  href="/dashboard/support"
                   className="hover:text-foreground dark:hover:text-foreground/90 transition-colors"
                   prefetchOnHover={true}
                 >
