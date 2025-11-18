@@ -18,6 +18,7 @@ import {
   BarChart3,
   Settings,
   Palette,
+  Database,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -122,6 +123,12 @@ export const dashboardConfig: DashboardConfig = {
     },
   ],
   secondaryNav: [
+    {
+      title: 'Gestión Base de Datos',
+      href: '/database-management',
+      icon: Database,
+      description: 'Administración completa de tablas: ver, importar, exportar, editar y eliminar datos.',
+    },
     {
       title: 'Solicitudes',
       href: '/requests',
