@@ -6,12 +6,22 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Path
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime
+import logging
 
 from app.core.database import get_db
+from app.core.app_exceptions import (
+    PayrollCalculationError,
+    ResourceNotFoundError,
+    ValidationError,
+    DatabaseError,
+    handle_exception
+)
 from app.services.payroll_service import PayrollService
 from app.services.config_service import PayrollConfigService, get_payroll_config_service
 from app.models.payroll_models import PayrollRun as PayrollRunModel, EmployeePayroll
 from app.models.models import Employee, YukyuRequest, RequestStatus
+
+logger = logging.getLogger(__name__)
 from app.schemas.payroll import (
     PayrollRunCreate,
     PayrollRun,
@@ -907,16 +917,13 @@ def calculate_payroll_from_timercards(
         }
 
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Validation error: {str(e)}"
-        )
+        raise handle_exception(ValidationError(str(e)))
+    except (ValidationError, ResourceNotFoundError, PayrollCalculationError) as e:
+        raise handle_exception(e)
     except HTTPException:
         raise
     except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.exception(f"Error calculating payroll for employee {employee_id}: {e}")
+        logger.exception(f"Unexpected error calculating payroll for employee {employee_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error calculating payroll"
