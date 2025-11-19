@@ -47,6 +47,8 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.core.database import SessionLocal
 from app.core.rate_limiter import limiter, RateLimitConfig
+from app.core.error_handlers import handle_errors
+from app.core.app_exceptions import ExternalServiceError, ValidationError
 from app.services.ai_gateway import AIGateway, AIGatewayError
 from app.services.ai_usage_service import AIUsageService
 from app.services.ai_budget_service import AIBudgetService, BudgetExceededException
@@ -259,6 +261,7 @@ def get_analytics_service() -> AnalyticsService:
 @router.post("/gemini", response_model=AIResponse)
 @limiter.limit(RateLimitConfig.GEMINI_LIMIT)
 @limiter.limit(RateLimitConfig.GEMINI_BURST)
+@handle_errors(default_detail="Gemini invocation failed")
 async def invoke_gemini(
     request: GeminiRequest,
     gateway: AIGateway = Depends(get_ai_gateway),
@@ -280,39 +283,26 @@ async def invoke_gemini(
     Raises:
         HTTPException: If invocation fails
     """
-    try:
-        logger.info(f"User {current_user.username} invoking Gemini")
+    logger.info(f"User {current_user.username} invoking Gemini")
 
-        response = await gateway.invoke_gemini(
-            prompt=request.prompt,
-            max_tokens=request.max_tokens,
-            temperature=request.temperature,
-            system_instruction=request.system_instruction,
-        )
+    response = await gateway.invoke_gemini(
+        prompt=request.prompt,
+        max_tokens=request.max_tokens,
+        temperature=request.temperature,
+        system_instruction=request.system_instruction,
+    )
 
-        return AIResponse(
-            status="success",
-            provider="gemini",
-            response=response,
-        )
-
-    except AIGatewayError as e:
-        logger.error(f"Gemini invocation failed: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Gemini invocation failed: {str(e)}"
-        )
-    except Exception as e:
-        logger.error(f"Unexpected error invoking Gemini: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error"
-        )
+    return AIResponse(
+        status="success",
+        provider="gemini",
+        response=response,
+    )
 
 
 @router.post("/openai", response_model=AIResponse)
 @limiter.limit(RateLimitConfig.OPENAI_LIMIT)
 @limiter.limit(RateLimitConfig.OPENAI_BURST)
+@handle_errors(default_detail="OpenAI invocation failed")
 async def invoke_openai(
     request: OpenAIRequest,
     gateway: AIGateway = Depends(get_ai_gateway),
@@ -334,35 +324,21 @@ async def invoke_openai(
     Raises:
         HTTPException: If invocation fails
     """
-    try:
-        logger.info(f"User {current_user.username} invoking OpenAI")
+    logger.info(f"User {current_user.username} invoking OpenAI")
 
-        response = await gateway.invoke_openai(
-            prompt=request.prompt,
-            model=request.model,
-            max_tokens=request.max_tokens,
-            temperature=request.temperature,
-            system_message=request.system_message,
-        )
+    response = await gateway.invoke_openai(
+        prompt=request.prompt,
+        model=request.model,
+        max_tokens=request.max_tokens,
+        temperature=request.temperature,
+        system_message=request.system_message,
+    )
 
-        return AIResponse(
-            status="success",
-            provider="openai",
-            response=response,
-        )
-
-    except AIGatewayError as e:
-        logger.error(f"OpenAI invocation failed: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"OpenAI invocation failed: {str(e)}"
-        )
-    except Exception as e:
-        logger.error(f"Unexpected error invoking OpenAI: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error"
-        )
+    return AIResponse(
+        status="success",
+        provider="openai",
+        response=response,
+    )
 
 
 @router.post("/claude", response_model=AIResponse)
