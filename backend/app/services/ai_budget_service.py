@@ -2,6 +2,11 @@
 AI Budget Service
 
 Manages user budgets, validates spending, sends alerts, and prevents overspending.
+
+ATOMIC OPERATIONS:
+- All budget spending updates use SQLAlchemy update() with proper isolation
+- Prevents race conditions between validation and recording
+- Uses pessimistic locking (select_for_update) when needed
 """
 
 import logging
@@ -11,7 +16,7 @@ from datetime import datetime, date, timedelta
 from decimal import Decimal
 
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, update
 
 from app.models.models import AIBudget, User
 from app.core.config import settings
@@ -88,6 +93,9 @@ class AIBudgetService:
         """
         Validate if user can afford an API call.
 
+        ATOMIC OPERATION: Uses pessimistic locking to prevent race conditions.
+        Between validation and recording, no other process can modify this budget.
+
         Args:
             user_id: User ID
             estimated_cost: Estimated cost of the call
@@ -98,7 +106,20 @@ class AIBudgetService:
         Raises:
             BudgetExceededException: If budget would be exceeded
         """
-        budget = self.get_or_create_budget(user_id)
+        # Use select_for_update to lock the budget row for this transaction
+        budget = self.db.query(AIBudget)\
+            .filter(AIBudget.user_id == user_id)\
+            .with_for_update()\
+            .first()
+
+        if not budget:
+            # If budget doesn't exist, create it but don't lock (new record)
+            budget = self.get_or_create_budget(user_id)
+            # Refetch with lock after creation
+            budget = self.db.query(AIBudget)\
+                .filter(AIBudget.user_id == user_id)\
+                .with_for_update()\
+                .first()
 
         # Check if budget is active
         if not budget.is_active:
@@ -108,11 +129,14 @@ class AIBudgetService:
                 "monthly_remaining": float(budget.monthly_remaining),
             }
 
-        # Reset monthly if needed
-        self._reset_monthly_if_needed(budget)
+        # Reset monthly if needed (happens within lock)
+        self._reset_monthly_if_needed_locked(budget)
 
-        # Reset daily if needed
-        self._reset_daily_if_needed(budget)
+        # Reset daily if needed (happens within lock)
+        self._reset_daily_if_needed_locked(budget)
+
+        # Reload to get updated values within the lock
+        self.db.refresh(budget)
 
         # Check monthly limit
         if budget.spent_this_month + estimated_cost > Decimal(str(budget.monthly_budget_usd)):
@@ -148,6 +172,9 @@ class AIBudgetService:
         """
         Record an API call cost against user's budget.
 
+        ATOMIC OPERATION: Uses SQL UPDATE statement with pessimistic locking
+        to ensure spending is recorded atomically without race conditions.
+
         Args:
             user_id: User ID
             cost: Cost in USD
@@ -157,15 +184,35 @@ class AIBudgetService:
         """
         budget = self.get_or_create_budget(user_id)
 
-        # Reset if needed
-        self._reset_monthly_if_needed(budget)
-        self._reset_daily_if_needed(budget)
+        # Lock budget row for atomic update
+        budget = self.db.query(AIBudget)\
+            .filter(AIBudget.user_id == user_id)\
+            .with_for_update()\
+            .first()
 
-        # Update spending
-        budget.spent_this_month = budget.spent_this_month + cost
-        budget.spent_today = budget.spent_today + cost
+        # Reset if needed (within lock)
+        self._reset_monthly_if_needed_locked(budget)
+        self._reset_daily_if_needed_locked(budget)
+
+        # Use atomic SQL UPDATE instead of read-modify-write
+        # This is atomic and prevents concurrent updates from being lost
+        self.db.execute(
+            update(AIBudget)\
+            .where(AIBudget.user_id == user_id)\
+            .values(
+                spent_this_month=AIBudget.spent_this_month + cost,
+                spent_today=AIBudget.spent_today + cost,
+                updated_at=datetime.utcnow()
+            )
+        )
 
         self.db.commit()
+
+        # Refresh to get updated values
+        budget = self.db.query(AIBudget)\
+            .filter(AIBudget.user_id == user_id)\
+            .first()
+
         self.db.refresh(budget)
 
         logger.info(f"Recorded spending for user {user_id}: ${cost} (month total: ${budget.spent_this_month})")
@@ -308,7 +355,7 @@ class AIBudgetService:
         return budget
 
     def _reset_monthly_if_needed(self, budget: AIBudget) -> None:
-        """Reset monthly spending if reset date has passed"""
+        """Reset monthly spending if reset date has passed (non-atomic, for compatibility)"""
         if date.today() >= budget.month_reset_date:
             budget.spent_this_month = Decimal("0")
 
@@ -321,12 +368,57 @@ class AIBudgetService:
             logger.info(f"Reset monthly budget for user {budget.user_id}")
 
     def _reset_daily_if_needed(self, budget: AIBudget) -> None:
-        """Reset daily spending if reset date has passed"""
+        """Reset daily spending if reset date has passed (non-atomic, for compatibility)"""
         if date.today() >= budget.day_reset_date:
             budget.spent_today = Decimal("0")
             budget.day_reset_date = date.today() + timedelta(days=1)
 
             self.db.commit()
+            logger.info(f"Reset daily budget for user {budget.user_id}")
+
+    def _reset_monthly_if_needed_locked(self, budget: AIBudget) -> None:
+        """
+        Reset monthly spending if reset date has passed (atomic operation within lock).
+
+        Called within a pessimistic lock transaction to ensure atomicity.
+        """
+        if date.today() >= budget.month_reset_date:
+            # Calculate next month reset date
+            today = date.today()
+            next_month = date(today.year, today.month, 1) + timedelta(days=32)
+            next_reset = date(next_month.year, next_month.month, 1)
+
+            # Use atomic SQL UPDATE
+            self.db.execute(
+                update(AIBudget)\
+                .where(AIBudget.user_id == budget.user_id)\
+                .values(
+                    spent_this_month=Decimal("0"),
+                    month_reset_date=next_reset,
+                    updated_at=datetime.utcnow()
+                )
+            )
+
+            logger.info(f"Reset monthly budget for user {budget.user_id}")
+
+    def _reset_daily_if_needed_locked(self, budget: AIBudget) -> None:
+        """
+        Reset daily spending if reset date has passed (atomic operation within lock).
+
+        Called within a pessimistic lock transaction to ensure atomicity.
+        """
+        if date.today() >= budget.day_reset_date:
+            # Use atomic SQL UPDATE
+            self.db.execute(
+                update(AIBudget)\
+                .where(AIBudget.user_id == budget.user_id)\
+                .values(
+                    spent_today=Decimal("0"),
+                    day_reset_date=date.today() + timedelta(days=1),
+                    updated_at=datetime.utcnow()
+                )
+            )
+
             logger.info(f"Reset daily budget for user {budget.user_id}")
 
     def _send_alert(self, budget: AIBudget, recent_cost: Decimal) -> None:
