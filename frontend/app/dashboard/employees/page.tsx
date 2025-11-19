@@ -228,7 +228,7 @@ export default function EmployeesPage() {
   const router = useRouter();
   const [searchInput, setSearchInput] = useState(''); // Local input value
   const [searchTerm, setSearchTerm] = useState(''); // Debounced search value
-  const [filterActive, setFilterActive] = useState<boolean | null>(null);
+  const [filterActive, setFilterActive] = useState<boolean | null>(true);
   const [filterFactory, setFilterFactory] = useState<string>('');
   const [filterContractType, setFilterContractType] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
