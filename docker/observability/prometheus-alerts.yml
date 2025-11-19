@@ -122,3 +122,140 @@ groups:
         annotations:
           summary: "OpenTelemetry Collector memory usage high"
           description: "OTel Collector is using {{ $value }}MB of memory."
+
+  - name: system_resources
+    interval: 30s
+    rules:
+      # Alert when disk space is critically low
+      - alert: DiskSpaceCritical
+        expr: |
+          (
+            node_filesystem_avail_bytes{mountpoint="/"}
+            /
+            node_filesystem_size_bytes{mountpoint="/"}
+          ) < 0.10
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Disk space critically low"
+          description: "Disk space is below 10% ({{ $value | humanizePercentage }} available)."
+
+      # Alert when disk space is getting low
+      - alert: DiskSpaceLow
+        expr: |
+          (
+            node_filesystem_avail_bytes{mountpoint="/"}
+            /
+            node_filesystem_size_bytes{mountpoint="/"}
+          ) < 0.20
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk space running low"
+          description: "Disk space is below 20% ({{ $value | humanizePercentage }} available)."
+
+      # Alert when system memory is high
+      - alert: HighMemoryUsage
+        expr: |
+          (
+            1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)
+          ) > 0.90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "System memory usage is high"
+          description: "Memory usage is above 90% ({{ $value | humanizePercentage }} used)."
+
+      # Alert when system CPU is high
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "System CPU usage is high"
+          description: "CPU usage is above 80% ({{ $value | humanize }}% used)."
+
+  - name: database_health
+    interval: 30s
+    rules:
+      # Alert when database is down (if postgres_exporter is available)
+      - alert: PostgreSQLDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL database is down"
+          description: "PostgreSQL database has been unreachable for 1 minute."
+
+      # Alert when database connections are high
+      - alert: DatabaseConnectionsHigh
+        expr: |
+          (
+            sum(pg_stat_database_numbackends)
+            /
+            pg_settings_max_connections
+          ) > 0.80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Database connections usage high"
+          description: "Database is using {{ $value | humanizePercentage }} of available connections."
+
+      # Alert when there are too many idle connections
+      - alert: TooManyIdleConnections
+        expr: count(pg_stat_activity_state{state="idle"}) > 20
+        for: 10m
+        labels:
+          severity: info
+        annotations:
+          summary: "Too many idle database connections"
+          description: "There are {{ $value }} idle connections to the database."
+
+  - name: application_health
+    interval: 30s
+    rules:
+      # Alert when OCR error rate is high
+      - alert: OCRHighErrorRate
+        expr: |
+          (
+            sum(rate(ocr_failures_total[5m]))
+            /
+            sum(rate(ocr_requests_total[5m]))
+          ) > 0.10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "OCR error rate is high"
+          description: "OCR error rate is {{ $value | humanizePercentage }} (threshold: 10%)."
+
+      # Alert when OCR processing is slow
+      - alert: OCRSlowProcessing
+        expr: |
+          (
+            rate(ocr_processing_seconds_sum[5m])
+            /
+            rate(ocr_processing_seconds_count[5m])
+          ) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "OCR processing is slow"
+          description: "Average OCR processing time is {{ $value | humanize }}s (threshold: 10s)."
+
+      # Alert when no OCR requests in last hour (possible service issue)
+      - alert: NoOCRRequests
+        expr: rate(ocr_requests_total[1h]) == 0
+        for: 1h
+        labels:
+          severity: info
+        annotations:
+          summary: "No OCR requests in the last hour"
+          description: "OCR service may not be processing requests or there's no traffic."
