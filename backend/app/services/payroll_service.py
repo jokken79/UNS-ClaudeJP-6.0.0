@@ -638,6 +638,259 @@ class PayrollService:
             return (overlap_end - overlap_start).total_seconds() / 3600
         return 0.0
 
+    def get_timer_cards_for_payroll(
+        self,
+        employee_id: int,
+        start_date: str,
+        end_date: str
+    ) -> Dict[str, Any]:
+        """Fetch timer cards for payroll calculation.
+
+        Args:
+            employee_id: ID of the employee
+            start_date: Start date in format 'YYYY-MM-DD'
+            end_date: End date in format 'YYYY-MM-DD'
+
+        Returns:
+            Dictionary with employee data and timer cards for the period
+        """
+        try:
+            # Parse dates
+            try:
+                from datetime import datetime as dt
+                start_dt = dt.strptime(start_date, '%Y-%m-%d').date()
+                end_dt = dt.strptime(end_date, '%Y-%m-%d').date()
+            except ValueError:
+                return {
+                    'success': False,
+                    'error': 'Invalid date format. Use YYYY-MM-DD'
+                }
+
+            if not self.db:
+                return {
+                    'success': False,
+                    'error': 'Database session not available'
+                }
+
+            # Fetch employee
+            employee = self.db.query(Employee).filter(Employee.id == employee_id).first()
+            if not employee:
+                return {
+                    'success': False,
+                    'error': f'Employee with ID {employee_id} not found'
+                }
+
+            # Import TimerCard model
+            from app.models.models import TimerCard
+
+            # Fetch timer cards for the period
+            timer_cards = self.db.query(TimerCard).filter(
+                TimerCard.employee_id == employee_id,
+                TimerCard.work_date >= start_dt,
+                TimerCard.work_date <= end_dt
+            ).all()
+
+            # Format response
+            timer_records = []
+            for card in timer_cards:
+                timer_records.append({
+                    'work_date': card.work_date.strftime('%Y-%m-%d'),
+                    'clock_in': card.clock_in.strftime('%H:%M') if card.clock_in else None,
+                    'clock_out': card.clock_out.strftime('%H:%M') if card.clock_out else None,
+                    'break_minutes': card.break_minutes,
+                    'regular_hours': float(card.regular_hours),
+                    'overtime_hours': float(card.overtime_hours),
+                    'night_hours': float(card.night_hours),
+                    'holiday_hours': float(card.holiday_hours),
+                    'is_approved': card.is_approved
+                })
+
+            return {
+                'success': True,
+                'employee': {
+                    'id': employee.id,
+                    'full_name_kanji': employee.full_name_kanji,
+                    'full_name_kana': employee.full_name_kana,
+                    'jikyu': employee.jikyu,
+                    'apartment_rent': employee.apartment_rent
+                },
+                'timer_records': timer_records,
+                'total_records': len(timer_records)
+            }
+
+        except Exception as e:
+            logger.error(f"Error fetching timer cards: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def calculate_payroll_from_timer_cards(
+        self,
+        employee_id: int,
+        start_date: str,
+        end_date: str
+    ) -> Dict[str, Any]:
+        """Calculate payroll from timer cards.
+
+        Args:
+            employee_id: ID of the employee
+            start_date: Start date in format 'YYYY-MM-DD'
+            end_date: End date in format 'YYYY-MM-DD'
+
+        Returns:
+            Dictionary with complete payroll calculation
+        """
+        try:
+            # First get timer cards
+            timer_data = self.get_timer_cards_for_payroll(employee_id, start_date, end_date)
+            if not timer_data['success']:
+                return timer_data
+
+            employee_info = timer_data['employee']
+            timer_records = timer_data['timer_records']
+
+            # Calculate totals
+            work_days = 0
+            total_hours = 0.0
+            regular_hours = 0.0
+            overtime_hours = 0.0
+            night_hours = 0.0
+            holiday_hours = 0.0
+
+            for record in timer_records:
+                work_days += 1
+                total_hours += record.get('regular_hours', 0) + record.get('overtime_hours', 0)
+                regular_hours += record.get('regular_hours', 0)
+                overtime_hours += record.get('overtime_hours', 0)
+                night_hours += record.get('night_hours', 0)
+                holiday_hours += record.get('holiday_hours', 0)
+
+            # Base salary calculations
+            base_rate = float(employee_info['jikyu'])
+            base_amount = int(regular_hours * base_rate)
+            overtime_amount = int(overtime_hours * base_rate * float(self.overtime_rate))
+            night_amount = int(night_hours * base_rate * (1 + float(self.night_rate)))
+            holiday_amount = int(holiday_hours * base_rate * float(self.holiday_rate))
+
+            gross_amount = base_amount + overtime_amount + night_amount + holiday_amount
+
+            # Deductions
+            apartment_deduction = employee_info.get('apartment_rent', 0)
+            health_insurance = int(gross_amount * Decimal('0.055'))  # 5.5%
+            pension = int(gross_amount * Decimal('0.091'))  # 9.1%
+            income_tax = int(gross_amount * Decimal('0.10'))  # 10%
+
+            total_deductions = apartment_deduction + int(health_insurance) + int(pension) + int(income_tax)
+            net_amount = gross_amount - total_deductions
+
+            return {
+                'success': True,
+                'employee_id': employee_id,
+                'pay_period_start': start_date,
+                'pay_period_end': end_date,
+                'hours_breakdown': {
+                    'work_days': work_days,
+                    'total_hours': total_hours,
+                    'regular_hours': regular_hours,
+                    'overtime_hours': overtime_hours,
+                    'night_hours': night_hours,
+                    'holiday_hours': holiday_hours
+                },
+                'rates': {
+                    'base_rate': base_rate,
+                    'overtime_rate': float(self.overtime_rate),
+                    'night_rate': float(self.night_rate),
+                    'holiday_rate': float(self.holiday_rate)
+                },
+                'amounts': {
+                    'base_amount': base_amount,
+                    'overtime_amount': overtime_amount,
+                    'night_amount': night_amount,
+                    'holiday_amount': holiday_amount,
+                    'gross_amount': gross_amount,
+                    'net_amount': net_amount
+                },
+                'deductions_detail': {
+                    'apartment': apartment_deduction,
+                    'health_insurance': int(health_insurance),
+                    'pension': int(pension),
+                    'income_tax': int(income_tax),
+                    'total': total_deductions
+                },
+                'validation': {
+                    'is_valid': True,
+                    'errors': []
+                },
+                'calculated_at': datetime.now().isoformat()
+            }
+
+        except Exception as e:
+            logger.error(f"Error calculating payroll: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def get_unprocessed_timer_cards(self) -> Dict[str, Any]:
+        """Get all unprocessed timer cards grouped by employee.
+
+        Returns:
+            Dictionary with unprocessed timer cards grouped by employee
+        """
+        try:
+            if not self.db:
+                return {
+                    'success': False,
+                    'error': 'Database session not available'
+                }
+
+            from app.models.models import TimerCard
+
+            # Get unprocessed timer cards (is_approved = False)
+            unprocessed = self.db.query(TimerCard).filter(
+                TimerCard.is_approved == False
+            ).all()
+
+            # Group by employee
+            employees_data = {}
+            for card in unprocessed:
+                if card.employee_id not in employees_data:
+                    employee = self.db.query(Employee).filter(Employee.id == card.employee_id).first()
+                    if employee:
+                        employees_data[card.employee_id] = {
+                            'employee_id': card.employee_id,
+                            'employee_name': employee.full_name_kanji,
+                            'timer_cards': []
+                        }
+
+                if card.employee_id in employees_data:
+                    employees_data[card.employee_id]['timer_cards'].append({
+                        'work_date': card.work_date.strftime('%Y-%m-%d'),
+                        'clock_in': card.clock_in.strftime('%H:%M') if card.clock_in else None,
+                        'clock_out': card.clock_out.strftime('%H:%M') if card.clock_out else None,
+                        'break_minutes': card.break_minutes,
+                        'regular_hours': float(card.regular_hours),
+                        'overtime_hours': float(card.overtime_hours)
+                    })
+
+            employees_list = list(employees_data.values())
+            total_records = len(unprocessed)
+
+            return {
+                'success': True,
+                'total_employees': len(employees_list),
+                'total_records': total_records,
+                'employees': employees_list
+            }
+
+        except Exception as e:
+            logger.error(f"Error fetching unprocessed timer cards: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
 
 # Global instance - kept for backward compatibility
 payroll_service = PayrollService()
