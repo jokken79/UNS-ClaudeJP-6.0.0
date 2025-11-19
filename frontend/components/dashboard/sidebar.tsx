@@ -11,16 +11,27 @@ import { useSidebar } from '@/lib/hooks/use-sidebar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fadeInLeft, staggerFast, shouldReduceMotion } from '@/lib/animations';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
 import { useTheme } from 'next-themes';
 
 export function Sidebar() {
   const pathname = usePathname();
+  const prevPathnameRef = useRef<string | null>(null);
   const { collapsed, toggle } = useSidebar();
   const reducedMotion = shouldReduceMotion();
   const { user } = useAuthStore();
   const { theme: activeTheme } = useTheme();
+  const [renderKey, setRenderKey] = useState(0);
+
+  // Sincronizar cuando la ruta cambia o el tema cambia para limpiar estados de animación
+  useEffect(() => {
+    if (prevPathnameRef.current && prevPathnameRef.current !== pathname) {
+      // Force re-render de los items para resetear estados de animación
+      setRenderKey(prev => prev + 1);
+    }
+    prevPathnameRef.current = pathname;
+  }, [pathname, activeTheme]);
 
   // Dynamic colors using CSS variables - automatically updates with theme changes
   // Logo uses primary color with contrasting foreground text
@@ -119,15 +130,16 @@ export function Sidebar() {
 
               return (
                 <motion.div
-                  key={item.href}
+                  key={`main-nav-${item.href}-${renderKey}`}
                   initial={!reducedMotion ? { opacity: 0, x: -20 } : undefined}
                   animate={!reducedMotion ? { opacity: 1, x: 0 } : undefined}
                   transition={!reducedMotion ? { delay: index * 0.05 } : undefined}
                 >
                   <Link href={item.href}>
                     <motion.div
-                      whileHover={!reducedMotion ? { scale: 1.02, x: 4 } : undefined}
-                      whileTap={!reducedMotion ? { scale: 0.98 } : undefined}
+                      key={`motion-wrapper-${item.href}`}
+                      whileHover={!reducedMotion && !isActive ? { scale: 1.02, x: 4 } : undefined}
+                      whileTap={!reducedMotion && !isActive ? { scale: 0.98 } : undefined}
                       transition={!reducedMotion ? { type: 'spring', stiffness: 400, damping: 25 } : undefined}
                     >
                       <Button
@@ -142,7 +154,8 @@ export function Sidebar() {
                         title={collapsed ? item.title : undefined}
                       >
                         <motion.div
-                          animate={!reducedMotion && isActive ? { scale: [1, 1.2, 1] } : undefined}
+                          key={`icon-${item.href}`}
+                          animate={!reducedMotion && isActive ? { scale: [1, 1.2, 1] } : { scale: 1 }}
                           transition={!reducedMotion && isActive ? { duration: 0.3 } : undefined}
                         >
                           <Icon
@@ -164,11 +177,11 @@ export function Sidebar() {
                           )}
                         </AnimatePresence>
 
-                        {/* Active indicator line */}
+                        {/* Active indicator line - layoutId debe ser único por item */}
                         {isActive && (
                           <motion.div
                             className="absolute right-1 top-1 bottom-1 w-1.5 rounded-full bg-primary"
-                            layoutId="activeIndicator"
+                            layoutId={`activeIndicator-main-${item.href}`}
                             transition={!reducedMotion ? { type: 'spring', stiffness: 300, damping: 30 } : undefined}
                           />
                         )}
@@ -200,45 +213,68 @@ export function Sidebar() {
             </AnimatePresence>
             {dashboardConfig.secondaryNav.map((item, index) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href;
+              // Estandarizar con la misma lógica que mainNav
+              const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
 
               return (
                 <motion.div
-                  key={item.href}
+                  key={`secondary-nav-${item.href}-${renderKey}`}
                   initial={!reducedMotion ? { opacity: 0, x: -20 } : undefined}
                   animate={!reducedMotion ? { opacity: 1, x: 0 } : undefined}
                   transition={!reducedMotion ? { delay: index * 0.05 } : undefined}
                 >
                   <Link href={item.href}>
-                    <Button
-                      variant="ghost"
-                      className={cn(
-                        'w-full justify-start gap-3 h-11 rounded-xl transition-all hover:bg-accent hover:text-accent-foreground',
-                        'border border-transparent backdrop-blur-sm',
-                        collapsed && 'justify-center px-2 rounded-full',
-                        isActive &&
-                          'shadow-md ring-1 hover:!shadow-lg hover:text-primary hover:shadow-primary/20 bg-primary/15 text-primary border-primary/30 dark:bg-primary/25 dark:border-primary/40'
-                      )}
-                      title={collapsed ? item.title : undefined}
+                    <motion.div
+                      key={`motion-wrapper-secondary-${item.href}`}
+                      whileHover={!reducedMotion && !isActive ? { scale: 1.02, x: 4 } : undefined}
+                      whileTap={!reducedMotion && !isActive ? { scale: 0.98 } : undefined}
+                      transition={!reducedMotion ? { type: 'spring', stiffness: 400, damping: 25 } : undefined}
                     >
-                      <Icon
-                        className="h-5 w-5 transition-colors"
-                      />
-                      <AnimatePresence mode="wait">
-                        {!collapsed && (
-                          <motion.span
-                            key="nav-text"
-                            className="text-sm truncate"
-                            initial={!reducedMotion ? { opacity: 0, width: 0 } : undefined}
-                            animate={!reducedMotion ? { opacity: 1, width: 'auto' } : undefined}
-                            exit={!reducedMotion ? { opacity: 0, width: 0 } : undefined}
-                            transition={!reducedMotion ? { duration: 0.2 } : undefined}
-                          >
-                            {item.title}
-                          </motion.span>
+                      <Button
+                        variant="ghost"
+                        className={cn(
+                          'w-full justify-start gap-3 h-11 rounded-xl transition-all relative overflow-hidden hover:bg-accent hover:text-accent-foreground',
+                          'border border-transparent backdrop-blur-sm',
+                          collapsed && 'justify-center px-2 rounded-full',
+                          isActive &&
+                            'shadow-md ring-1 hover:!shadow-lg hover:text-primary hover:shadow-primary/20 bg-primary/15 text-primary border-primary/30 dark:bg-primary/25 dark:border-primary/40'
                         )}
-                      </AnimatePresence>
-                    </Button>
+                        title={collapsed ? item.title : undefined}
+                      >
+                        <motion.div
+                          key={`icon-secondary-${item.href}`}
+                          animate={!reducedMotion && isActive ? { scale: [1, 1.2, 1] } : { scale: 1 }}
+                          transition={!reducedMotion && isActive ? { duration: 0.3 } : undefined}
+                        >
+                          <Icon
+                            className="h-5 w-5 transition-colors"
+                          />
+                        </motion.div>
+                        <AnimatePresence mode="wait">
+                          {!collapsed && (
+                            <motion.span
+                              key="nav-text"
+                              className="text-sm truncate"
+                              initial={!reducedMotion ? { opacity: 0, width: 0 } : undefined}
+                              animate={!reducedMotion ? { opacity: 1, width: 'auto' } : undefined}
+                              exit={!reducedMotion ? { opacity: 0, width: 0 } : undefined}
+                              transition={!reducedMotion ? { duration: 0.2 } : undefined}
+                            >
+                              {item.title}
+                            </motion.span>
+                          )}
+                        </AnimatePresence>
+
+                        {/* Active indicator line - layoutId debe ser único por item */}
+                        {isActive && (
+                          <motion.div
+                            className="absolute right-1 top-1 bottom-1 w-1.5 rounded-full bg-primary"
+                            layoutId={`activeIndicator-secondary-${item.href}`}
+                            transition={!reducedMotion ? { type: 'spring', stiffness: 300, damping: 30 } : undefined}
+                          />
+                        )}
+                      </Button>
+                    </motion.div>
                   </Link>
                 </motion.div>
               );
