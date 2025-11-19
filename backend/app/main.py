@@ -59,7 +59,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=f"{settings.APP_NAME} API",
-    description="""## UNS-ClaudeJP v5.6.0 - API de Gestión de Personal Temporal
+    description="""## UNS-ClaudeJP v6.0.0 - API de Gestión de Personal Temporal
 
 ### Características Principales
 - **OCR Híbrido**: Azure + EasyOCR + Gemini + Tesseract con caché inteligente
@@ -238,6 +238,7 @@ async def internal_error_handler(request: Request, exc: Exception) -> JSONRespon
 
 
 from app.api import (
+    ai_agents,  # noqa: E402  pylint: disable=wrong-import-position
     azure_ocr,  # noqa: E402  pylint: disable=wrong-import-position
     admin,
     apartments_v2,
@@ -266,6 +267,7 @@ from app.api import (
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(admin.router, tags=["Admin Panel"])
+app.include_router(ai_agents.router, prefix="/api/ai", tags=["AI Agents"])
 app.include_router(audit.router, tags=["Admin Audit Log"])
 app.include_router(apartments_v2.router, prefix="/api/apartments", tags=["Apartments"])
 app.include_router(candidates.router, prefix="/api/candidates", tags=["Candidates"])
