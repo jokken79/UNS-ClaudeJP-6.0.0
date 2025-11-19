@@ -18,9 +18,16 @@ STOP.bat           # Stop services
 
 ### Start Services (Linux/macOS)
 ```bash
+# Generate .env from .env.example
 python generate_env.py
+
+# Start services
 docker compose up -d
+
+# View logs
 docker compose logs -f
+
+# Stop services
 docker compose down
 ```
 
