@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.models import SystemSettings, User, UserRole
-from app.api.auth import get_current_user
+from app.api.deps import get_current_user
 from app.schemas.settings import VisibilityToggleResponse, VisibilityToggleUpdate
 from app.core.logging import app_logger
 

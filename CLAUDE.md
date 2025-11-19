@@ -39,7 +39,7 @@ docker compose down
 
 ## 📐 Project Overview
 
-UNS-ClaudeJP 5.6.0 is a comprehensive HR management system for Japanese staffing agencies (人材派遣会社):
+UNS-ClaudeJP 6.0.0 is a comprehensive HR management system for Japanese staffing agencies (人材派遣会社):
 
 - **Backend**: FastAPI 0.115.6 (Python 3.11+) with SQLAlchemy 2.0.36 ORM and PostgreSQL 15
 - **Frontend**: Next.js 16.0.0 with React 19.0.0, TypeScript 5.6 and Tailwind CSS 3.4 (App Router)
@@ -47,7 +47,7 @@ UNS-ClaudeJP 5.6.0 is a comprehensive HR management system for Japanese staffing
 
 Manages the complete lifecycle of temporary workers: candidates (履歴書/Rirekisho), employees (派遣社員), factories (派遣先), attendance (タイムカード), payroll (給与), and requests (申請).
 
-**Version 5.6.0**: 45+ functional pages across 8 core modules with advanced theming system (12 predefined themes + custom themes), template designer, and professional design tools. Version 5.6.0 includes dependency cleanup (17 frontend + 5 backend packages removed), observability stack (OpenTelemetry + Prometheus + Grafana), and 67% reduction in documentation files.
+**Version 6.0.0**: 45+ functional pages across 8 core modules with advanced theming system (23 predefined themes + custom themes), template designer, and professional design tools. Version 6.0.0 includes fixed AI agents router (45 endpoints), 50+ database models, dependency cleanup (17 frontend + 5 backend packages removed), observability stack (OpenTelemetry + Prometheus + Grafana), and 67% reduction in documentation files.
 
 ---
 
@@ -77,8 +77,8 @@ pytest -k "test_login" -vs              # Run tests matching pattern
 ```
 
 **Key Backend Paths:**
-- API endpoints: `backend/app/api/*.py` (24+ routers with FastAPI dependency injection)
-- Database models: `backend/app/models/models.py` (single-file pattern, 13 tables)
+- API endpoints: `backend/app/api/*.py` (25 routers with FastAPI dependency injection + AI Agents)
+- Database models: `backend/app/models/models.py` (single-file pattern, 50+ models/tables)
 - Schemas: `backend/app/schemas/*.py` (Pydantic models for validation)
 - Business logic: `backend/app/services/*.py` (separated by domain)
 - Core config: `backend/app/core/` (security, database, config)
@@ -128,7 +128,7 @@ npm list                                # Show dependencies
 - Layouts: `frontend/app/(dashboard)/layout.tsx` (dashboard layout with auth)
 - Components: `frontend/components/*.tsx` (shared components, Shadcn/ui pattern)
 - UI Library: `frontend/components/ui/*` (Radix UI + Tailwind components)
-- Themes: `frontend/lib/themes.ts` (12 predefined + custom theme system)
+- Themes: `frontend/lib/themes.ts` (23 predefined + custom theme system)
 - API client: `frontend/lib/api.ts` (Axios instance with JWT interceptors)
 - State: `frontend/stores/*.ts` (Zustand stores for client state)
 - Contexts: `frontend/contexts/*.tsx` (React contexts)
@@ -170,14 +170,14 @@ export function CandidateList({ candidates }) {
 docker exec -it uns-claudejp-db psql -U uns_admin -d uns_claudejp
 
 # Useful SQL commands
-\dt                              # List tables (13 tables)
+\dt                              # List tables (50+ models/tables)
 \d candidates                    # Describe candidates table
 \d employees                     # Describe employees table
 SELECT COUNT(*) FROM candidates; # Count records
 SELECT * FROM users WHERE username='admin';  # Verify admin user
 
 # Quick data verification
-\dt                              # List all 13 tables
+\dt                              # List all 50+ models/tables
 SELECT tablename FROM pg_tables WHERE schemaname='public';
 
 # Backup/restore
@@ -215,12 +215,12 @@ docker exec uns-claudejp-backend bash -c "cd /app && alembic history"
 1. **Next.js App Router** (NOT Pages Router) - File-based routing under `app/`
 2. **FastAPI with dependency injection** - Type-safe endpoints with auto-documentation
 3. **SQLAlchemy ORM** - Never use raw SQL; always use the ORM
-4. **PostgreSQL with 13 tables** - Full normalization with triggers for business logic
+4. **PostgreSQL with 50+ models/tables** - Full normalization with triggers for business logic
 5. **Hybrid OCR** - Azure (primary) → EasyOCR (secondary) → Tesseract (fallback)
 6. **Zustand + React Query** - Light state management + server state caching
 7. **Shadcn/ui + Tailwind** - Component-driven design with CSS utilities
 
-### Database (13 Tables)
+### Database (50+ Models/Tables)
 
 **Personnel:** users, candidates, employees, contract_workers, staff
 **Business:** factories, apartments, documents, contracts
@@ -265,9 +265,9 @@ SUPER_ADMIN > ADMIN > COORDINATOR > KANRININSHA > EMPLOYEE > CONTRACT_WORKER
 - MediaPipe for automatic photo extraction from documents
 - Photos stored in `photo_data_url` field
 
-### Theme System (12 Predefined + Custom)
+### Theme System (23 Predefined + Custom)
 
-**12 Predefined Themes (Required):**
+**23 Predefined Themes:**
 1. **default-light** - Default light theme
 2. **default-dark** - Default dark theme
 3. **uns-kikaku** - Corporate theme
@@ -387,7 +387,7 @@ UNS-ClaudeJP-5.6.0/
 ├── backend/                    # FastAPI backend
 │   ├── app/
 │   │   ├── api/                # API routers (24+ endpoints)
-│   │   ├── models/             # SQLAlchemy models (13 tables)
+│   │   ├── models/             # SQLAlchemy models (50+ models/tables)
 │   │   ├── schemas/            # Pydantic schemas
 │   │   ├── services/           # Business logic
 │   │   ├── core/               # Security, config, deps
@@ -992,7 +992,7 @@ cat ./backups/backup_20251108.sql | docker exec -i uns-claudejp-db psql -U uns_a
 - **Turbopack**: Default bundler in Next.js 16 for faster development
 - **Multi-language**: UI supports both English and Japanese
 - **OCR Support**: Processes Japanese documents (resume, residence card, driver's license)
-- **Theme System**: 12 predefined + unlimited custom themes
+- **Theme System**: 23 predefined + unlimited custom themes
 - **Role-based Access**: 6 user roles (SUPER_ADMIN → CONTRACT_WORKER)
 - **Timezone**: Set to Asia/Tokyo (JST) for Japanese business operations
 - **Observability**: Full OpenTelemetry instrumentation with Grafana dashboards

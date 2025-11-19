@@ -44,7 +44,7 @@ import json
 from fastapi import APIRouter, Depends, HTTPException, status, StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_current_user
+from app.api.deps import get_current_user
 from app.core.database import SessionLocal
 from app.core.rate_limiter import limiter, RateLimitConfig
 from app.services.ai_gateway import AIGateway, AIGatewayError
