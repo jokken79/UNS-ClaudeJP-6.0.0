@@ -13,12 +13,14 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
+from app.core.config import settings
 from app.core.observability import (
     record_ocr_failure,
     record_ocr_request,
     trace_ocr_operation,
 )
 from app.core.timeout_utils import timeout_executor, TimeoutException
+from app.core.ocr_rate_limiter import get_azure_ocr_rate_limiter
 
 logger = logging.getLogger(__name__)
 
@@ -347,7 +349,7 @@ class HybridOCRService:
 
     def process_document_hybrid(self, image_data: bytes, document_type: str = "zairyu_card",
                                preferred_method: str = "auto") -> Dict[str, Any]:
-        """Procesa un documento usando estrategia híbrida inteligente de OCR (with 90s timeout).
+        """Procesa un documento usando estrategia híbrida inteligente de OCR (with configurable timeout).
 
         Este método implementa una estrategia sofisticada que:
         1. Si preferred_method='azure': Usa Azure primero, EasyOCR como fallback
@@ -411,13 +413,18 @@ class HybridOCRService:
             - El score de confianza es mayor cuando se combinan múltiples métodos
             - La estrategia 'auto' es la más precisa pero más lenta
             - Si ningún método está disponible, success=False
-            - **TIMEOUT: 90 segundos total** - Prevents indefinite hanging (allows for both OCR methods + processing)
+            - **TIMEOUT: Configurable** - From OCR_AZURE_TIMEOUT + OCR_EASYOCR_TIMEOUT + OCR_TESSERACT_TIMEOUT + overhead
         """
         try:
-            # Execute with 90 second total timeout (allows for both Azure 30s + EasyOCR 30s + overhead)
+            # Calculate total timeout: sum of all provider timeouts + 30s overhead for processing
+            total_timeout = settings.OCR_AZURE_TIMEOUT + settings.OCR_EASYOCR_TIMEOUT + settings.OCR_TESSERACT_TIMEOUT + 30
+
+            logger.info(f"Hybrid OCR processing with timeout: {total_timeout}s (Azure: {settings.OCR_AZURE_TIMEOUT}s, EasyOCR: {settings.OCR_EASYOCR_TIMEOUT}s, Tesseract: {settings.OCR_TESSERACT_TIMEOUT}s)")
+
+            # Execute with configurable total timeout
             result = timeout_executor(
                 self._process_document_hybrid_internal,
-                timeout_seconds=90,
+                timeout_seconds=total_timeout,
                 image_data=image_data,
                 document_type=document_type,
                 preferred_method=preferred_method
@@ -425,10 +432,10 @@ class HybridOCRService:
             return result
 
         except TimeoutException as e:
-            logger.error(f"Hybrid OCR processing timed out after 90 seconds: {e}")
+            logger.error(f"Hybrid OCR processing timed out after {total_timeout} seconds: {e}")
             return {
                 "success": False,
-                "error": "Hybrid OCR processing timeout after 90 seconds",
+                "error": f"Hybrid OCR processing timeout after {total_timeout} seconds",
                 "method_used": "timeout",
                 "confidence_score": 0.0,
                 "document_type": document_type
@@ -457,19 +464,39 @@ class HybridOCRService:
         Returns:
             Dict[str, Any]: Azure OCR result
         """
+        # Check and enforce Azure OCR rate limiting
+        rate_limiter = get_azure_ocr_rate_limiter()
+
+        # Wait if necessary to comply with rate limit
+        wait_seconds = rate_limiter.wait_if_needed()
+        if wait_seconds > 0:
+            logger.info(f"Azure OCR rate limiting: waiting {wait_seconds:.2f}s before API call")
+            time.sleep(wait_seconds)
+
         with open(temp_path, 'wb') as f:
             f.write(image_data)
 
         started = time.perf_counter()
-        with trace_ocr_operation("azure.process_document", document_type, "azure"):
-            result = self.azure_service.process_document(temp_path, document_type)
-        duration = time.perf_counter() - started
-        record_ocr_request(document_type=document_type, method="azure", duration_seconds=duration)
+        try:
+            with trace_ocr_operation("azure.process_document", document_type, "azure"):
+                result = self.azure_service.process_document(temp_path, document_type)
 
-        return result
+            # Record successful API call for rate limiting
+            rate_limiter.record_call()
+
+            duration = time.perf_counter() - started
+            record_ocr_request(document_type=document_type, method="azure", duration_seconds=duration)
+
+            return result
+
+        except Exception as e:
+            duration = time.perf_counter() - started
+            logger.error(f"Azure OCR API call failed after {duration:.2f}s: {e}")
+            record_ocr_failure(document_type=document_type, method="azure")
+            raise
 
     def _process_with_azure(self, image_data: bytes, document_type: str) -> Optional[Dict[str, Any]]:
-        """Procesa documento con Azure Computer Vision OCR (with 30s timeout).
+        """Procesa documento con Azure Computer Vision OCR (with configurable timeout).
 
         Args:
             image_data (bytes): Imagen del documento en bytes
@@ -492,17 +519,17 @@ class HybridOCRService:
             - Registra métricas de observabilidad (duración, errores)
             - Crea archivo temporal para Azure OCR
             - Limpia archivo temporal después del procesamiento
-            - **TIMEOUT: 30 segundos** - Prevents indefinite hanging
+            - **TIMEOUT: Configurable from OCR_AZURE_TIMEOUT** - Prevents indefinite hanging
         """
         if not self.azure_available:
             return None
 
         temp_path = "/tmp/temp_azure_image.jpg"
         try:
-            # Execute with 30 second timeout
+            # Execute with configurable timeout
             result = timeout_executor(
                 self._process_with_azure_internal,
-                timeout_seconds=30,
+                timeout_seconds=settings.OCR_AZURE_TIMEOUT,
                 image_data=image_data,
                 document_type=document_type,
                 temp_path=temp_path
@@ -515,12 +542,12 @@ class HybridOCRService:
             return result
 
         except TimeoutException as e:
-            logger.error(f"Azure OCR timed out after 30 seconds: {e}")
+            logger.error(f"Azure OCR timed out after {settings.OCR_AZURE_TIMEOUT} seconds: {e}")
             record_ocr_failure(document_type=document_type, method="azure")
             # Clean up temp file
             if os.path.exists(temp_path):
                 os.remove(temp_path)
-            return {"success": False, "error": "Azure OCR timeout after 30 seconds"}
+            return {"success": False, "error": f"Azure OCR timeout after {settings.OCR_AZURE_TIMEOUT} seconds"}
 
         except Exception as e:
             logger.error(f"Error procesando con Azure: {e}")
@@ -550,7 +577,7 @@ class HybridOCRService:
         return result
 
     def _process_with_easyocr(self, image_data: bytes, document_type: str) -> Optional[Dict[str, Any]]:
-        """Procesa documento con EasyOCR (with 30s timeout).
+        """Procesa documento con EasyOCR (with configurable timeout).
 
         Args:
             image_data (bytes): Imagen del documento en bytes
@@ -573,33 +600,52 @@ class HybridOCRService:
         Note:
             - Registra métricas de observabilidad (duración, errores)
             - No requiere archivo temporal (procesa bytes directamente)
-            - **TIMEOUT: 30 segundos** - Prevents indefinite hanging
+            - **TIMEOUT: Configurable from OCR_EASYOCR_TIMEOUT** - Prevents indefinite hanging
         """
         if not self.easyocr_available:
             return None
 
         try:
-            # Execute with 30 second timeout
+            # Execute with configurable timeout
             result = timeout_executor(
                 self._process_with_easyocr_internal,
-                timeout_seconds=30,
+                timeout_seconds=settings.OCR_EASYOCR_TIMEOUT,
                 image_data=image_data,
                 document_type=document_type
             )
             return result
 
         except TimeoutException as e:
-            logger.error(f"EasyOCR timed out after 30 seconds: {e}")
+            logger.error(f"EasyOCR timed out after {settings.OCR_EASYOCR_TIMEOUT} seconds: {e}")
             record_ocr_failure(document_type=document_type, method="easyocr")
-            return {"success": False, "error": "EasyOCR timeout after 30 seconds"}
+            return {"success": False, "error": f"EasyOCR timeout after {settings.OCR_EASYOCR_TIMEOUT} seconds"}
 
         except Exception as e:
             logger.error(f"Error procesando con EasyOCR: {e}")
             record_ocr_failure(document_type=document_type, method="easyocr")
             return {"success": False, "error": str(e)}
 
+    def _process_with_tesseract_internal(self, image_data: bytes, document_type: str) -> Dict[str, Any]:
+        """Internal method to process document with Tesseract OCR (without timeout wrapper).
+
+        This method is called by _process_with_tesseract with timeout protection.
+
+        Args:
+            image_data (bytes): Image bytes
+            document_type (str): Document type
+
+        Returns:
+            Dict[str, Any]: Tesseract OCR result
+        """
+        started = time.perf_counter()
+        with trace_ocr_operation("tesseract.process_document", document_type, "tesseract"):
+            result = self.tesseract_service.process_document(image_data, document_type)
+        duration = time.perf_counter() - started
+        record_ocr_request(document_type=document_type, method="tesseract", duration_seconds=duration)
+        return result
+
     def _process_with_tesseract(self, image_data: bytes, document_type: str) -> Optional[Dict[str, Any]]:
-        """Procesa documento con Tesseract OCR (fallback final).
+        """Procesa documento con Tesseract OCR (with configurable timeout).
 
         Args:
             image_data (bytes): Imagen del documento en bytes
@@ -621,18 +667,25 @@ class HybridOCRService:
         Note:
             - Registra métricas de observabilidad (duración, errores)
             - No requiere archivo temporal (procesa bytes directamente)
-            - No usa timeout (es lo suficientemente rápido)
+            - **TIMEOUT: Configurable from OCR_TESSERACT_TIMEOUT** - Prevents indefinite hanging
         """
         if not self.tesseract_available:
             return None
 
         try:
-            started = time.perf_counter()
-            with trace_ocr_operation("tesseract.process_document", document_type, "tesseract"):
-                result = self.tesseract_service.process_document(image_data, document_type)
-            duration = time.perf_counter() - started
-            record_ocr_request(document_type=document_type, method="tesseract", duration_seconds=duration)
+            # Execute with configurable timeout
+            result = timeout_executor(
+                self._process_with_tesseract_internal,
+                timeout_seconds=settings.OCR_TESSERACT_TIMEOUT,
+                image_data=image_data,
+                document_type=document_type
+            )
             return result
+
+        except TimeoutException as e:
+            logger.error(f"Tesseract OCR timed out after {settings.OCR_TESSERACT_TIMEOUT} seconds: {e}")
+            record_ocr_failure(document_type=document_type, method="tesseract")
+            return {"success": False, "error": f"Tesseract OCR timeout after {settings.OCR_TESSERACT_TIMEOUT} seconds"}
 
         except Exception as e:
             logger.error(f"Error procesando con Tesseract: {e}")

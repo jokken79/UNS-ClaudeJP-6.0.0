@@ -168,6 +168,15 @@ class Settings(BaseSettings):
     OTEL_METRICS_EXPORT_INTERVAL_MS: int = int(os.getenv("OTEL_METRICS_EXPORT_INTERVAL_MS", "60000"))
     PROMETHEUS_METRICS_PATH: str = os.getenv("PROMETHEUS_METRICS_PATH", "/metrics")
 
+    # OCR Timeouts (seconds) - Prevent system hangs
+    OCR_AZURE_TIMEOUT: int = int(os.getenv("OCR_AZURE_TIMEOUT", "30"))
+    OCR_EASYOCR_TIMEOUT: int = int(os.getenv("OCR_EASYOCR_TIMEOUT", "60"))
+    OCR_TESSERACT_TIMEOUT: int = int(os.getenv("OCR_TESSERACT_TIMEOUT", "45"))
+
+    # Azure OCR Rate Limiting - Prevent quota exhaustion (Free tier: 20 req/min)
+    AZURE_OCR_RATE_LIMIT: str = os.getenv("AZURE_OCR_RATE_LIMIT", "20/minute")  # Free tier limit
+    AZURE_OCR_BATCH_SIZE: int = int(os.getenv("AZURE_OCR_BATCH_SIZE", "1"))  # Process one at a time for free tier
+
     # CORS
     BACKEND_CORS_ORIGINS: list[str] | str = os.getenv(
         "BACKEND_CORS_ORIGINS",
