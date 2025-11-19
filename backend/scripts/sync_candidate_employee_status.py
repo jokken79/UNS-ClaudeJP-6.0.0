@@ -17,19 +17,23 @@ from app.models.models import Candidate, Employee, ContractWorker, Staff
 from sqlalchemy import func
 
 def sync_candidate_employee_status():
-    """Synchronize candidate status based on employee existence"""
+    """
+    Synchronize candidate status based on employee existence
+    AND synchronize photos from candidates to employees
+    """
 
     db = SessionLocal()
     try:
         # Get all candidates
         candidates = db.query(Candidate).all()
 
-        updated = 0
+        updated_status = 0
+        updated_photos = 0
         unchanged = 0
 
         print(f"""
 ╔════════════════════════════════════════════════════════════╗
-║          SINCRONIZANDO ESTADOS CANDIDATO-EMPLEADO          ║
+║     SINCRONIZANDO ESTADOS Y FOTOS CANDIDATO-EMPLEADO       ║
 ╚════════════════════════════════════════════════════════════╝
 Total de candidatos a procesar: {len(candidates)}
         """)
@@ -37,45 +41,72 @@ Total de candidatos a procesar: {len(candidates)}
         for candidate in candidates:
             # Check if this candidate has a corresponding employee in ANY of the 3 tables
             # 1. Try Employee table
-            employee = db.query(Employee).filter(
+            employees = db.query(Employee).filter(
                 Employee.rirekisho_id == candidate.rirekisho_id
-            ).first()
+            ).all()
 
-            # 2. Try ContractWorker table if not found
-            if not employee:
-                employee = db.query(ContractWorker).filter(
-                    ContractWorker.rirekisho_id == candidate.rirekisho_id
-                ).first()
+            # 2. Try ContractWorker table
+            contract_workers = db.query(ContractWorker).filter(
+                ContractWorker.rirekisho_id == candidate.rirekisho_id
+            ).all()
 
-            # 3. Try Staff table if still not found
-            if not employee:
-                employee = db.query(Staff).filter(
-                    Staff.rirekisho_id == candidate.rirekisho_id
-                ).first()
+            # 3. Try Staff table
+            staff_members = db.query(Staff).filter(
+                Staff.rirekisho_id == candidate.rirekisho_id
+            ).all()
 
-            if employee:
-                # Candidate has an employee assignment → status should be "hired" (採用)
+            all_workers = employees + contract_workers + staff_members
+
+            if all_workers:
+                # Candidate has employee assignment(s) → status should be "hired" (採用)
                 if candidate.status != "hired":
                     candidate.status = "hired"
                     db.commit()
-                    updated += 1
+                    updated_status += 1
                 else:
                     unchanged += 1
+
+                # SINCRONIZAR FOTOS: Copy candidate's photo to all linked employees
+                if candidate.photo_data_url or candidate.photo_url:
+                    for worker in all_workers:
+                        photo_updated = False
+
+                        # Update photo_data_url (primary field)
+                        if candidate.photo_data_url:
+                            if not worker.photo_data_url or worker.photo_data_url != candidate.photo_data_url:
+                                worker.photo_data_url = candidate.photo_data_url
+                                photo_updated = True
+
+                        # Update photo_url (legacy field)
+                        if candidate.photo_url:
+                            if not worker.photo_url or worker.photo_url != candidate.photo_url:
+                                worker.photo_url = candidate.photo_url
+                                photo_updated = True
+
+                        if photo_updated:
+                            db.add(worker)
+                            updated_photos += 1
+
+                    # Commit photo updates
+                    if updated_photos > 0:
+                        db.commit()
+
             else:
                 # No employee assignment → keep "pending" (審査中)
                 if candidate.status != "pending":
                     candidate.status = "pending"
                     db.commit()
-                    updated += 1
+                    updated_status += 1
                 else:
                     unchanged += 1
 
         print(f"""
 ╔════════════════════════════════════════════════════════════╗
-║          SINCRONIZACIÓN COMPLETADA                         ║
+║      SINCRONIZACIÓN COMPLETADA (ESTADO Y FOTOS)             ║
 ╚════════════════════════════════════════════════════════════╝
-✓ Actualizados: {updated}
-━ Sin cambios:  {unchanged}
+✓ Estados actualizados: {updated_status}
+✓ Fotos sincronizadas: {updated_photos}
+━ Sin cambios:         {unchanged}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         """)
 
@@ -95,11 +126,21 @@ Total de candidatos a procesar: {len(candidates)}
             }.get(status, status)
             print(f"   {status_label}: {count}")
 
+        # Show photo synchronization summary
+        employees_with_photo = db.query(Employee).filter(
+            Employee.photo_data_url.isnot(None)
+        ).count()
+        employees_total = db.query(Employee).count()
+
+        print(f"\n📸 Fotos en empleados: {employees_with_photo}/{employees_total}")
+
         return True
 
     except Exception as e:
         print(f"❌ Error al sincronizar: {e}")
         db.rollback()
+        import traceback
+        traceback.print_exc()
         return False
     finally:
         db.close()
