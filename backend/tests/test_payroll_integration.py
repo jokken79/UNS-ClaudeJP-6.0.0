@@ -1,6 +1,16 @@
 """
 Integration Test: Timer Card OCR Data to Payroll Calculation
 Tests the complete flow from timer card extraction to payroll calculation
+
+NOTE (SEMANA 6): This test file has been updated to use PayrollService instead of
+the deleted PayrollIntegrationService. These tests require implementing the following
+methods in PayrollService:
+- get_timer_cards_for_payroll(employee_id, start_date, end_date)
+- calculate_payroll_from_timer_cards(employee_id, start_date, end_date)
+- get_unprocessed_timer_cards()
+
+Status: Tests are ready to run once the above methods are implemented.
+Target: SEMANA 6.3 - Implement Timer Card Payroll Integration
 """
 import pytest
 from datetime import datetime, date
@@ -8,7 +18,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.models.models import Base, Employee, TimerCard, Factory
-from app.services.payroll_integration_service import PayrollIntegrationService
+from app.services.payroll_service import PayrollService
+from app.models.payroll_models import PayrollRun
+
+# TODO SEMANA 6.3: Implement the timer card payroll integration methods
+# These tests will pass once the methods are added to PayrollService
 
 
 @pytest.fixture
@@ -95,7 +109,7 @@ def sample_data(db_session):
 
 def test_get_timer_cards_for_payroll(db_session, sample_data):
     """Test fetching timer cards for a specific employee and date range"""
-    service = PayrollIntegrationService(db_session)
+    service = PayrollService(db_session)
 
     # Fetch timer cards for October 2025
     result = service.get_timer_cards_for_payroll(
@@ -128,7 +142,7 @@ def test_get_timer_cards_for_payroll(db_session, sample_data):
 
 def test_calculate_payroll_from_timer_cards(db_session, sample_data):
     """Test calculating payroll using timer card data from database"""
-    service = PayrollIntegrationService(db_session)
+    service = PayrollService(db_session)
 
     # Calculate payroll for October 2025
     result = service.calculate_payroll_from_timer_cards(
@@ -174,7 +188,7 @@ def test_calculate_payroll_from_timer_cards(db_session, sample_data):
 
 def test_calculate_payroll_with_date_range_filter(db_session, sample_data):
     """Test that payroll calculation respects date range"""
-    service = PayrollIntegrationService(db_session)
+    service = PayrollService(db_session)
 
     # Calculate payroll for first half of October only
     result = service.calculate_payroll_from_timer_cards(
@@ -193,7 +207,7 @@ def test_calculate_payroll_with_date_range_filter(db_session, sample_data):
 
 def test_get_unprocessed_timer_cards(db_session, sample_data):
     """Test fetching unprocessed timer cards"""
-    service = PayrollIntegrationService(db_session)
+    service = PayrollService(db_session)
 
     # Get unprocessed timer cards
     result = service.get_unprocessed_timer_cards()
@@ -211,7 +225,7 @@ def test_get_unprocessed_timer_cards(db_session, sample_data):
 
 def test_employee_not_found_error(db_session):
     """Test error handling when employee is not found"""
-    service = PayrollIntegrationService(db_session)
+    service = PayrollService(db_session)
 
     result = service.get_timer_cards_for_payroll(
         employee_id=9999,
@@ -225,7 +239,7 @@ def test_employee_not_found_error(db_session):
 
 def test_invalid_date_format_error(db_session):
     """Test error handling for invalid date format"""
-    service = PayrollIntegrationService(db_session)
+    service = PayrollService(db_session)
 
     result = service.get_timer_cards_for_payroll(
         employee_id=1,
@@ -246,7 +260,7 @@ def test_complete_flow_from_ocr_to_payroll(db_session, sample_data):
     3. Payroll is calculated using timer card data
     4. Result includes all necessary information for payslip generation
     """
-    service = PayrollIntegrationService(db_session)
+    service = PayrollService(db_session)
 
     # Step 1: Get timer cards (simulating OCR data fetch)
     timer_data = service.get_timer_cards_for_payroll(
