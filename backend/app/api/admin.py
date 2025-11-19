@@ -223,6 +223,34 @@ async def get_admin_statistics(
         .count()
     ) if db.query(PageVisibility).first() else 0
 
+    # Calculate database size
+    try:
+        from sqlalchemy import text
+        # Get database size in MB (works for PostgreSQL)
+        db_size_result = db.execute(
+            text("SELECT pg_database_size(current_database()) / 1024 / 1024 as size_mb")
+        ).scalar()
+        database_size_mb = float(db_size_result) if db_size_result else 0
+    except Exception as e:
+        logger.warning(f"Could not calculate database size: {e}")
+        database_size_mb = None
+
+    # Calculate uptime (time since earliest record in database)
+    try:
+        earliest_user = db.query(User.created_at).order_by(User.created_at).first()
+        if earliest_user and earliest_user[0]:
+            uptime_td = datetime.utcnow() - earliest_user[0]
+            uptime_days = uptime_td.days
+            uptime_seconds = uptime_td.seconds % 86400
+            uptime_hours = uptime_seconds // 3600
+            uptime_minutes = (uptime_seconds % 3600) // 60
+            uptime_str = f"{uptime_days}d {uptime_hours}h {uptime_minutes}m"
+        else:
+            uptime_str = "Unknown"
+    except Exception as e:
+        logger.warning(f"Could not calculate uptime: {e}")
+        uptime_str = "Unknown"
+
     return {
         "pages": {
             "total": total_pages,
@@ -241,9 +269,10 @@ async def get_admin_statistics(
         "total_employees": total_employees,
         "total_factories": total_factories,
         "maintenance_mode": maintenance_enabled,
-        "database_size": None,  # TODO: Implement database size calculation
-        "uptime": None  # TODO: Implement uptime calculation
+        "database_size_mb": database_size_mb,
+        "uptime": uptime_str
     }
+
 
 # ============================================
 # ENDPOINTS - EXPORT/IMPORT

@@ -6,12 +6,22 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Path
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime
+import logging
 
 from app.core.database import get_db
+from app.core.app_exceptions import (
+    PayrollCalculationError,
+    ResourceNotFoundError,
+    ValidationError,
+    DatabaseError,
+    handle_exception
+)
 from app.services.payroll_service import PayrollService
 from app.services.config_service import PayrollConfigService, get_payroll_config_service
 from app.models.payroll_models import PayrollRun as PayrollRunModel, EmployeePayroll
 from app.models.models import Employee, YukyuRequest, RequestStatus
+
+logger = logging.getLogger(__name__)
 from app.schemas.payroll import (
     PayrollRunCreate,
     PayrollRun,
@@ -766,10 +776,158 @@ def calculate_employee_payroll(
         )
 
 
-# TODO: SEMANA 6 - Implement calculate_payroll_from_timer_cards endpoint
-# This endpoint was removed during SEMANA 3-4 cleanup because PayrollIntegrationService was consolidated
-# To restore, implement the method in PayrollService and update the endpoint
-# Priority: Medium (timer card integration for payroll)
+@router.post(
+    "/calculate-from-timercards",
+    summary="Calculate payroll from timer cards",
+    description="Calculate employee payroll based on timer card records for a specific period",
+    response_model=dict
+)
+def calculate_payroll_from_timercards(
+    employee_id: int = Query(..., description="Employee ID"),
+    start_date: str = Query(..., description="Start date (YYYY-MM-DD format)"),
+    end_date: str = Query(..., description="End date (YYYY-MM-DD format)"),
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """
+    Calculate payroll for an employee from their timer card records.
+
+    This endpoint:
+    1. Retrieves all approved timer cards for the employee in the period
+    2. Aggregates regular, overtime, night shift, and holiday hours
+    3. Calculates gross salary using employee's hourly rate
+    4. Applies standard deductions (taxes, insurance)
+    5. Returns detailed payroll breakdown
+
+    Args:
+        employee_id: Employee ID
+        start_date: Period start date (YYYY-MM-DD)
+        end_date: Period end date (YYYY-MM-DD)
+
+    Returns:
+        Dictionary with payroll calculation details
+    """
+    try:
+        from datetime import datetime
+        from sqlalchemy import and_
+
+        # Validate dates
+        try:
+            period_start = datetime.strptime(start_date, "%Y-%m-%d").date()
+            period_end = datetime.strptime(end_date, "%Y-%m-%d").date()
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid date format. Use YYYY-MM-DD"
+            )
+
+        if period_start > period_end:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="start_date must be before end_date"
+            )
+
+        # Get employee
+        from app.models.models import Employee, TimerCard
+        employee = db.query(Employee).filter(Employee.id == employee_id).first()
+
+        if not employee:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Employee {employee_id} not found"
+            )
+
+        # Get approved timer cards for period
+        timer_cards = db.query(TimerCard).filter(
+            and_(
+                TimerCard.hakenmoto_id == employee_id,
+                TimerCard.work_date >= period_start,
+                TimerCard.work_date <= period_end,
+                TimerCard.is_approved == True
+            )
+        ).all()
+
+        if not timer_cards:
+            return {
+                "employee_id": employee_id,
+                "period_start": start_date,
+                "period_end": end_date,
+                "message": "No approved timer cards found for this period",
+                "regular_hours": 0,
+                "overtime_hours": 0,
+                "night_hours": 0,
+                "holiday_hours": 0,
+                "gross_salary": 0,
+                "deductions": 0,
+                "net_salary": 0
+            }
+
+        # Aggregate hours
+        regular_hours = float(sum(tc.regular_hours or 0 for tc in timer_cards))
+        overtime_hours = float(sum(tc.overtime_hours or 0 for tc in timer_cards))
+        night_hours = float(sum(tc.night_hours or 0 for tc in timer_cards))
+        holiday_hours = float(sum(tc.holiday_hours or 0 for tc in timer_cards))
+        total_hours = regular_hours + overtime_hours + night_hours + holiday_hours
+
+        # Calculate gross salary
+        hourly_rate = float(employee.jikyu or 0)  # Use jikyu from employee
+
+        # Base calculation
+        gross_salary = (
+            (regular_hours * hourly_rate) +
+            (overtime_hours * hourly_rate * 1.25) +  # 25% premium for overtime
+            (night_hours * hourly_rate * 0.25) +     # 25% premium for night
+            (holiday_hours * hourly_rate * 0.35)      # 35% premium for holiday
+        )
+
+        # Apply deductions (simplified - social insurance ~15%)
+        social_insurance = gross_salary * 0.15
+        income_tax = max(0, (gross_salary - 1000) * 0.10)  # Simplified
+        total_deductions = social_insurance + income_tax
+
+        net_salary = gross_salary - total_deductions
+
+        return {
+            "employee_id": employee_id,
+            "employee_name": f"{employee.full_name_kanji or ''} ({employee.full_name_kana or ''})",
+            "hourly_rate": hourly_rate,
+            "period_start": start_date,
+            "period_end": end_date,
+            "hours_breakdown": {
+                "regular_hours": regular_hours,
+                "overtime_hours": overtime_hours,
+                "night_hours": night_hours,
+                "holiday_hours": holiday_hours,
+                "total_hours": total_hours
+            },
+            "salary_calculation": {
+                "base_salary": regular_hours * hourly_rate,
+                "overtime_premium": overtime_hours * hourly_rate * 0.25,
+                "night_premium": night_hours * hourly_rate * 0.25,
+                "holiday_premium": holiday_hours * hourly_rate * 0.35,
+                "gross_salary": round(gross_salary, 0)
+            },
+            "deductions": {
+                "social_insurance": round(social_insurance, 0),
+                "income_tax": round(income_tax, 0),
+                "total_deductions": round(total_deductions, 0)
+            },
+            "net_salary": round(net_salary, 0),
+            "timer_cards_processed": len(timer_cards)
+        }
+
+    except ValueError as e:
+        raise handle_exception(ValidationError(str(e)))
+    except (ValidationError, ResourceNotFoundError, PayrollCalculationError) as e:
+        raise handle_exception(e)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Unexpected error calculating payroll for employee {employee_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error calculating payroll"
+        )
 
 
 @router.get(

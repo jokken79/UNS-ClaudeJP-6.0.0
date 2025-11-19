@@ -1,7 +1,7 @@
 """
 Employee Schemas
 """
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel, EmailStr, ConfigDict, Field, field_validator
 from typing import Optional
 from datetime import date, datetime
 
@@ -28,26 +28,42 @@ class EmployeeBase(BaseModel):
 class EmployeeCreate(EmployeeBase):
     """Create employee from candidate"""
     rirekisho_id: str  # Changed from uns_id
-    factory_id: str
+    factory_id: int = Field(..., gt=0, description="工場/クライアントID (Factory/Client ID)")
     hakensaki_shain_id: Optional[str] = None
     hire_date: date
-    jikyu: int
+    jikyu: int = Field(..., gt=0, description="時給 - Hourly rate in JPY")
     position: Optional[str] = None
     contract_type: Optional[str] = None
     apartment_id: Optional[int] = None
     apartment_start_date: Optional[date] = None
-    apartment_rent: Optional[int] = None
+    apartment_rent: Optional[int] = Field(None, ge=0, description="Apartment rent - Optional")
     is_corporate_housing: bool = False  # 社宅 (Corporate Housing)
-    housing_subsidy: Optional[int] = 0  # 住宅手当 (Housing Subsidy)
+    housing_subsidy: Optional[int] = Field(0, ge=0, description="住宅手当 - Housing Subsidy")
+
+    @field_validator('factory_id')
+    @classmethod
+    def validate_factory_id(cls, v):
+        """Ensure factory_id is positive integer"""
+        if v <= 0:
+            raise ValueError('factory_id must be positive integer')
+        return v
+
+    @field_validator('jikyu')
+    @classmethod
+    def validate_jikyu(cls, v):
+        """Ensure jikyu (hourly rate) is positive"""
+        if v <= 0:
+            raise ValueError('jikyu (hourly rate) must be positive')
+        return v
 
 
 class EmployeeUpdate(BaseModel):
     """Update employee"""
     full_name_kanji: Optional[str] = None
     full_name_kana: Optional[str] = None
-    factory_id: Optional[str] = None
+    factory_id: Optional[int] = Field(None, gt=0, description="工場/クライアントID (Factory/Client ID)")
     hakensaki_shain_id: Optional[str] = None
-    jikyu: Optional[int] = None
+    jikyu: Optional[int] = Field(None, gt=0, description="時給 - Hourly rate in JPY")
     position: Optional[str] = None
     address: Optional[str] = None
     current_address: Optional[str] = None  # 現住所 - Base address
@@ -58,10 +74,26 @@ class EmployeeUpdate(BaseModel):
     emergency_contact: Optional[str] = None
     emergency_phone: Optional[str] = None
     apartment_id: Optional[int] = None
-    apartment_rent: Optional[int] = None
+    apartment_rent: Optional[int] = Field(None, ge=0, description="Apartment rent - Optional")
     is_corporate_housing: bool = False  # 社宅 (Corporate Housing)
-    housing_subsidy: Optional[int] = 0  # 住宅手当 (Housing Subsidy)
+    housing_subsidy: Optional[int] = Field(0, ge=0, description="住宅手当 - Housing Subsidy")
     zairyu_expire_date: Optional[date] = None
+
+    @field_validator('factory_id')
+    @classmethod
+    def validate_factory_id(cls, v):
+        """Ensure factory_id is positive integer when provided"""
+        if v is not None and v <= 0:
+            raise ValueError('factory_id must be positive integer')
+        return v
+
+    @field_validator('jikyu')
+    @classmethod
+    def validate_jikyu(cls, v):
+        """Ensure jikyu (hourly rate) is positive when provided"""
+        if v is not None and v <= 0:
+            raise ValueError('jikyu (hourly rate) must be positive')
+        return v
 
 
 class EmployeeResponse(EmployeeBase):
@@ -69,12 +101,12 @@ class EmployeeResponse(EmployeeBase):
     id: int
     hakenmoto_id: int
     rirekisho_id: Optional[str]  # Changed from uns_id
-    factory_id: Optional[str]
+    factory_id: Optional[int] = Field(None, description="工場/クライアントID (Factory/Client ID)")
     factory_name: Optional[str] = None  # Nombre de la fábrica
     hakensaki_shain_id: Optional[str]  # 派遣先ID - ID que la fábrica asigna al empleado
     hire_date: Optional[date]  # 入社日
     current_hire_date: Optional[date]  # 現入社 - Fecha de entrada a fábrica actual
-    jikyu: int  # 時給
+    jikyu: int = Field(..., description="時給 - Hourly rate in JPY")  # 時給
     jikyu_revision_date: Optional[date]  # 時給改定
     photo_url: Optional[str] = None  # Added photo
     photo_data_url: Optional[str] = None  # Base64 encoded photo data
