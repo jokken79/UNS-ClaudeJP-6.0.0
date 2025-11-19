@@ -3,7 +3,7 @@ chcp 65001 >nul
 setlocal EnableDelayedExpansion
 
 color 0A
-title UNS-ClaudeJP 5.4 - DETENER SISTEMA
+title UNS-ClaudeJP 6.0.0 - DETENER SISTEMA
 
 cls
 echo.

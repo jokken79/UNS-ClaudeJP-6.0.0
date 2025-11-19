@@ -123,7 +123,7 @@ const nextConfig: NextConfig = {
 
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
-    NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION ?? '5.6.0',
+    NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION ?? '6.0.0',
     NEXT_PUBLIC_AUTH_TOKEN_MAX_AGE: process.env.NEXT_PUBLIC_AUTH_TOKEN_MAX_AGE ?? String(60 * 60 * 8),
   },
 

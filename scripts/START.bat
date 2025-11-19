@@ -3,7 +3,7 @@ chcp 65001 >nul
 setlocal EnableDelayedExpansion
 
 color 0A
-title UNS-ClaudeJP 5.4 - INICIAR SISTEMA
+title UNS-ClaudeJP 6.0.0 - INICIAR SISTEMA
 
 cls
 echo.
@@ -15,7 +15,7 @@ echo                    ███████║   ██║   ██║  ██
 echo                    ╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝
 echo.
 echo             ═══════════════════════════════════════════════════
-echo                        🚀 UNS-CLAUDEJP 5.4 INICIANDO 🚀
+echo                        🚀 UNS-CLAUDEJP 6.0.0 INICIANDO 🚀
 echo             ═══════════════════════════════════════════════════
 echo.
 echo ┌────────────────────────────────────────────────────────────────────┐

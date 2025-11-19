@@ -3,7 +3,7 @@ chcp 65001 >nul
 setlocal EnableDelayedExpansion
 
 color 0A
-title UNS-ClaudeJP 5.4 - VER LOGS EN TIEMPO REAL
+title UNS-ClaudeJP 6.0.0 - VER LOGS EN TIEMPO REAL
 
 cls
 echo.

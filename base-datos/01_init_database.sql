@@ -1,5 +1,5 @@
 -- ==============================================================================
--- UNS-ClaudeJP 5.4 - Database Initialization Script
+-- UNS-ClaudeJP 6.0.0 - Database Initialization Script
 -- ==============================================================================
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
