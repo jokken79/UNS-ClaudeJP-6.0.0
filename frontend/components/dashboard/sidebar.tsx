@@ -24,14 +24,14 @@ export function Sidebar() {
   const { theme: activeTheme } = useTheme();
   const [renderKey, setRenderKey] = useState(0);
 
-  // Sincronizar cuando la ruta cambia para limpiar estados de animación
+  // Sincronizar cuando la ruta cambia o el tema cambia para limpiar estados de animación
   useEffect(() => {
     if (prevPathnameRef.current && prevPathnameRef.current !== pathname) {
       // Force re-render de los items para resetear estados de animación
       setRenderKey(prev => prev + 1);
     }
     prevPathnameRef.current = pathname;
-  }, [pathname]);
+  }, [pathname, activeTheme]);
 
   // Dynamic colors using CSS variables - automatically updates with theme changes
   // Logo uses primary color with contrasting foreground text
