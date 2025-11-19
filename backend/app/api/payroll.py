@@ -9,7 +9,6 @@ from datetime import datetime
 
 from app.core.database import get_db
 from app.services.payroll_service import PayrollService
-from app.services.payroll_integration_service import PayrollIntegrationService
 from app.services.config_service import PayrollConfigService, get_payroll_config_service
 from app.models.payroll_models import PayrollRun as PayrollRunModel, EmployeePayroll
 from app.models.models import Employee, YukyuRequest, RequestStatus
@@ -44,11 +43,6 @@ router = APIRouter(prefix="/api/payroll", tags=["payroll"])
 # Dependency to get PayrollService
 def get_payroll_service(db: Session = Depends(get_db)) -> PayrollService:
     return PayrollService(db_session=db)
-
-# Dependency to get PayrollIntegrationService
-def get_payroll_integration_service(db: Session = Depends(get_db)) -> PayrollIntegrationService:
-    return PayrollIntegrationService(db_session=db)
-
 
 # ============================================================================
 # Payroll Runs Endpoints
@@ -772,61 +766,10 @@ def calculate_employee_payroll(
         )
 
 
-@router.post(
-    "/calculate-from-timer-cards/{employee_id}",
-    response_model=EmployeePayrollResult,
-    summary="Calculate payroll from database timer cards",
-    description="Calculates payroll for an employee using their timer card records from the database"
-)
-def calculate_payroll_from_timer_cards(
-    employee_id: int = Path(..., ge=1, description="Employee ID"),
-    start_date: str = Query(..., description="Start date in YYYY-MM-DD format"),
-    end_date: str = Query(..., description="End date in YYYY-MM-DD format"),
-    service: PayrollIntegrationService = Depends(get_payroll_integration_service)
-):
-    """Calculate payroll for an employee using their timer card records from the database.
-
-    This endpoint:
-    1. Fetches timer card records for the employee in the specified date range
-    2. Matches timer cards to employee
-    3. Calculates payroll based on the timer card data
-    4. Returns the calculated payroll result
-
-    Args:
-        employee_id: Employee ID
-        start_date: Start date in YYYY-MM-DD format (e.g., "2025-10-01")
-        end_date: End date in YYYY-MM-DD format (e.g., "2025-10-31")
-        service: Payroll integration service instance
-
-    Returns:
-        Employee payroll calculation result
-
-    Raises:
-        HTTPException: If employee not found or calculation fails
-    """
-    try:
-        # Calculate payroll from timer cards
-        result = service.calculate_payroll_from_timer_cards(
-            employee_id=employee_id,
-            start_date=start_date,
-            end_date=end_date
-        )
-
-        if not result['success']:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND if 'not found' in result.get('error', '').lower() else status.HTTP_400_BAD_REQUEST,
-                detail=result['error']
-            )
-
-        return EmployeePayrollResult(**result)
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error calculating payroll from timer cards: {str(e)}"
-        )
+# TODO: SEMANA 6 - Implement calculate_payroll_from_timer_cards endpoint
+# This endpoint was removed during SEMANA 3-4 cleanup because PayrollIntegrationService was consolidated
+# To restore, implement the method in PayrollService and update the endpoint
+# Priority: Medium (timer card integration for payroll)
 
 
 @router.get(

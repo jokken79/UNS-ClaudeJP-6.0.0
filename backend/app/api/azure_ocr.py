@@ -22,9 +22,10 @@ from app.core.background_tasks import background_manager, JobStatus
 from app.schemas.responses import CacheStatsResponse, ErrorResponse, OCRResponse
 from app.schemas.job import JobResponse, JobStatusResponse, OCRJobRequest
 from app.services.auth_service import AuthService
-from app.services.azure_ocr_service import azure_ocr_service
+from app.services.hybrid_ocr_service import HybridOCRService
 
 router = APIRouter()
+ocr_service = HybridOCRService()  # Consolidated OCR service (Azure primary, with fallbacks)
 UPLOAD_DIR = Path(settings.UPLOAD_DIR) / "azure_ocr_temp"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -32,7 +33,7 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 def process_ocr_sync(image_path: str, document_type: str) -> Dict[str, Any]:
     """Función auxiliar para procesar OCR (se ejecuta en background)"""
     try:
-        result = azure_ocr_service.process_document(image_path, document_type)
+        result = ocr_service.process_document(image_path, document_type)
         result["document_type"] = document_type
         return {"success": True, "data": result}
     except Exception as e:
@@ -97,7 +98,7 @@ async def process_ocr_document(
 
     try:
         # Process with Azure OCR service
-        result = azure_ocr_service.process_document(temp_file.name, document_type)
+        result = ocr_service.process_document(temp_file.name, document_type)
 
         # Add document type to result
         result["document_type"] = document_type
@@ -134,7 +135,7 @@ async def process_ocr_from_base64(
         temp_file.close()
 
         try:
-            result = azure_ocr_service.process_document(temp_file.name, document_type)
+            result = ocr_service.process_document(temp_file.name, document_type)
             return {"success": True, "data": result, "message": "Document processed successfully"}
         finally:
             Path(temp_file.name).unlink(missing_ok=True)
@@ -251,7 +252,7 @@ async def health_check():
         "status": "healthy",
         "service": "azure_ocr",
         "provider": "Azure Computer Vision",
-        "api_version": azure_ocr_service.api_version
+        "api_version": ocr_service.api_version
     }
 
 
@@ -280,7 +281,7 @@ async def warm_up_ocr_service(
             temp_file.close()
 
             try:
-                azure_ocr_service.process_document(temp_file.name, "warmup")
+                ocr_service.process_document(temp_file.name, "warmup")
             finally:
                 Path(temp_file.name).unlink(missing_ok=True)
 
