@@ -116,11 +116,40 @@ services:
     networks:
       - uns-claudejp-600-network
     command: >
-      sh -c "python scripts/simple_importer.py &&
-             echo '========================================' &&
-             echo 'Importing data from BASEDATEJP...' &&
-             echo '========================================' &&
-             python scripts/import_all_from_databasejp.py"
+      sh -c "
+        echo '========================================' &&
+        echo 'PASO 1: Importar datos iniciales' &&
+        echo '========================================' &&
+        python scripts/simple_importer.py &&
+
+        echo '' &&
+        echo '========================================' &&
+        echo 'PASO 2: Importar datos de BASEDATEJP' &&
+        echo '========================================' &&
+        python scripts/import_all_from_databasejp.py &&
+
+        echo '' &&
+        echo '========================================' &&
+        echo 'PASO 3: Sincronizar fotos (candidato → empleado)' &&
+        echo '========================================' &&
+        python scripts/sync_candidate_photos.py &&
+
+        echo '' &&
+        echo '========================================' &&
+        echo 'PASO 4: Sincronizar estado y fotos' &&
+        echo '========================================' &&
+        python scripts/sync_candidate_employee_status.py &&
+
+        echo '' &&
+        echo '========================================' &&
+        echo 'PASO 5: Validar sincronización de fotos' &&
+        echo '========================================' &&
+        python scripts/validate_candidate_employee_photos.py &&
+
+        echo '' &&
+        echo '✅ IMPORTACIÓN COMPLETADA EXITOSAMENTE' &&
+        echo '========================================='
+      "
     logging: *logging-default
 
   backend:
