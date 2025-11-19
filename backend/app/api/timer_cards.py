@@ -311,7 +311,7 @@ async def create_timer_cards_bulk(
 
 
 @router.post("/upload", response_model=TimerCardUploadResponse)
-@limiter.limit("5/minute")
+@limiter.limit("20/hour")  # OCR processing is expensive - limit to 20 uploads per hour
 async def upload_timer_card_file(
     request: Request,
     file: UploadFile = File(...),
@@ -319,7 +319,7 @@ async def upload_timer_card_file(
     current_user: User = Depends(auth_service.require_role("admin")),
     db: Session = Depends(get_db)
 ):
-    """Upload timer card PDF and process with OCR (Rate limit: 5/minute - expensive OCR operation)"""
+    """Upload timer card PDF and process with OCR (Rate limit: 20/hour - expensive OCR operation)"""
 
     # Validar tipo de archivo
     if not file.filename.endswith('.pdf'):

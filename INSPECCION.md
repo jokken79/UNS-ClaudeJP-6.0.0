@@ -1,9 +1,15 @@
-# INSPECCIÓN EXHAUSTIVA - UNS-ClaudeJP 6.0.0
+# 🔍 INSPECCIÓN COMPLETA - UNS-ClaudeJP 6.0.0
 
 **Fecha de análisis**: 2025-11-19
 **Versión del proyecto**: 6.0.0
 **Total de archivos analizados**: 660+
-**Líneas de código**: ~25,000+
+**Líneas de código**: ~25,000+ (frontend + backend)
+**Páginas frontend**: 80+ páginas
+**API Routers**: 28 routers especializados
+**Modelos de BD**: 1,816 LOC en SQLAlchemy
+**Servicios backend**: 20+ servicios especializados
+**Componentes React**: 171 componentes reutilizables
+**Stores Zustand**: 8 stores de estado global
 
 ---
 
@@ -53,113 +59,294 @@
 ```
 UNS-ClaudeJP-6.0.0/
 │
-├── frontend/                     # Next.js 16 App
-│   ├── app/                      # 30+ páginas (Next.js App Router)
-│   ├── components/               # 171 componentes React
-│   ├── lib/                      # API client, validaciones, telemetría
-│   ├── stores/                   # 8 Zustand stores (estado global)
-│   ├── hooks/                    # 12 custom React hooks
-│   ├── types/                    # Tipos TypeScript
-│   ├── styles/                   # CSS y temas globales
-│   ├── contexts/                 # React Context (tema, navegación)
-│   ├── utils/                    # Funciones utilitarias
-│   ├── public/                   # Archivos estáticos
-│   ├── e2e/                      # Tests Playwright
-│   ├── tests/                    # Tests Vitest
-│   ├── next.config.js            # Configuración Next.js
-│   ├── tailwind.config.js        # Temas (12+)
-│   └── tsconfig.json             # TypeScript strict mode
+├── 📁 frontend/                                # Next.js 16 + React 19 + TypeScript 5.6
+│   ├── app/                                   # 80+ páginas (App Router)
+│   │   ├── (dashboard)/                       # Rutas protegidas
+│   │   │   ├── apartments/                    # 📋 Gestión de apartamentos (社宅)
+│   │   │   ├── candidates/                    # 👤 Candidatos (履歴書) + OCR
+│   │   │   ├── employees/                     # 👥 Empleados (派遣社員)
+│   │   │   ├── factories/                     # 🏭 Empresas clientes (派遣先)
+│   │   │   ├── timercards/                    # ⏱️ Asistencia (タイムカード)
+│   │   │   ├── salary/                        # 💰 Salarios (給与)
+│   │   │   ├── payroll/                       # 📊 Nómina avanzada
+│   │   │   ├── yukyu/                         # 🏖️ Vacaciones (有給休暇)
+│   │   │   ├── requests/                      # 📝 Solicitudes
+│   │   │   ├── design-system/                 # 🎨 Sistema de diseño
+│   │   │   ├── themes/                        # 🌈 12+ temas personalizables
+│   │   │   ├── reports/                       # 📈 Reportes PDF
+│   │   │   └── [10+ módulos más]              # Admin, monitoring, settings, etc.
+│   │   └── public/                            # Público: login, landing
+│   │
+│   ├── 🧩 components/                         # 171 componentes React reutilizables
+│   │   ├── ui/                                # 40+ Radix UI primitivos
+│   │   ├── dashboard/                         # 20 dashboard widgets
+│   │   ├── apartments/                        # Selectores y formularios
+│   │   ├── candidates/                        # Evaluadores y formularios
+│   │   ├── payroll/                           # Cálculos y reportes
+│   │   └── [15+ carpetas temáticas]           # Organizadas por dominio
+│   │
+│   ├── 📚 lib/                                # Librerías y utilidades
+│   │   ├── api.ts (994 LOC)                   # Cliente Axios + servicios
+│   │   ├── api/                               # 10+ servicios (authService, etc.)
+│   │   ├── validations/                       # Esquemas Zod
+│   │   ├── themes.ts                          # 12+ temas configurables
+│   │   ├── utilities/                         # Funciones helper
+│   │   └── constants/                         # Constantes globales
+│   │
+│   ├── 🏪 stores/                             # 8 Zustand stores (estado global)
+│   │   ├── auth-store.ts                      # 🔐 Autenticación + JWT
+│   │   ├── salary-store.ts                    # 💸 Estado de salarios
+│   │   ├── payroll-store.ts                   # 📊 Estado de nómina
+│   │   ├── dashboard-tabs-store.ts            # 📑 Navegación tabs
+│   │   ├── layout-store.ts                    # 🎛️ Sidebar + theme
+│   │   └── [3+ stores más]                    # Fonts, settings, theme custom
+│   │
+│   ├── 🪝 hooks/                              # 12 custom React hooks
+│   │   ├── use-toast.ts                       # Notificaciones
+│   │   ├── use-page-visibility.ts             # Visibilidad de página
+│   │   ├── use-page-permission.ts             # Control de acceso
+│   │   └── [9+ hooks más]                     # Validación, temas, rutas
+│   │
+│   ├── 🔤 types/                              # TypeScript definitions
+│   ├── 🎨 styles/                             # CSS global + config Tailwind
+│   ├── 🔌 contexts/                           # React Context (tema, auth)
+│   ├── 🛠️ utils/                              # Funciones utilitarias
+│   ├── 🖼️ public/                             # Archivos estáticos
+│   ├── 🧪 e2e/                                # Tests Playwright
+│   ├── ✅ tests/                              # Tests Vitest
+│   └── 📄 next.config.js + tsconfig.json     # Configuración
 │
-├── backend/                      # FastAPI
+├── 📁 backend/                                # FastAPI 0.115.6 + Python 3.11+
 │   ├── app/
-│   │   ├── api/                  # 24 routers FastAPI (endpoints REST)
-│   │   ├── models/               # SQLAlchemy (1,816 LOC)
-│   │   ├── services/             # 20 servicios de negocio
-│   │   ├── schemas/              # Esquemas Pydantic
-│   │   ├── core/                 # Configuración, DB, security, middlewares
-│   │   └── utils/                # Funciones utilitarias
-│   ├── tests/                    # Tests unitarios e integración (30+)
-│   ├── alembic/                  # Migraciones de BD
-│   ├── main.py                   # Punto de entrada FastAPI
-│   └── requirements.txt           # Dependencias Python
+│   │   ├── 🔗 api/ (28 routers)               # Endpoints REST
+│   │   │   ├── auth.py                        # 🔐 Login, registro, JWT
+│   │   │   ├── employees.py                   # 👥 Gestión de empleados
+│   │   │   ├── candidates.py                  # 👤 Candidatos + OCR
+│   │   │   ├── factories.py                   # 🏭 Empresas clientes
+│   │   │   ├── timer_cards.py                 # ⏱️ Asistencia
+│   │   │   ├── salary.py                      # 💰 Cálculo de salarios
+│   │   │   ├── payroll.py                     # 📊 Nómina avanzada
+│   │   │   ├── apartments_v2.py               # 📋 Apartamentos + asignaciones
+│   │   │   ├── yukyu.py                       # 🏖️ Vacaciones pagadas
+│   │   │   ├── requests.py                    # 📝 Solicitudes workflow
+│   │   │   ├── admin.py                       # ⚙️ Administración
+│   │   │   ├── dashboard.py                   # 📈 Estadísticas
+│   │   │   ├── azure_ocr.py                   # 🖼️ OCR integration
+│   │   │   ├── ai_agents.py                   # 🤖 Gateway multi-IA
+│   │   │   ├── audit.py                       # 📋 Auditoría
+│   │   │   ├── notifications.py               # 📧 Email + LINE
+│   │   │   ├── contracts.py                   # 📜 Contratos
+│   │   │   ├── import_export.py               # 📤 Importación
+│   │   │   ├── monitoring.py                  # 🏥 Health checks
+│   │   │   └── [8+ routers más]               # Reporting, database, settings, etc.
+│   │   │
+│   │   ├── 🗄️ models/ (1,816 LOC)            # SQLAlchemy ORM
+│   │   │   ├── models.py (1,670 LOC)          # 17+ modelos principales
+│   │   │   └── payroll_models.py              # Modelos de nómina
+│   │   │
+│   │   ├── 🧠 services/ (20+ servicios)       # Lógica de negocio
+│   │   │   ├── payroll/                       # 5 servicios nómina
+│   │   │   │   ├── payroll_validator.py
+│   │   │   │   ├── deduction_calculator.py
+│   │   │   │   ├── payslip_generator.py
+│   │   │   │   ├── rate_calculator.py
+│   │   │   │   └── overtime_calculator.py
+│   │   │   ├── yukyu_service.py               # Gestión de vacaciones
+│   │   │   ├── ocr_cache_service.py           # Cache OCR
+│   │   │   ├── notification_service.py        # Email/LINE
+│   │   │   ├── ai_gateway.py                  # Multi-IA gateway
+│   │   │   ├── audit_service.py               # Auditoría
+│   │   │   └── [12+ servicios más]
+│   │   │
+│   │   ├── 📋 schemas/                        # Pydantic models (validación)
+│   │   ├── ⚙️ core/                           # Configuración core
+│   │   │   ├── config.py                      # Variables de entorno
+│   │   │   ├── database.py                    # Conexión PostgreSQL
+│   │   │   ├── security.py                    # JWT + Bcrypt
+│   │   │   ├── deps.py                        # Dependency injection
+│   │   │   └── resilience/                    # Circuit breakers
+│   │   │
+│   │   └── 🛠️ utils/                          # Funciones utilitarias
+│   │
+│   ├── 🔄 alembic/versions/                   # Migraciones de BD
+│   ├── 🧪 tests/                              # Tests unitarios e integración
+│   ├── 📁 scripts/                            # Importación de datos
+│   ├── main.py                                # Punto de entrada FastAPI
+│   └── requirements.txt                       # Dependencias Python (40+)
 │
-├── docker/                       # Docker Compose (6 servicios)
+├── 🐳 docker/                                 # Docker & Compose
+│   ├── Dockerfile.backend                     # Build backend
+│   ├── Dockerfile.frontend                    # Build frontend
+│   ├── Dockerfile.importer                    # Inicialización BD
+│   ├── docker-compose.yml                     # 6 servicios orquestados
+│   └── logging-config.yml                     # Configuración de logs
 │
-├── docs/                         # Documentación exhaustiva
+├── 📚 docs/                                   # Documentación exhaustiva
+│   ├── 00-START-HERE/                         # Guías iniciales
+│   ├── 01-instalacion/                        # Setup y configuración
+│   ├── 02-configuracion/                      # BD, migraciones, backups
+│   ├── 03-uso/                                # Guías de uso
+│   ├── 04-troubleshooting/                    # Solución de problemas
+│   ├── 05-devops/                             # Git, GitHub, CI/CD
+│   └── 06-agentes/                            # Sistema de agentes IA
 │
-├── scripts/                      # Utilidades (setup, git, extracción de datos)
+├── 🛠️ scripts/                                # Scripts de automatización
+│   ├── START.bat / STOP.bat                   # Control servicios
+│   ├── BACKUP_DATOS.bat                       # Backup automático
+│   ├── LOGS.bat                               # Ver logs (menú interactivo)
+│   └── [25+ scripts más]                      # Diagnóstico, setup, etc.
 │
-├── config/                       # Configuración de factories
+├── ⚙️ config/                                 # Configuración templates
+│   ├── employee_master.xlsm                   # Template Excel
+│   └── factories/                             # Config de fábricas
 │
-├── BASEDATEJP/                   # Base de datos inicial
+├── 💾 BASEDATEJP/                             # Base de datos de demostración
+├── 📂 base-datos/                             # Backups y snapshots
+├── 📤 uploads/                                # Almacenamiento de archivos
 │
-├── uploads/                      # Almacenamiento de archivos
+├── 🔧 Configuración raíz
+│   ├── docker-compose.yml                     # Orquestación 6 servicios
+│   ├── .env.example                           # Variables de entorno (ejemplo)
+│   ├── .env.production                        # Config producción
+│   ├── .claudE.md                             # 🔴 Instrucciones para IAs
+│   ├── CLAUDE.md                              # Reglas de desarrollo
+│   └── README.md (1,100+ líneas)              # Documentación principal
 │
-├── base-datos/                   # Backups de BD
-│
-├── .env.example                  # Variables de entorno (ejemplo)
-├── .env.production               # Configuración producción
-├── docker-compose.yml            # Orquestación de servicios
-│
-└── README.md (37KB)              # Documentación principal
+└── 📊 Documentación de análisis
+    ├── INSPECCION.md (este archivo)           # Análisis completo
+    ├── ANALISIS_APLICACION_RESUMEN.md         # Resumen ejecutivo
+    └── RELEASE_NOTES_v6.0.0.md                # Novedades v6.0.0
 ```
 
 ---
 
 ## 3. FRONTEND (Next.js 16 + React 19)
 
-### 3.1 Páginas Principales (30+)
+### 3.1 Páginas Principales (80+ páginas)
 
-#### Autenticación
+#### 🔐 Autenticación
 - `/login` - Página de login con JWT
+- `/` - Landing page
 
-#### Dashboard
-- `/dashboard` - Panel principal
-- `/dashboard/page` - Inicio
-- `/dashboard/design-system` - Sistema de diseño
-- `/dashboard/design-preferences` - Preferencias de diseño
+#### 📊 Dashboard (Panel Principal)
+- `/dashboard` - **Panel principal con widgets**
+- `/dashboard/page` - Inicio del dashboard
+- `/dashboard/design-system` - 🎨 Sistema de diseño
+- `/dashboard/design-preferences` - Preferencias visuales
+- `/dashboard/monitoring/` - Monitoreo del sistema
+- `/dashboard/monitoring/health/` - Health checks
+- `/dashboard/monitoring/performance/` - Métricas de rendimiento
 
-#### Gestión de Nómina (給与)
-- `/dashboard/salary` - Listado de salarios
-- `/dashboard/salary/reports` - Reportes de salarios
-- `/dashboard/salary/[id]` - Detalle de salario
-- `/dashboard/payroll` - Gestión de nómina
-- `/dashboard/payroll/create` - Crear cálculo
-- `/dashboard/payroll/calculate` - Calcular nómina
-- `/dashboard/payroll/yukyu-summary` - Resumen vacaciones
+#### 💰 Gestión de Nómina (給与)
+- `/dashboard/salary/` - 📋 Listado de salarios
+- `/dashboard/salary/reports/` - 📈 Reportes de salarios
+- `/dashboard/salary/[id]/` - 📄 Detalle de salario individual
 
-#### Gestión de Apartamentos
-- `/dashboard/apartments` - Listado
-- `/dashboard/apartments/create` - Crear apartamento
-- `/dashboard/apartments/search` - Buscar
-- `/dashboard/apartments/[id]` - Detalle
-- `/dashboard/apartments/[id]/assign` - Asignar empleado
-- `/dashboard/apartments/[id]/edit` - Editar
+#### 📊 Gestión de Nómina Avanzada (Payroll)
+- `/dashboard/payroll/` - Gestión de cálculos
+- `/dashboard/payroll/create/` - ➕ Crear cálculo
+- `/dashboard/payroll/calculate/` - 🧮 Calcular nómina
+- `/dashboard/payroll/yukyu-summary/` - 📊 Resumen vacaciones
+- `/dashboard/payroll/settings/` - ⚙️ Configuración
+- `/dashboard/payroll/timer-cards/` - Tarjetas relacionadas
+- `/dashboard/payroll/[id]/` - Detalle de cálculo
 
-#### Gestión de Empleados
-- Candidatos: `/dashboard/candidates`
-- Empleados: `/dashboard/employees` (después de aprobación)
+#### 📋 Gestión de Apartamentos (社宅)
+- `/dashboard/apartments/` - Listado de apartamentos
+- `/dashboard/apartments/create/` - Crear apartamento
+- `/dashboard/apartments/search/` - Búsqueda avanzada
+- `/dashboard/apartments/[id]/` - Detalle del apartamento
+- `/dashboard/apartments/[id]/assign/` - Asignar empleado
+- `/dashboard/apartments/[id]/edit/` - Editar información
+- `/dashboard/apartment-assignments/` - Listado de asignaciones
+- `/dashboard/apartment-assignments/create/` - Crear asignación
+- `/dashboard/apartment-assignments/[id]/` - Detalle de asignación
+- `/dashboard/apartment-assignments/[id]/end/` - Terminar asignación
+- `/dashboard/apartment-assignments/transfer/` - Transferir empleado
 
-#### Gestión de Fábricas/Clientes (派遣先)
-- `/dashboard/factories` - Listado
-- `/dashboard/factories/new` - Crear
-- `/dashboard/factories/[id]` - Detalle
-- `/dashboard/factories/[id]/config` - Configuración
+#### 📊 Reportes de Apartamentos
+- `/dashboard/apartment-reports/` - Centro de reportes
+- `/dashboard/apartment-reports/occupancy/` - 📈 Ocupación
+- `/dashboard/apartment-reports/arrears/` - 💳 Atrasos de pago
+- `/dashboard/apartment-reports/maintenance/` - 🔧 Mantenimiento
+- `/dashboard/apartment-reports/costs/` - 💵 Análisis de costos
+- `/dashboard/apartment-calculations/` - Cálculos especiales
+- `/dashboard/apartment-calculations/prorated/` - Cálculos prorratados
+- `/dashboard/apartment-calculations/total/` - Cálculos totales
+- `/dashboard/rent-deductions/` - Gestión de descuentos
 
-#### Asistencia (タイムカード)
-- `/dashboard/timercards` - Listado
-- `/dashboard/timercards/upload` - Subir PDF con OCR
+#### 👤 Gestión de Candidatos (履歴書)
+- `/dashboard/candidates/` - 📋 Listado de candidatos
+- `/dashboard/candidates/new/` - ➕ Crear nuevo candidato
+- `/dashboard/candidates/[id]/` - 👤 Perfil del candidato
+- `/dashboard/candidates/[id]/edit/` - ✏️ Editar datos
+- `/dashboard/candidates/[id]/print/` - 🖨️ Imprimir CV (Rirekisho)
+- `/dashboard/candidates/rirekisho/` - 📄 Gestión de Rirekisho
 
-#### Vacaciones (有給休暇)
-- `/dashboard/yukyu` - Listado de vacaciones
-- `/dashboard/yukyu-requests` - Solicitudes de vacaciones
-- `/dashboard/yukyu-requests/create` - Crear solicitud
+#### 👥 Gestión de Empleados (派遣社員)
+- `/dashboard/employees/` - 📋 Listado de empleados
+- `/dashboard/employees/new/` - ➕ Registrar empleado
+- `/dashboard/employees/[id]/` - 👤 Perfil del empleado
+- `/dashboard/employees/[id]/edit/` - ✏️ Editar datos
+- `/dashboard/employees/excel-view/` - 📊 Vista en Excel
 
-#### Otros
-- `/dashboard/profile` - Perfil de usuario
-- `/dashboard/reports` - Reportes del sistema
-- `/dashboard/help` - Ayuda y soporte
-- `/dashboard/examples/forms` - Ejemplos de formularios
+#### 🏭 Gestión de Fábricas/Clientes (派遣先)
+- `/dashboard/factories/` - 📋 Listado de clientes
+- `/dashboard/factories/new/` - ➕ Crear empresa cliente
+- `/dashboard/factories/[factory_id]/` - 🏢 Detalle del cliente
+- `/dashboard/factories/[factory_id]/config/` - ⚙️ Configuración
+
+#### ⏱️ Asistencia (タイムカード)
+- `/dashboard/timercards/` - 📋 Listado de asistencia
+- `/dashboard/timercards/upload/` - 📤 Subir PDF con OCR
+
+#### 🏖️ Vacaciones (有給休暇)
+- `/dashboard/yukyu/` - 📋 Listado de vacaciones
+- `/dashboard/yukyu-history/` - 📜 Historial de vacaciones
+- `/dashboard/yukyu-reports/` - 📈 Reportes de vacaciones
+- `/dashboard/yukyu-requests/` - 📝 Solicitudes de vacaciones
+- `/dashboard/yukyu-requests/create/` - ➕ Crear solicitud
+- `/dashboard/additional-charges/` - Cargos adicionales
+- `/dashboard/keiri/yukyu-dashboard/` - Dashboard contable
+
+#### 📝 Solicitudes/Workflows (申請)
+- `/dashboard/requests/` - 📋 Listado de solicitudes
+- `/dashboard/requests/[id]/` - 📄 Detalle de solicitud
+
+#### 🎨 Diseño y Temas
+- `/dashboard/themes/` - 🌈 Galería de temas
+- `/dashboard/themes/customizer/` - ✏️ Personalizador de temas
+
+#### ⚙️ Administración
+- `/dashboard/admin/` - Panel de administración
+- `/dashboard/admin/control-panel/` - Control central
+- `/dashboard/admin/audit-logs/` - 📋 Logs de auditoría
+- `/dashboard/admin/yukyu-management/` - Gestión de vacaciones
+
+#### 🛠️ Configuración y Utilidades
+- `/dashboard/settings/` - ⚙️ Configuración general
+- `/dashboard/settings/appearance/` - Apariencia
+- `/dashboard/profile/` - 👤 Mi perfil
+- `/dashboard/help/` - ❓ Ayuda y soporte
+- `/dashboard/support/` - 🆘 Centro de soporte
+- `/dashboard/reports/` - 📈 Reportes del sistema
+- `/dashboard/privacy/` - 🔒 Privacidad
+- `/dashboard/terms/` - 📋 Términos de servicio
+- `/dashboard/database-management/` - 🗄️ Gestión de BD
+- `/dashboard/construction/` - 🚧 En construcción
+- `/dashboard/examples/forms/` - 📋 Ejemplos de formularios
+
+#### 📄 Rutas públicas
+- `/apartments/` - Apartamentos públicos
+- `/candidates/` - Candidatos públicos
+- `/employees/` - Empleados públicos
+- `/factories/` - Fábricas públicas
+- `/payroll/` - Nómina pública
+- `/requests/` - Solicitudes públicas
+- `/settings/` - Configuración pública
+- `/timercards/` - Asistencia pública
+- `/reports/` - Reportes públicos
+- `/profile/` - Perfil público
 
 ### 3.2 Componentes (171 Total)
 
@@ -240,7 +427,7 @@ UNS-ClaudeJP-6.0.0/
 
 ## 4. BACKEND (FastAPI + Python 3.11+)
 
-### 4.1 Routers/Endpoints (24 Total)
+### 4.1 Routers/Endpoints (28 Total - 200+ endpoints)
 
 | Router | Descripción | Endpoints Principales |
 |--------|-----------|----------------------|
@@ -663,35 +850,145 @@ backend/app/api/ai_gateway.py
 
 ## 📈 MÉTRICAS DEL PROYECTO
 
-| Métrica | Valor |
-|---------|-------|
-| Archivos fuente totales | 660+ |
-| Líneas de código | ~25,000+ |
-| Páginas frontend | 30+ |
-| Componentes React | 171 |
-| Routers/Endpoints API | 24 |
-| Modelos BD | 17+ |
-| Servicios backend | 20 |
-| Stores Zustand | 8 |
-| Custom hooks | 12 |
-| Tests automatizados | 30+ |
-| Lenguajes | 3 (JavaScript/TypeScript, Python, YAML) |
+| Métrica | Valor | Detalles |
+|---------|-------|----------|
+| **Archivos fuente totales** | 660+ | Código fuente + tests + docs |
+| **Líneas de código** | ~25,000+ | Frontend + Backend combinado |
+| **Páginas frontend** | 80+ | Next.js App Router (actualizadas) |
+| **Componentes React** | 171 | Reutilizables + modulares |
+| **Routers/Endpoints API** | 28 | Con ~200+ endpoints REST |
+| **Modelos BD** | 17+ | SQLAlchemy ORM |
+| **Servicios backend** | 20+ | Especializados por dominio |
+| **Stores Zustand** | 8 | Estado global |
+| **Custom hooks** | 12 | React hooks personalizados |
+| **Tests automatizados** | 30+ | Playwright E2E + Vitest |
+| **Lenguajes principales** | 3 | TypeScript, Python, YAML |
+| **Documentación** | 100+ | Archivos .md exhaustivos |
+| **Scripts de automatización** | 30+ | Windows batch + PowerShell |
 
 ---
 
 ## 🐳 DOCKER COMPOSE (6 SERVICIOS)
 
-```yaml
-Servicios:
-├── backend (FastAPI) - Puerto 8000
-├── frontend (Next.js) - Puerto 3000
-├── postgres (PostgreSQL 15) - Puerto 5432
-├── redis (Redis 7) - Puerto 6379
-├── adminer (Gestor BD web) - Puerto 8080
-└── grafana (Monitoreo) - Puerto 3001
+### Arquitectura de Contenedores
 
-Red: uns-network (compartida)
 ```
+UNS-ClaudeJP-6.0.0 Sistema Multi-Contenedor
+│
+├─ 🗄️ PostgreSQL 15
+│  ├─ Puerto: 5432
+│  ├─ BD: uns_claudejp
+│  ├─ Usuario: uns_admin
+│  └─ Volumen: postgres_data (persistente)
+│
+├─ 🔴 Redis 7
+│  ├─ Puerto: 6379
+│  ├─ Maxmemory: 256mb
+│  ├─ Policy: allkeys-lru
+│  └─ Volumen: redis_data (persistente)
+│
+├─ 📤 Importer (One-time service)
+│  ├─ Aplicar migraciones Alembic
+│  ├─ Crear usuario admin
+│  ├─ Importar datos demostración
+│  └─ Restart: 'no' (ejecuta una sola vez)
+│
+├─ ⚙️ Backend FastAPI
+│  ├─ Puerto: 8000
+│  ├─ Endpoint API: /api
+│  ├─ Swagger: /api/docs
+│  ├─ ReDoc: /api/redoc
+│  ├─ Health: /api/health
+│  └─ Hot reload: Habilitado ✅
+│
+├─ 🌐 Frontend Next.js 16
+│  ├─ Puerto: 3000
+│  ├─ Bundler: Turbopack (70% más rápido)
+│  ├─ Pages: 80+ rutas
+│  └─ Hot reload: Habilitado ✅
+│
+├─ 🖥️ Adminer (Gestor BD Visual)
+│  ├─ Puerto: 8080
+│  ├─ Sistema: PostgreSQL
+│  └─ Credenciales: POSTGRES_USER/PASSWORD
+│
+└─ 📊 Grafana (Monitoreo)
+   ├─ Puerto: 3001
+   └─ Dashboard: Métricas del sistema
+
+Red Compartida: uns-claudejp-600-network (bridge)
+```
+
+### Variables de Entorno Críticas
+
+**Obligatorias (⚠️):**
+```bash
+# Base de datos
+POSTGRES_DB=uns_claudejp
+POSTGRES_USER=uns_admin
+POSTGRES_PASSWORD=<cambiar-en-producción>  # CRÍTICO
+
+# Redis
+REDIS_PASSWORD=<cambiar-en-producción>     # CRÍTICO
+
+# JWT
+SECRET_KEY=<64-bytes-aleatorios>          # CRÍTICO
+
+# Base de datos URL
+DATABASE_URL=postgresql://uns_admin:<password>@db:5432/uns_claudejp
+
+# Frontend
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
+**Opcionales (según funcionalidades):**
+```bash
+# OCR & Vision
+AZURE_COMPUTER_VISION_ENDPOINT=https://...
+AZURE_COMPUTER_VISION_KEY=...
+GOOGLE_CLOUD_VISION_API_KEY=...
+
+# IA Providers
+OPENAI_API_KEY=sk-...
+GEMINI_API_KEY=...
+ANTHROPIC_API_KEY=...
+ZHIPU_API_KEY=...
+
+# Notificaciones
+SMTP_SERVER=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=...
+SMTP_PASSWORD=...
+LINE_CHANNEL_ACCESS_TOKEN=...
+
+# Monitoreo
+GRAFANA_ADMIN_USER=admin
+GRAFANA_ADMIN_PASSWORD=...
+```
+
+### Flujo de Inicio
+
+```
+1. docker compose up -d db      → PostgreSQL listo (90s)
+2. db + redis healthy           → Inicia importer
+3. importer aplica migraciones  → Crea tablas, usuario admin
+4. backend espera DB            → Inicia cuando BD lista
+5. frontend espera backend      → Inicia cuando API responde
+6. adminer y grafana            → Servicios de monitoreo
+
+Tiempo total: ~2-3 minutos (primera vez)
+```
+
+### Ports Requeridos
+
+| Puerto | Servicio | URL | Verificación |
+|--------|----------|-----|--------------|
+| **3000** | Frontend (Next.js) | http://localhost:3000 | ✅ Landing page |
+| **8000** | Backend (FastAPI) | http://localhost:8000 | ✅ /api/docs |
+| **5432** | PostgreSQL | localhost:5432 | ✅ psql conecta |
+| **6379** | Redis | localhost:6379 | ✅ redis-cli ping |
+| **8080** | Adminer | http://localhost:8080 | ✅ Interface Web |
+| **3001** | Grafana | http://localhost:3001 | ✅ Dashboard |
 
 ---
 

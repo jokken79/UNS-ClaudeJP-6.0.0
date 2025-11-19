@@ -1,7 +1,7 @@
 """
 Salary Calculation API Endpoints
 """
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, extract
@@ -13,6 +13,7 @@ from typing import Optional
 
 from app.core.database import get_db
 from app.core.config import settings
+from app.core.rate_limiter import limiter
 from app.models.models import SalaryCalculation, Employee, TimerCard, Factory, User
 from app.schemas.salary import (
     SalaryCalculate, SalaryCalculationResponse, SalaryBulkCalculate,
@@ -142,7 +143,9 @@ def calculate_employee_salary(db: Session, employee_id: int, month: int, year: i
 
 
 @router.post("/calculate", response_model=SalaryCalculationResponse, status_code=201)
+@limiter.limit("10/hour")  # Expensive salary calculation operation
 async def calculate_salary(
+    request: Request,
     salary_data: SalaryCalculate,
     current_user: User = Depends(auth_service.require_role("admin")),
     db: Session = Depends(get_db)

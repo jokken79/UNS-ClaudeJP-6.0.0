@@ -1,28 +1,36 @@
 """
-Rate Limiting Service for AI Gateway
+Rate Limiting Service for UNS-ClaudeJP 6.0.0
 
-Provides per-user and per-IP rate limiting for AI API endpoints.
+Provides distributed rate limiting using Redis for:
+- AI Gateway endpoints
+- Authentication endpoints
+- Resource-intensive operations (salary calculation, OCR upload)
 
-Rate Limits:
-- Gemini: 100 calls per day
-- OpenAI: 50 calls per day
-- Claude API: 50 calls per day
-- Local CLI: 200 calls per day (no cost)
+Rate Limits by Endpoint:
+- /api/auth/login: 5 attempts/minute (brute force protection)
+- /api/salary/calculate: 10 requests/hour (expensive operation)
+- /api/timer-cards/upload: 20 uploads/hour (OCR processing)
+- AI Gateway (Gemini): 100 calls/day
+- AI Gateway (OpenAI): 50 calls/day
+- AI Gateway (Claude API): 50 calls/day
+- AI Gateway (Local CLI): 200 calls/day
+- General endpoints: 100 requests/minute (default)
 
 Usage:
     from app.core.rate_limiter import limiter
 
-    @router.post("/gemini")
-    @limiter.limit("100/day")
-    async def invoke_gemini(request, current_user):
+    @router.post("/expensive-operation")
+    @limiter.limit("10/hour")
+    async def expensive_operation(request: Request, ...):
         ...
 
 Configuration:
-    SLOWAPI_STORAGE_URL=memory:// (default: in-memory)
-    SLOWAPI_STORAGE_URL=redis://localhost:6379 (for distributed)
+    REDIS_URL=redis://redis:6379/0 (distributed storage)
+    SLOWAPI_STORAGE_URL=redis://redis:6379/0 (fallback to REDIS_URL)
 """
 
 import logging
+import re
 from typing import Optional, Dict
 from datetime import datetime, timedelta
 
@@ -30,6 +38,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from fastapi import HTTPException, status, Request
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_
 
@@ -37,14 +46,28 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Initialize rate limiter
-# Uses in-memory storage by default (good for single instance)
-# For distributed systems, use Redis
+# Determine storage URI for rate limiter
+# Priority: SLOWAPI_STORAGE_URL > REDIS_URL > memory://
+def get_storage_uri() -> str:
+    """Get storage URI for rate limiter with Redis fallback"""
+    if hasattr(settings, 'SLOWAPI_STORAGE_URL') and settings.SLOWAPI_STORAGE_URL:
+        return settings.SLOWAPI_STORAGE_URL
+    elif hasattr(settings, 'REDIS_URL') and settings.REDIS_URL:
+        return settings.REDIS_URL
+    else:
+        logger.warning("⚠️ Rate limiter using memory:// - Not suitable for production with multiple instances!")
+        return "memory://"
+
+# Initialize rate limiter with Redis backend
+storage_uri = get_storage_uri()
 limiter = Limiter(
     key_func=get_remote_address,
-    default_limits=["200/hour"],  # Global fallback limit
-    storage_uri=settings.SLOWAPI_STORAGE_URL if hasattr(settings, 'SLOWAPI_STORAGE_URL') else "memory://",
+    default_limits=["100/minute"],  # Global fallback limit
+    storage_uri=storage_uri,
+    strategy="fixed-window"
 )
+
+logger.info(f"✅ Rate limiter initialized with storage: {storage_uri}")
 
 
 class RateLimitConfig:
@@ -153,25 +176,112 @@ class UserRateLimitService:
         }
 
 
+def calculate_retry_after(limit_detail: str) -> int:
+    """
+    Calculate Retry-After value in seconds based on rate limit detail.
+
+    Args:
+        limit_detail: Rate limit detail string (e.g., "5 per 1 minute")
+
+    Returns:
+        Seconds until retry is allowed
+    """
+    detail_lower = limit_detail.lower()
+
+    # Parse time unit from limit detail
+    if "second" in detail_lower:
+        return 1
+    elif "minute" in detail_lower:
+        # Extract number of minutes if present
+        match = re.search(r'(\d+)\s+minute', detail_lower)
+        if match:
+            return int(match.group(1)) * 60
+        return 60
+    elif "hour" in detail_lower:
+        match = re.search(r'(\d+)\s+hour', detail_lower)
+        if match:
+            return int(match.group(1)) * 3600
+        return 3600
+    elif "day" in detail_lower:
+        match = re.search(r'(\d+)\s+day', detail_lower)
+        if match:
+            return int(match.group(1)) * 86400
+        return 86400
+    else:
+        # Default to 1 minute if can't parse
+        return 60
+
+
+def format_retry_time(seconds: int) -> str:
+    """
+    Format seconds into human-readable time.
+
+    Args:
+        seconds: Number of seconds
+
+    Returns:
+        Human-readable time string
+    """
+    if seconds < 60:
+        return f"{seconds} second{'s' if seconds != 1 else ''}"
+    elif seconds < 3600:
+        minutes = seconds // 60
+        return f"{minutes} minute{'s' if minutes != 1 else ''}"
+    elif seconds < 86400:
+        hours = seconds // 3600
+        return f"{hours} hour{'s' if hours != 1 else ''}"
+    else:
+        days = seconds // 86400
+        return f"{days} day{'s' if days != 1 else ''}"
+
+
 def handle_rate_limit_error(request: Request, exc: RateLimitExceeded):
     """
     Custom error handler for rate limit exceeded.
+
+    Returns proper HTTP 429 response with Retry-After header and
+    detailed error information for debugging and user feedback.
 
     Args:
         request: FastAPI request
         exc: RateLimitExceeded exception
 
     Returns:
-        HTTPException with detailed info
+        JSONResponse with HTTP 429 status and Retry-After header
     """
-    logger.warning(f"Rate limit exceeded for {request.client.host}: {exc.detail}")
+    # Calculate retry after time
+    retry_after = calculate_retry_after(str(exc.detail))
+    retry_after_human = format_retry_time(retry_after)
 
-    return HTTPException(
+    # Get endpoint path for logging
+    endpoint = request.url.path
+    ip_address = request.client.host
+
+    # Enhanced logging with context
+    logger.warning(
+        f"Rate limit exceeded",
+        extra={
+            "ip": ip_address,
+            "endpoint": endpoint,
+            "user_agent": request.headers.get("user-agent", "unknown"),
+            "limit_detail": str(exc.detail),
+            "retry_after": retry_after
+        }
+    )
+
+    # Return proper HTTP 429 response with Retry-After header
+    return JSONResponse(
         status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-        detail={
+        headers={
+            "Retry-After": str(retry_after),
+            "X-RateLimit-Reset": str(int((datetime.utcnow() + timedelta(seconds=retry_after)).timestamp()))
+        },
+        content={
             "error": "Rate limit exceeded",
-            "message": f"You have exceeded the rate limit. {exc.detail}",
-            "retry_after": 3600,  # Suggest retry in 1 hour
-            "documentation": "https://docs.uns-claudejp.com/api/rate-limiting"
+            "message": f"Too many requests. {exc.detail}",
+            "retry_after": retry_after,
+            "retry_after_human": retry_after_human,
+            "endpoint": endpoint,
+            "documentation": "https://github.com/jokken79/UNS-ClaudeJP-6.0.0/blob/main/RATE_LIMITING_IMPLEMENTATION.md"
         }
     )
