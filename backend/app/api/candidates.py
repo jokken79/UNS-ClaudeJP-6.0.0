@@ -8,6 +8,9 @@ from sqlalchemy import func
 import os
 import shutil
 from typing import Optional, Dict, Any
+
+# File validation with magic bytes detection
+from app.core.file_validator import validate_upload, FileValidationError, MAGIC_AVAILABLE
 from datetime import datetime, date
 import re
 import json
@@ -676,24 +679,6 @@ async def upload_document(
             detail="Invalid filename"
         )
 
-    # Validate file type by extension
-    file_ext = os.path.splitext(safe_filename)[1].lower().replace('.', '')
-    if file_ext not in settings.ALLOWED_EXTENSIONS:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"File type not allowed. Allowed types: {settings.ALLOWED_EXTENSIONS}"
-        )
-
-    # Validate image file types specifically for photos/documents
-    IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp']
-    if file_ext in IMAGE_EXTENSIONS:
-        # Validate content type matches extension
-        if file.content_type and not file.content_type.startswith('image/'):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="File content type does not match image extension"
-            )
-
     # Create upload directory if not exists
     upload_dir = os.path.join(settings.UPLOAD_DIR, "candidates", str(candidate_id))
     os.makedirs(upload_dir, exist_ok=True)
@@ -708,20 +693,31 @@ async def upload_document(
             detail=f"File size exceeds maximum allowed size of {MAX_FILE_SIZE / (1024*1024):.1f} MB"
         )
 
-    # If it's an image, validate it's actually a valid image
-    if file_ext in IMAGE_EXTENSIONS:
-        try:
-            from PIL import Image
-            import io
-            image = Image.open(io.BytesIO(file_content))
-            image.verify()  # Verify it's a valid image
-            # Reset file pointer for saving
-            file_content_io = io.BytesIO(file_content)
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid or corrupted image file: {str(e)}"
-            )
+    # Validate file type using magic bytes (MIME type detection)
+    # Prevents spoofed files (e.g., malware renamed as .jpg)
+    try:
+        file_ext = os.path.splitext(safe_filename)[1].lower().replace('.', '')
+
+        # Determine what type of validation to do based on file extension
+        check_image = file_ext in ['jpg', 'jpeg', 'png', 'webp', 'gif']
+        check_pdf = file_ext == 'pdf'
+
+        # Validate using magic bytes (python-magic) and extension
+        await validate_upload(
+            file_content,
+            safe_filename,
+            settings.ALLOWED_EXTENSIONS,
+            check_image=check_image,
+            check_pdf=check_pdf
+        )
+
+        logger.info(f"File validation passed for {safe_filename} (magic: {'enabled' if MAGIC_AVAILABLE else 'disabled'})")
+
+    except FileValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File validation failed: {str(e)}"
+        )
 
     # Save file
     file_path = os.path.join(upload_dir, safe_filename)

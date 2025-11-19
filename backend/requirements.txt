@@ -44,6 +44,9 @@ pydantic==2.10.5
 pydantic-settings==2.11.0
 email-validator==2.3.0
 
+# File Type Validation (magic bytes detection)
+python-magic==0.4.27
+
 # Date/Time
 python-dateutil==2.9.0.post0
 pytz==2025.2
