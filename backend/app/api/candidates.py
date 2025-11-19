@@ -24,13 +24,14 @@ from app.schemas.candidate import (
 )
 from app.schemas.base import PaginatedResponse
 from app.services.auth_service import auth_service
-from app.services.azure_ocr_service import azure_ocr_service
+from app.services.hybrid_ocr_service import HybridOCRService
 from app.services.photo_service import photo_service
 from app.services.candidate_service import CandidateService
 
 import logging
 
 router = APIRouter()
+ocr_service = HybridOCRService()  # Consolidated OCR service (Azure primary, with fallbacks)
 limiter = Limiter(key_func=get_remote_address)
 
 logger = logging.getLogger(__name__)
@@ -739,7 +740,7 @@ async def upload_document(
     if document_type in ["rirekisho", "zairyu_card", "license"]:
         try:
             # Process with Azure OCR service
-            ocr_result = azure_ocr_service.process_document(file_path, document_type)
+            ocr_result = ocr_service.process_document(file_path, document_type)
 
             # Convert to OCRData model
             ocr_data = OCRData(
@@ -871,7 +872,7 @@ async def process_ocr_document(
     try:
         logger.info("Processing document with Azure OCR service")
         # Process with Azure OCR service
-        ocr_result = azure_ocr_service.process_document(tmp_path, document_type)
+        ocr_result = ocr_service.process_document(tmp_path, document_type)
         logger.info("OCR processing complete")
 
         # Add document type to the result

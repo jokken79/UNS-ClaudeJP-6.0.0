@@ -65,44 +65,44 @@ class HybridOCRService:
     def _init_services(self):
         """Inicializa los servicios OCR disponibles.
 
-        Intenta importar y configurar Azure OCR, EasyOCR y Tesseract. Si alguno falla,
-        registra un warning pero continúa con los servicios disponibles.
+        NOTA: v6.0.0 consolidación - Individual OCR services (AzureOCRService, EasyOCRService,
+        TesseractOCRService) were removed during SEMANA 3-4 cleanup. HybridOCRService now
+        contains all OCR logic internally.
 
         Side Effects:
-            - Establece self.azure_service y self.azure_available
-            - Establece self.easyocr_service y self.easyocr_available
-            - Establece self.tesseract_service y self.tesseract_available
-            - Registra mensajes de log sobre disponibilidad
+            - Sets availability flags based on configuration
+            - Initializes OCR backends (Azure API, EasyOCR model, Tesseract)
+            - Registers log messages about provider availability
         """
-        # Inicializar Azure OCR
+        # Check Azure Computer Vision API availability
         try:
-            from app.services.azure_ocr_service import azure_ocr_service
-            self.azure_service = azure_ocr_service
-            self.azure_available = True
-            logger.info("Azure OCR service disponible")
-        except ImportError as e:
-            logger.warning(f"Azure OCR no disponible: {e}")
-            self.azure_service = None
+            from app.core.config import settings
+            self.azure_available = bool(settings.AZURE_COMPUTER_VISION_ENDPOINT and settings.AZURE_COMPUTER_VISION_KEY)
+            if self.azure_available:
+                logger.info("Azure Computer Vision OCR available (configured)")
+            else:
+                logger.info("Azure Computer Vision OCR not configured (using fallbacks)")
+        except Exception as e:
+            logger.warning(f"Azure OCR initialization check failed: {e}")
+            self.azure_available = False
 
-        # Inicializar EasyOCR
+        # Check EasyOCR availability
         try:
-            from app.services.easyocr_service import easyocr_service
-            self.easyocr_service = easyocr_service
-            self.easyocr_available = easyocr_service.easyocr_available
-            logger.info("EasyOCR service disponible")
-        except ImportError as e:
-            logger.warning(f"EasyOCR no disponible: {e}")
-            self.easyocr_service = None
+            import easyocr
+            self.easyocr_available = True
+            logger.info("EasyOCR library available (fallback method)")
+        except ImportError:
+            logger.warning("EasyOCR not installed (will use Tesseract fallback)")
+            self.easyocr_available = False
 
-        # Inicializar Tesseract OCR
+        # Check Tesseract availability
         try:
-            from app.services.tesseract_ocr_service import tesseract_ocr_service
-            self.tesseract_service = tesseract_ocr_service
-            self.tesseract_available = tesseract_ocr_service.tesseract_available
-            logger.info("Tesseract OCR service disponible")
-        except ImportError as e:
-            logger.warning(f"Tesseract OCR no disponible: {e}")
-            self.tesseract_service = None
+            import pytesseract
+            self.tesseract_available = True
+            logger.info("Tesseract OCR available (final fallback)")
+        except ImportError:
+            logger.warning("Tesseract not installed (may fail if other methods unavailable)")
+            self.tesseract_available = False
     
     def _process_document_hybrid_internal(self, image_data: bytes, document_type: str,
                                          preferred_method: str) -> Dict[str, Any]:
