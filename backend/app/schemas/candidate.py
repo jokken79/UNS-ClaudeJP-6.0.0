@@ -4,7 +4,7 @@ Candidate Schemas - Complete Candidate Fields (履歴書/Rirekisho)
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
 from typing import Optional, List, Dict, Any
 from datetime import date, datetime
-from app.models.models import CandidateStatus
+from app.models.models import CandidateStatus, InterviewResult
 
 
 class CandidateBase(BaseModel):
@@ -125,7 +125,7 @@ class CandidateBase(BaseModel):
     commute_time_oneway: Optional[int] = None
 
     # 面接・検査 (Interview & Tests)
-    interview_result: Optional[str] = None
+    interview_result: Optional[InterviewResult] = None  # 👍👎⏳
     antigen_test_kit: Optional[str] = None
     antigen_test_date: Optional[date] = None
     covid_vaccine_status: Optional[str] = None
@@ -280,12 +280,17 @@ class CandidateFormResponse(BaseModel):
 
 
 class CandidateEvaluation(BaseModel):
-    """Quick evaluation for candidate (thumbs up/down)"""
+    """Quick evaluation for candidate (thumbs up/down for interview + approval)"""
+    # Interview result (Required) - 👍👎
+    interview_result: InterviewResult = Field(..., description="Interview result: passed (👍) or failed (👎)")
+
+    # Approval decision (based on interview)
     approved: bool  # True = approved (合格), False = pending (審査中)
     notes: Optional[str] = Field(None, max_length=500)
 
     model_config = ConfigDict(json_schema_extra={
         "example": {
+            "interview_result": "passed",
             "approved": True,
             "notes": "良い候補者。日本語堪能"
         }

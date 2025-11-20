@@ -37,6 +37,7 @@ interface Candidate {
   address_banchi?: string;
   address_building?: string;
   status?: string;
+  interview_result?: 'passed' | 'failed' | 'pending';  // 👍👎⏳
   photo_url?: string;
   photo_data_url?: string;
 
@@ -278,10 +279,37 @@ export default function CandidateDetailPage() {
               </div>
             </div>
 
+            {/* Interview Result Card (Visual Indicator) */}
+            {candidate.interview_result && candidate.interview_result !== 'pending' && (
+              <div className="bg-card rounded-2xl shadow-sm border border-input p-6">
+                <h3 className="text-lg font-semibold text-foreground mb-4">面接結果</h3>
+                <div className="flex items-center gap-3">
+                  {candidate.interview_result === 'passed' ? (
+                    <>
+                      <div className="text-4xl">👍</div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">面接結果</p>
+                        <p className="text-lg font-bold text-green-600">合格 (Passed)</p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-4xl">👎</div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">面接結果</p>
+                        <p className="text-lg font-bold text-red-600">不合格 (Failed)</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Quick Evaluation Card */}
             <CandidateEvaluator
               candidateId={candidate.id}
               candidateName={candidate.full_name_kanji || 'Candidate'}
+              currentInterviewResult={candidate.interview_result || 'pending'}
               onSuccess={() => {
                 // Refetch candidate data to update status
                 queryClient.invalidateQueries({ queryKey: ['candidate', id] });
