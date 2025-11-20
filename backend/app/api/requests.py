@@ -675,11 +675,12 @@ async def approve_nyuusha_request(
         address=candidate.address,
         photo_data_url=candidate.photo_data_url,
         passport_number=candidate.passport_number,
-        zairyu_card_number=candidate.zairyu_card_number,
-        visa_type=candidate.visa_type,
-        visa_expiration=candidate.visa_expiration,
+        # FIXED: Use correct field names from Candidate model
+        residence_card_number=candidate.residence_card_number,  # Fixed: was zairyu_card_number
+        residence_status=candidate.residence_status,  # Fixed: was visa_type
+        residence_expiry=candidate.residence_expiry,  # Fixed: was visa_expiration
         marital_status=candidate.marital_status,
-        dependents=candidate.dependents,
+        # Note: dependents field doesn't exist in Candidate model, so not copied
 
         # Add employee-specific data from employee_data JSON
         factory_id=emp_data.get("factory_id"),
