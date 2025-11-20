@@ -16,6 +16,12 @@ export enum CandidateStatus {
   HIRED = 'hired',
 }
 
+export enum InterviewResult {
+  PASSED = 'passed',   // 👍
+  FAILED = 'failed',   // 👎
+  PENDING = 'pending', // ⏳
+}
+
 export enum DocumentType {
   RIREKISHO = 'rirekisho',
   ZAIRYU_CARD = 'zairyu_card',
@@ -112,6 +118,7 @@ export interface Candidate {
   address?: string;
   photo_data_url?: string;
   status: CandidateStatus | string;
+  interview_result?: InterviewResult | string;  // 👍👎⏳ Interview result
   created_at: string;
   updated_at?: string;
   [key: string]: any;

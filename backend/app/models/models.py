@@ -36,6 +36,13 @@ class CandidateStatus(str, enum.Enum):
     HIRED = "hired"
 
 
+class InterviewResult(str, enum.Enum):
+    """Interview result - Thumbs up/down visual"""
+    PASSED = "passed"  # 👍 Entrevista pasada
+    FAILED = "failed"  # 👎 Entrevista fallida
+    PENDING = "pending"  # ⏳ Entrevista pendiente
+
+
 class DocumentType(str, enum.Enum):
     RIREKISHO = "rirekisho"
     ZAIRYU_CARD = "zairyu_card"
@@ -320,7 +327,7 @@ class Candidate(Base, SoftDeleteMixin):
     commute_time_oneway = Column(Integer)  # 通勤片道時間
 
     # 面接・検査 (Interview & Tests)
-    interview_result = Column(String(20))  # 面接結果OK
+    interview_result = Column(SQLEnum(InterviewResult), server_default="pending")  # 面接結果 (👍👎⏳)
     antigen_test_kit = Column(String(20))  # 簡易抗原検査キット
     antigen_test_date = Column(Date)  # 簡易抗原検査実施日
     covid_vaccine_status = Column(String(50))  # コロナワクチン予防接種状態

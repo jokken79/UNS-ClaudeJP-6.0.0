@@ -587,12 +587,21 @@ async def quick_evaluate_candidate(
     db: Session = Depends(get_db)
 ):
     """
-    Quick evaluation endpoint for thumbs up/down approval (👍/👎)
+    Quick evaluation endpoint for thumbs up/down interview + approval (👍/👎)
 
-    Sets candidate status to "approved" (合格) or "pending" (審査中)
+    STEP 1: Interview Result (Required)
+    - passed (👍) = Candidato pasó la entrevista
+    - failed (👎) = Candidato falló la entrevista
+
+    STEP 2: Approval Decision
+    - approved=true + interview_result=passed → Status = "approved" (move to NYUUSHA)
+    - approved=true + interview_result=failed → Status = "rejected" (entrevista fallida)
+    - approved=false → Status = "pending" (review more)
+
+    Sets candidate status to "approved" (合格), "rejected" (不合格), or "pending" (審査中)
     Coordinator or higher can evaluate candidates
 
-    🆕 NEW BEHAVIOR: When approved, automatically creates a 入社連絡票 (NYUUSHA) request
+    🆕 AUTO-CREATE 入社連絡票 (New Hire Notification Form) when approved after passing interview
     """
     candidate = db.query(Candidate).filter(Candidate.id == candidate_id).first()
     if not candidate:
@@ -601,36 +610,48 @@ async def quick_evaluate_candidate(
             detail="Candidate not found"
         )
 
-    # Update status based on evaluation
+    # STEP 1: Always update interview_result (required)
+    candidate.interview_result = evaluation.interview_result
+
+    # STEP 2: Determine candidate status based on interview result + approval decision
     if evaluation.approved:
-        candidate.status = "approved"
-        candidate.approved_by = current_user.id
-        candidate.approved_at = datetime.now()
+        # Only approve if interview was PASSED
+        if evaluation.interview_result == "passed":
+            candidate.status = "approved"
+            candidate.approved_by = current_user.id
+            candidate.approved_at = datetime.now()
 
-        # 🆕 AUTO-CREATE 入社連絡票 (New Hire Notification Form)
-        # Check if a NYUUSHA request already exists for this candidate
-        existing_nyuusha = db.query(RequestModel).filter(
-            RequestModel.candidate_id == candidate.id,
-            RequestModel.request_type == RequestType.NYUUSHA
-        ).first()
+            # 🆕 AUTO-CREATE 入社連絡票 (New Hire Notification Form)
+            # Check if a NYUUSHA request already exists for this candidate
+            existing_nyuusha = db.query(RequestModel).filter(
+                RequestModel.candidate_id == candidate.id,
+                RequestModel.request_type == RequestType.NYUUSHA
+            ).first()
 
-        if not existing_nyuusha:
-            # Create new 入社連絡票 request
-            nyuusha_request = RequestModel(
-                candidate_id=candidate.id,
-                hakenmoto_id=None,  # Will be filled after employee creation
-                request_type=RequestType.NYUUSHA,
-                status=RequestStatus.PENDING,
-                start_date=date.today(),
-                end_date=date.today(),
-                reason=f"新規採用: {candidate.full_name_kanji or candidate.full_name_roman}",
-                notes=evaluation.notes if hasattr(evaluation, 'notes') and evaluation.notes else None,
-                employee_data={}  # Empty JSON, to be filled later
-            )
-            db.add(nyuusha_request)
+            if not existing_nyuusha:
+                # Create new 入社連絡票 request
+                nyuusha_request = RequestModel(
+                    candidate_id=candidate.id,
+                    hakenmoto_id=None,  # Will be filled after employee creation
+                    request_type=RequestType.NYUUSHA,
+                    status=RequestStatus.PENDING,
+                    start_date=date.today(),
+                    end_date=date.today(),
+                    reason=f"新規採用: {candidate.full_name_kanji or candidate.full_name_roman}",
+                    notes=evaluation.notes if hasattr(evaluation, 'notes') and evaluation.notes else None,
+                    employee_data={}  # Empty JSON, to be filled later
+                )
+                db.add(nyuusha_request)
 
-            logger.info(f"Created 入社連絡票 request for candidate {candidate.id} ({candidate.rirekisho_id})")
+                logger.info(f"Created 入社連絡票 request for candidate {candidate.id} ({candidate.rirekisho_id})")
+        else:
+            # Interview FAILED - reject candidate
+            candidate.status = "rejected"
+            candidate.approved_by = current_user.id
+            candidate.approved_at = datetime.now()
+            logger.info(f"Candidate {candidate.id} rejected due to failed interview")
     else:
+        # Not approved yet - keep as pending
         candidate.status = "pending"
 
     db.commit()
